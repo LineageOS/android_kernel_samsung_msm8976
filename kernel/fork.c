@@ -1249,7 +1249,8 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	 * forking task.
 	 */
 	if ((clone_flags & (CLONE_SIGHAND | CLONE_NEWPID)) &&
-	    (task_active_pid_ns(current) != current->nsproxy->pid_ns))
+	    (task_active_pid_ns(current) !=
+	     current->nsproxy->pid_ns_for_children))
 		return ERR_PTR(-EINVAL);
 
 	retval = security_task_create(clone_flags);
@@ -1422,7 +1423,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 	if (pid != &init_struct_pid) {
 		retval = -ENOMEM;
-		pid = alloc_pid(p->nsproxy->pid_ns);
+		pid = alloc_pid(p->nsproxy->pid_ns_for_children);
 		if (!pid)
 			goto bad_fork_cleanup_io;
 	}
