@@ -1734,7 +1734,7 @@ SYSCALL_DEFINE0(fork)
 	return do_fork(SIGCHLD, 0, 0, NULL, NULL);
 #else
 	/* can not support in nommu mode */
-	return(-EINVAL);
+	return -EINVAL;
 #endif
 }
 #endif
@@ -1742,7 +1742,7 @@ SYSCALL_DEFINE0(fork)
 #ifdef __ARCH_WANT_SYS_VFORK
 SYSCALL_DEFINE0(vfork)
 {
-	return do_fork(CLONE_VFORK | CLONE_VM | SIGCHLD, 0, 
+	return do_fork(CLONE_VFORK | CLONE_VM | SIGCHLD, 0,
 			0, NULL, NULL);
 }
 #endif
