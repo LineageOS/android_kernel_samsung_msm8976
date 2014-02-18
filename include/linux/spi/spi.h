@@ -230,7 +230,7 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
  * @mode_bits: flags understood by this controller driver
  * @bits_per_word_mask: A mask indicating which values of bits_per_word are
  *	supported by the driver. Bit n indicates that a bits_per_word n+1 is
- *	suported. If set, the SPI core will reject any transfer with an
+ *	supported. If set, the SPI core will reject any transfer with an
  *	unsupported bits_per_word. If not set, this value is simply ignored,
  *	and it's up to the individual driver to perform any validation.
  * @flags: other constraints relevant to this driver
