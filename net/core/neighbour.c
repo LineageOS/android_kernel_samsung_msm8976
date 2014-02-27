@@ -943,6 +943,7 @@ static void neigh_timer_handler(unsigned long arg)
 		neigh->nud_state = NUD_FAILED;
 		notify = 1;
 		neigh_invalidate(neigh);
+		goto out;
 	}
 
 	if (neigh->nud_state & NUD_IN_TIMER) {
