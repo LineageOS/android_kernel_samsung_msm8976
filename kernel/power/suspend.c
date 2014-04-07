@@ -28,6 +28,7 @@
 #include <linux/rtc.h>
 #include <trace/events/power.h>
 #include <linux/wakeup_reason.h>
+#include <linux/compiler.h>
 
 #include "power.h"
 
@@ -158,13 +159,13 @@ static int suspend_prepare(suspend_state_t state)
 }
 
 /* default implementation */
-void __attribute__ ((weak)) arch_suspend_disable_irqs(void)
+void __weak arch_suspend_disable_irqs(void)
 {
 	local_irq_disable();
 }
 
 /* default implementation */
-void __attribute__ ((weak)) arch_suspend_enable_irqs(void)
+void __weak arch_suspend_enable_irqs(void)
 {
 	local_irq_enable();
 }
