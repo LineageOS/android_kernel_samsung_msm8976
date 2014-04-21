@@ -1137,9 +1137,11 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 		if (ret)
 			return notifier_from_errno(ret);
 		break;
+	default:
+		return NOTIFY_DONE;
 	}
 
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
 }
 
 static struct notifier_block cfg80211_netdev_notifier = {
