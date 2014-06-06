@@ -287,8 +287,22 @@ struct ksignal {
 extern int get_signal(struct ksignal *ksig);
 extern void signal_setup_done(int failed, struct ksignal *ksig, int stepping);
 extern void exit_signals(struct task_struct *tsk);
-extern void allow_signal(int);
-extern void disallow_signal(int);
+extern void kernel_sigaction(int, __sighandler_t);
+
+static inline void allow_signal(int sig)
+{
+	/*
+	 * Kernel threads handle their own signals. Let the signal code
+	 * know it'll be handled, so that they don't get converted to
+	 * SIGKILL or just silently dropped.
+	 */
+	kernel_sigaction(sig, (__force __sighandler_t)2);
+}
+
+static inline void disallow_signal(int sig)
+{
+	kernel_sigaction(sig, SIG_IGN);
+}
 
 extern struct kmem_cache *sighand_cachep;
 
