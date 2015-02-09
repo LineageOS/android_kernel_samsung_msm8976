@@ -1,0 +1,18 @@
+--- drivers/video/msm/mdss/mdss_fb.c
++++ drivers/video/msm/mdss/mdss_fb.c
+@@ -58,6 +58,7 @@
+ #include "mdss_mdp_splash_logo.h"
+ #define CREATE_TRACE_POINTS
+ #include "mdss_debug.h"
++#include "mdss_mdp.h"
+ 
+ #if defined(CONFIG_MACH_LGE)
+ #include <linux/timer.h>
+@@ -1355,6 +1439,7 @@ static struct attribute *mdss_fb_attrs[] = {
+ 	&dev_attr_aod.attr,
+ 	&dev_attr_fake_u2.attr,
+ #endif
++	&dev_attr_rgb.attr,
+ 	NULL,
+ };
+ 
