@@ -708,6 +708,7 @@ typedef struct tagCsrConfig
     tANI_BOOLEAN sendDeauthBeforeCon;
     tANI_BOOLEAN ignorePeerErpInfo;
     v_U16_t pkt_err_disconn_th;
+    bool vendor_vht_for_24ghz_sap;
 }tCsrConfig;
 
 typedef struct tagCsrChannelPowerInfo
