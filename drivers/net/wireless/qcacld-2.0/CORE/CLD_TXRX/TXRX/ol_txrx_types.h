@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -839,8 +839,8 @@ struct ol_txrx_pdev_t {
 	u_int8_t ocb_peer_valid;
 	struct ol_txrx_peer_t *ocb_peer;
 	int tid_to_ac[OL_TX_NUM_TIDS + OL_TX_VDEV_NUM_QUEUES];
-
 	uint32_t total_bundle_queue_length;
+	struct ol_txrx_peer_t *self_peer;
 };
 
 struct ol_txrx_ocb_chan_info {

@@ -4514,4 +4514,14 @@ void sme_send_disassoc_req_frame(tHalHandle hal, uint8_t session_id,
  *         false - if not in progress
  */
 bool sme_is_sta_key_exchange_in_progress(tHalHandle hal, uint8_t session_id);
+
+/**
+ * sme_create_mon_session() - post message to create PE session for monitormode
+ * operation
+ * @hal_handle: Handle to the HAL
+ * @bssid: pointer to bssid
+ *
+ * Return: eHAL_STATUS_SUCCESS on success, non-zero error code on failure.
+ */
+eHalStatus sme_create_mon_session(tHalHandle hal_handle, uint8_t *bssid);
 #endif //#if !defined( __SME_API_H )
