@@ -130,7 +130,7 @@ static int msm_vb2_buf_finish(struct vb2_buffer *vb)
 
 	stream = msm_get_stream_from_vb2q(vb->vb2_queue);
 	if (!stream) {
-		pr_err("%s:%d] NULL stream", __func__, __LINE__);
+		pr_err_ratelimited("%s:%d] NULL stream", __func__, __LINE__);
 		read_unlock_irqrestore(&session->stream_rwlock, rl_flags);
 		return -EINVAL;
 	}
