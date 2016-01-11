@@ -2049,11 +2049,11 @@ limSendAssocReqMgmtFrame(tpAniSirGlobal   pMac,
 
     vos_mem_set( ( tANI_U8* )pFrm, sizeof( tDot11fAssocRequest ), 0 );
 
-    if (nAddIELen) {
+    if (nAddIELen && psessionEntry->is_ext_caps_present) {
         vos_mem_set(( tANI_U8* )&extractedExtCap, sizeof( tDot11fIEExtCap ), 0);
         nSirStatus = lim_strip_extcap_update_struct(pMac, pAddIE,
-                                      &nAddIELen,
-                                      &extractedExtCap );
+                      &nAddIELen,
+                      &extractedExtCap );
         if(eSIR_SUCCESS != nSirStatus )
         {
             extractedExtCapFlag = eANI_BOOLEAN_FALSE;
@@ -2078,7 +2078,8 @@ limSendAssocReqMgmtFrame(tpAniSirGlobal   pMac,
             }
         }
     } else {
-        limLog(pMac, LOG1, FL("No additional IE for Assoc Request"));
+        limLog(pMac, LOG1,
+                FL("No addn IE or peer dosen't support addnIE for Assoc Req"));
         extractedExtCapFlag = eANI_BOOLEAN_FALSE;
     }
 
@@ -2219,8 +2220,8 @@ limSendAssocReqMgmtFrame(tpAniSirGlobal   pMac,
         isVHTEnabled = eANI_BOOLEAN_TRUE;
     }
 #endif
-
-    PopulateDot11fExtCap( pMac, isVHTEnabled, &pFrm->ExtCap, psessionEntry);
+    if (psessionEntry->is_ext_caps_present)
+        PopulateDot11fExtCap( pMac, isVHTEnabled, &pFrm->ExtCap, psessionEntry);
 
 #if defined WLAN_FEATURE_VOWIFI_11R
     if (psessionEntry->pLimJoinReq->is11Rconnection)
@@ -2690,8 +2691,9 @@ limSendReassocReqWithFTIEsMgmtFrame(tpAniSirGlobal     pMac,
         limLog( pMac, LOG1, FL("Populate VHT IEs in Re-Assoc Request"));
         PopulateDot11fVHTCaps( pMac, psessionEntry, &frm.VHTCaps );
         isVHTEnabled = eANI_BOOLEAN_TRUE;
-        PopulateDot11fExtCap(pMac, isVHTEnabled, &frm.ExtCap, psessionEntry);
     }
+    if (psessionEntry->is_ext_caps_present)
+        PopulateDot11fExtCap(pMac, isVHTEnabled, &frm.ExtCap, psessionEntry);
 #endif
 
     nStatus = dot11fGetPackedReAssocRequestSize( pMac, &frm, &nPayload );
@@ -3160,7 +3162,8 @@ limSendReassocReqMgmtFrame(tpAniSirGlobal     pMac,
     }
 #endif
 
-    PopulateDot11fExtCap(pMac, isVHTEnabled, &frm.ExtCap, psessionEntry);
+    if (psessionEntry->is_ext_caps_present)
+        PopulateDot11fExtCap(pMac, isVHTEnabled, &frm.ExtCap, psessionEntry);
 
     nStatus = dot11fGetPackedReAssocRequestSize( pMac, &frm, &nPayload );
     if ( DOT11F_FAILED( nStatus ) )
