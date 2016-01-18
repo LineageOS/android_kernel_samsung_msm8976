@@ -199,6 +199,23 @@ static inline bool vos_is_ssr_fw_dump_required(void)
 {
 	return true;
 }
+
+typedef void (*oob_irq_handler_t) (void *dev_para);
+static inline bool vos_oob_enabled(void)
+{
+	return false;
+}
+
+static inline int vos_register_oob_irq_handler(oob_irq_handler_t handler,
+		void *pm_oob)
+{
+	return -ENOSYS;
+}
+
+static inline int vos_unregister_oob_irq_handler(void *pm_oob)
+{
+	return -ENOSYS;
+}
 #else
 static inline void
 vos_init_work(struct work_struct *work, work_func_t func)
@@ -466,6 +483,46 @@ static inline void vos_wlan_pci_link_down(void)
 static inline int vos_pcie_shadow_control(struct pci_dev *dev, bool enable)
 {
 	return cnss_pcie_shadow_control(dev, enable);
+}
+#endif
+
+#ifdef CONFIG_CNSS_SDIO
+static inline bool vos_oob_enabled(void)
+{
+	bool enabled = true;
+
+	if (-ENOSYS == cnss_wlan_query_oob_status())
+		enabled = false;
+
+	return enabled;
+}
+
+static inline int vos_register_oob_irq_handler(oob_irq_handler_t handler,
+		void *pm_oob)
+{
+	return cnss_wlan_register_oob_irq_handler(handler, pm_oob);
+}
+
+static inline int vos_unregister_oob_irq_handler(void *pm_oob)
+{
+	return cnss_wlan_unregister_oob_irq_handler(pm_oob);
+}
+#else
+typedef void (*oob_irq_handler_t) (void *dev_para);
+static inline bool vos_oob_enabled(void)
+{
+	return false;
+}
+
+static inline int vos_register_oob_irq_handler(oob_irq_handler_t handler,
+		void *pm_oob)
+{
+	return -ENOSYS;
+}
+
+static inline int vos_unregister_oob_irq_handler(void *pm_oob)
+{
+	return -ENOSYS;
 }
 #endif
 #endif
