@@ -189,7 +189,7 @@ void *wcnss_prealloc_get(size_t size)
 		if (wcnss_allocs[i].occupied)
 			continue;
 
-		if (wcnss_allocs[i].size > size) {
+		if (wcnss_allocs[i].size >= size) {
 			/* we found the slot */
 			pr_err("wcnss: %s: size: %d index %d\n",
 				__func__, size, i);
