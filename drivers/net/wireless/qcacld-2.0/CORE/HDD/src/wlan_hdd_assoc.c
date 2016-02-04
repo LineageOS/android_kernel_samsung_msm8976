@@ -734,6 +734,7 @@ static void hdd_SendAssociationEvent(struct net_device *dev,tCsrRoamInfo *pCsrRo
         spin_lock_bh(&pHddCtx->bus_bw_lock);
         pAdapter->prev_tx_packets = pAdapter->stats.tx_packets;
         pAdapter->prev_rx_packets = pAdapter->stats.rx_packets;
+        pAdapter->prev_tx_bytes = pAdapter->stats.tx_bytes;
         spin_unlock_bh(&pHddCtx->bus_bw_lock);
         hdd_start_bus_bw_compute_timer(pAdapter);
 #endif
@@ -782,6 +783,7 @@ static void hdd_SendAssociationEvent(struct net_device *dev,tCsrRoamInfo *pCsrRo
         spin_lock_bh(&pHddCtx->bus_bw_lock);
         pAdapter->prev_tx_packets = 0;
         pAdapter->prev_rx_packets = 0;
+        pAdapter->prev_tx_bytes = 0;
         spin_unlock_bh(&pHddCtx->bus_bw_lock);
         hdd_stop_bus_bw_compute_timer(pAdapter);
 #endif
