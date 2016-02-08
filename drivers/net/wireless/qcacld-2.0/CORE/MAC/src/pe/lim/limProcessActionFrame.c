@@ -1279,8 +1279,8 @@ __limValidateAddBAParameterSet( tpAniSirGlobal pMac,
         (LIM_ADDBA_REQ == reqType))
   {
       //There is already BA session setup for STA/TID.
-      limLog( pMac, LOGE,
-          FL( "AddBAReq rcvd when there is already a session for this StaId = %d, tid = %d\n " ),
+      limLog(pMac, LOGE,
+          FL("AddBAReq rcvd when there is already a session for this StaId = %d, tid = %d"),
           pSta->staIndex, baParameterSet.tid);
       limPrintMacAddr( pMac, pSta->staAddr, LOGW );
 

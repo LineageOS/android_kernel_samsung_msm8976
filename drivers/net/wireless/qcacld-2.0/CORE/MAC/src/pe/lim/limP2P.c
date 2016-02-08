@@ -768,7 +768,7 @@ void limSendP2PActionFrame(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
         if ((!pMac->lim.gpLimRemainOnChanReq) && (0 != pMbMsg->wait))
         {
             limLog(pMac, LOGE,
-                    FL("Remain on channel is not running \n"));
+                    FL("Remain on channel is not running"));
             limSendSmeRsp(pMac, eWNI_SME_ACTION_FRAME_SEND_CNF,
                     eHAL_STATUS_FAILURE, pMbMsg->sessionId, 0);
             return;
@@ -965,7 +965,7 @@ send_action_frame:
             else
             {
                 limLog(pMac, LOGE,
-                            FL("Failed to Send Action frame \n"));
+                            FL("Failed to Send Action frame"));
                 limSendSmeRsp(pMac, eWNI_SME_ACTION_FRAME_SEND_CNF,
                         eHAL_STATUS_FAILURE, pMbMsg->sessionId, 0);
                 return;
