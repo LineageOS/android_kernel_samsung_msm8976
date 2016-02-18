@@ -452,7 +452,7 @@ static int pkt_stats_fill_headers(struct sk_buff *skb)
 	vos_mem_copy(skb_push(skb, sizeof(int)), &diag_type, sizeof(int));
 
 	extra_header_len = sizeof(msg_header.radio) + sizeof(tAniHdr);
-	nl_payload_len = NLMSG_ALIGN(extra_header_len + skb->len);
+	nl_payload_len = extra_header_len + skb->len;
 
 	msg_header.nlh.nlmsg_type = ANI_NL_MSG_PUMAC;
 	msg_header.nlh.nlmsg_len = nl_payload_len;
