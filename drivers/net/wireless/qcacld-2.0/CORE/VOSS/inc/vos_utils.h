@@ -182,6 +182,7 @@ v_U8_t vos_get_mmie_size(void);
 #endif /* WLAN_FEATURE_11W */
 
 eHalStatus vos_send_flush_logs_cmd_to_fw(tpAniSirGlobal pMac);
+int vos_status_to_os_return(VOS_STATUS status);
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 void vos_wow_wakeup_host_event(uint8_t wow_wakeup_cause);
