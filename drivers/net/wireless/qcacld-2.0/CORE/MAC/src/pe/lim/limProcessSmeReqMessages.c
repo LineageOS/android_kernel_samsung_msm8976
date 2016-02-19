@@ -808,7 +808,7 @@ __limHandleSmeStartBssRequest(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
             else
 #endif
                 psessionEntry->htSupportedChannelWidthSet =
-                                 (pSmeStartBssReq->cbMode)?1:0;
+                                 (pSmeStartBssReq->cbMode > 0)?1:0;
             psessionEntry->htSecondaryChannelOffset = pSmeStartBssReq->cbMode;
             psessionEntry->htRecommendedTxWidthSet =
                                  (psessionEntry->htSecondaryChannelOffset)? 1:0;
@@ -2061,7 +2061,7 @@ __limProcessSmeJoinReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         /*Phy mode*/
         psessionEntry->gLimPhyMode = pSmeJoinReq->bssDescription.nwType;
         handleHTCapabilityandHTInfo(pMac, psessionEntry);
-        psessionEntry->htSupportedChannelWidthSet = (pSmeJoinReq->cbMode)?1:0; // This is already merged value of peer and self - done by csr in csrGetCBModeFromIes
+        psessionEntry->htSupportedChannelWidthSet = (pSmeJoinReq->cbMode > 0)?1:0; // This is already merged value of peer and self - done by csr in csrGetCBModeFromIes
         psessionEntry->htRecommendedTxWidthSet = psessionEntry->htSupportedChannelWidthSet;
         psessionEntry->htSecondaryChannelOffset = pSmeJoinReq->cbMode;
 
@@ -3677,6 +3677,8 @@ void limProcessSmeGetAssocSTAsInfo(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
     tANI_U8                 sessionId = CSR_SESSION_ID_INVALID;
     tANI_U8                 assocId = 0;
     tANI_U8                 staCount = 0;
+
+    vos_mem_zero(&getAssocSTAsReq, sizeof(getAssocSTAsReq));
 
     if (!limIsSmeGetAssocSTAsReqValid(pMac, &getAssocSTAsReq, (tANI_U8 *) pMsgBuf))
     {
