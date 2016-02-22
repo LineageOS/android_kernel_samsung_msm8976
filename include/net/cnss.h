@@ -221,4 +221,5 @@ extern int cnss_wlan_register_oob_irq_handler(oob_irq_handler_t handler,
 	    void *pm_oob);
 extern int cnss_wlan_unregister_oob_irq_handler(void *pm_oob);
 #endif
+extern void cnss_dump_stack(struct task_struct *task);
 #endif /* _NET_CNSS_H_ */
