@@ -4502,4 +4502,7 @@ eHalStatus sme_delete_all_tdls_peers(tHalHandle hal, uint8_t session_id);
 
 VOS_STATUS sme_is_session_valid(tHalHandle hal_handle, uint8_t session_id);
 
+void sme_send_disassoc_req_frame(tHalHandle hal, uint8_t session_id,
+		uint8_t *peer_mac, tANI_U16 reason, uint8_t wait_for_ack);
+
 #endif //#if !defined( __SME_API_H )
