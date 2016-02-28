@@ -800,7 +800,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                             goto free;
                         }
 
-                        PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %x peer "), pAuthNode);
+                        PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %p peer"), pAuthNode);
                         limPrintMacAddr(pMac, pHdr->sa, LOG1);)
 
                         vos_mem_copy((tANI_U8 *) pAuthNode->peerMacAddr,
@@ -926,7 +926,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                             pAuthNode->timestamp = vos_timer_get_system_ticks();
                             limAddPreAuthNode(pMac, pAuthNode);
 
-                            PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %x id %d peer "),
+                            PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %p id %d peer "),
                                           pAuthNode, pAuthNode->authNodeIdx);)
                             PELOG1(limPrintMacAddr(pMac, pHdr->sa, LOG1);)
 
@@ -1192,7 +1192,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
                         goto free;
                     }
 
-                    PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %x peer "), pAuthNode);)
+                    PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %p peer "), pAuthNode);)
                     PELOG1(limPrintMacAddr(pMac, pHdr->sa, LOG1);)
 
                     vos_mem_copy((tANI_U8 *) pAuthNode->peerMacAddr,
@@ -1757,7 +1757,7 @@ limProcessAuthFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession pse
 
                     goto free;
                 }
-                PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %x peer "), pAuthNode);
+                PELOG1(limLog(pMac, LOG1, FL("Alloc new data: %p peer "), pAuthNode);
                 limPrintMacAddr(pMac, pHdr->sa, LOG1);)
 
                 vos_mem_copy((tANI_U8 *) pAuthNode->peerMacAddr,
