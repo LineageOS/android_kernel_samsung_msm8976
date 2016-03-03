@@ -1970,6 +1970,8 @@ eHalStatus csrChangeDefaultConfigParam(tpAniSirGlobal pMac, tCsrConfigParam *pPa
         pMac->enable_dot11p = pParam->enable_dot11p;
         pMac->roam.configParam.sendDeauthBeforeCon =
                                pParam->sendDeauthBeforeCon;
+        pMac->roam.configParam.enable_fatal_event =
+                                        pParam->enable_fatal_event;
     }
 
     return status;
@@ -2149,6 +2151,8 @@ eHalStatus csrGetConfigParam(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
         pParam->enableAmpduPs = pMac->roam.configParam.enableAmpduPs;
         pParam->enableHtSmps = pMac->roam.configParam.enableHtSmps;
         pParam->htSmps = pMac->roam.configParam.htSmps;
+        pParam->enable_fatal_event =
+               pMac->roam.configParam.enable_fatal_event;
         status = eHAL_STATUS_SUCCESS;
     }
     return (status);
@@ -8627,8 +8631,14 @@ static void csrRoamRoamingStateReassocRspProcessor( tpAniSirGlobal pMac, tpSirSm
      * to call csrRoamComplete() with state as CsrJoinFailure */
     else
     {
-        smsLog( pMac, LOGW, "CSR SmeReassocReq failed with statusCode= 0x%08X [%d]", pSmeJoinRsp->statusCode, pSmeJoinRsp->statusCode );
+        smsLog( pMac, LOGW,
+              FL("CSR SmeReassocReq failed with statusCode= 0x%08X [%d]"),
+                        pSmeJoinRsp->statusCode, pSmeJoinRsp->statusCode );
         result = eCsrReassocFailure;
+        vos_flush_logs(WLAN_LOG_TYPE_FATAL,
+                       WLAN_LOG_INDICATOR_HOST_DRIVER,
+                       WLAN_LOG_REASON_ROAM_FAIL,
+                       true);
 #if defined(WLAN_FEATURE_VOWIFI_11R) || defined(FEATURE_WLAN_ESE) || \
     defined(FEATURE_WLAN_LFR)
         if ((eSIR_SME_FT_REASSOC_TIMEOUT_FAILURE == pSmeJoinRsp->statusCode) ||

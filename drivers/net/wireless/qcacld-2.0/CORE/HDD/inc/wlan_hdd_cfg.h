@@ -1040,6 +1040,15 @@ enum
 #define CFG_FT_RESOURCE_REQ_DEFAULT                     (0)
 #endif
 
+/*
+ * Enable/Disable to initiate BUG report in case of fatal event
+ * Default: Enable
+ */
+#define CFG_ENABLE_FATAL_EVENT_TRIGGER                 "gEnableFatalEvent"
+#define CFG_ENABLE_FATAL_EVENT_TRIGGER_MIN             (0)
+#define CFG_ENABLE_FATAL_EVENT_TRIGGER_MAX             (1)
+#define CFG_ENABLE_FATAL_EVENT_TRIGGER_DEFAULT         (1)
+
 #define CFG_TELE_BCN_TRANS_LI_NAME                   "telescopicBeaconTransListenInterval"
 #define CFG_TELE_BCN_TRANS_LI_MIN                    ( 0 )
 #define CFG_TELE_BCN_TRANS_LI_MAX                    ( 7 )
@@ -4345,6 +4354,7 @@ struct hdd_config {
    bool                        enable_dynamic_sta_chainmask;
    uint32_t                    rx_wakelock_timeout;
    uint32_t                    arp_ac_category;
+   bool                        enable_fatal_event;
 };
 
 typedef struct hdd_config hdd_config_t;
