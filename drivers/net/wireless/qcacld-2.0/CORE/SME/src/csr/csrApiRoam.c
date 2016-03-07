@@ -2152,6 +2152,8 @@ eHalStatus csrGetConfigParam(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
                      pMac->roam.configParam.sendDeauthBeforeCon;
         pParam->first_scan_bucket_threshold =
                      pMac->first_scan_bucket_threshold;
+        pParam->enableHtSmps = pMac->roam.configParam.enableHtSmps;
+        pParam->htSmps = pMac->roam.configParam.htSmps;
         status = eHAL_STATUS_SUCCESS;
     }
     return (status);
