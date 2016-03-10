@@ -167,7 +167,7 @@ static int wlan_send_sock_msg_to_app(tAniHdr *wmsg, int radio,
 		return -EINVAL;
 	}
 
-	payload_len = wmsg_length + sizeof(wnl->radio);
+	payload_len = wmsg_length + sizeof(wnl->radio) + sizeof(tAniHdr);
 	tot_msg_len = NLMSG_SPACE(payload_len);
 	skb = dev_alloc_skb(tot_msg_len);
 	if (skb == NULL) {
@@ -455,7 +455,7 @@ static int pkt_stats_fill_headers(struct sk_buff *skb)
 	nl_payload_len = extra_header_len + skb->len;
 
 	msg_header.nlh.nlmsg_type = ANI_NL_MSG_PUMAC;
-	msg_header.nlh.nlmsg_len = nl_payload_len;
+	msg_header.nlh.nlmsg_len = nlmsg_msg_size(nl_payload_len);
 	msg_header.nlh.nlmsg_flags = NLM_F_REQUEST;
 	msg_header.nlh.nlmsg_pid = 0;
 	msg_header.nlh.nlmsg_seq = nlmsg_seq++;
