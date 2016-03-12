@@ -1147,12 +1147,9 @@ static void __hdd_tx_timeout(struct net_device *dev)
 
    for (i = 0; i < NUM_TX_QUEUES; i++) {
       txq = netdev_get_tx_queue(dev, i);
-      hddLog(LOG1, FL("Queue%d status: %d txq->trans_start %lu"),
+      hddLog(LOGE, FL("Queue%d status: %d txq->trans_start %lu"),
              i, netif_tx_queue_stopped(txq), txq->trans_start);
    }
-
-   VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_INFO,
-              "carrier state: %d", netif_carrier_ok(dev));
 }
 
 /**
@@ -1689,6 +1686,27 @@ void wlan_hdd_log_eapol(struct sk_buff *skb,
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
 
 /**
+ * wlan_hdd_update_txq_timestamp() - update txq timestamp
+ * @dev: net device
+ *
+ * Return: none
+ */
+static void wlan_hdd_update_txq_timestamp(struct net_device *dev)
+{
+	struct netdev_queue *txq;
+	int i;
+	bool unlock;
+
+	for (i = 0; i < NUM_TX_QUEUES; i++) {
+		txq = netdev_get_tx_queue(dev, i);
+		unlock = __netif_tx_trylock(txq);
+		txq_trans_update(txq);
+		if (unlock == true)
+			__netif_tx_unlock(txq);
+	}
+}
+
+/**
  * wlan_hdd_netif_queue_control() - Use for netif_queue related actions
  * @adapter: adapter handle
  * @action: action type
@@ -1720,8 +1738,10 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 
 	case WLAN_STOP_ALL_NETIF_QUEUE:
 		spin_lock_bh(&adapter->pause_map_lock);
-		if (!adapter->pause_map)
+		if (!adapter->pause_map) {
 			netif_tx_stop_all_queues(adapter->dev);
+			wlan_hdd_update_txq_timestamp(adapter->dev);
+		}
 		adapter->pause_map |= (1 << reason);
 		spin_unlock_bh(&adapter->pause_map_lock);
 		break;
@@ -1744,8 +1764,10 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 
 	case WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER:
 		spin_lock_bh(&adapter->pause_map_lock);
-		if (!adapter->pause_map)
+		if (!adapter->pause_map) {
 			netif_tx_stop_all_queues(adapter->dev);
+			wlan_hdd_update_txq_timestamp(adapter->dev);
+		}
 		adapter->pause_map |= (1 << reason);
 		netif_carrier_off(adapter->dev);
 		spin_unlock_bh(&adapter->pause_map_lock);
@@ -1762,16 +1784,20 @@ void wlan_hdd_netif_queue_control(hdd_adapter_t *adapter,
 
 	case WLAN_NETIF_TX_DISABLE:
 		spin_lock_bh(&adapter->pause_map_lock);
-		if (!adapter->pause_map)
+		if (!adapter->pause_map) {
 			netif_tx_disable(adapter->dev);
+			wlan_hdd_update_txq_timestamp(adapter->dev);
+		}
 		adapter->pause_map |= (1 << reason);
 		spin_unlock_bh(&adapter->pause_map_lock);
 		break;
 
 	case WLAN_NETIF_TX_DISABLE_N_CARRIER:
 		spin_lock_bh(&adapter->pause_map_lock);
-		if (!adapter->pause_map)
+		if (!adapter->pause_map) {
 			netif_tx_disable(adapter->dev);
+			wlan_hdd_update_txq_timestamp(adapter->dev);
+		}
 		adapter->pause_map |= (1 << reason);
 		netif_carrier_off(adapter->dev);
 		spin_unlock_bh(&adapter->pause_map_lock);
