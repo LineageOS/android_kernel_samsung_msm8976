@@ -17461,8 +17461,8 @@ int wlan_hdd_disconnect( hdd_adapter_t *pAdapter, u16 reason )
 
     /*stop tx queues*/
     hddLog(LOG1, FL("Disabling queues"));
-    netif_tx_disable(pAdapter->dev);
-    netif_carrier_off(pAdapter->dev);
+    wlan_hdd_netif_queue_control(pAdapter, WLAN_NETIF_TX_DISABLE_N_CARRIER,
+          WLAN_CONTROL_PATH);
     pHddCtx->isAmpAllowed = VOS_TRUE;
     VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                    "%s: Set HDD connState to eConnectionState_Disconnecting",

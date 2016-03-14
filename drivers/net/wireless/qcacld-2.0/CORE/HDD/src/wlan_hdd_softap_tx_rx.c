@@ -143,7 +143,8 @@ void hdd_softap_tx_resume_timer_expired_handler(void *adapter_context)
    }
 
    hddLog(LOG1, FL("Enabling queues"));
-   netif_tx_wake_all_queues(pAdapter->dev);
+   wlan_hdd_netif_queue_control(pAdapter, WLAN_WAKE_ALL_NETIF_QUEUE,
+                 WLAN_CONTROL_PATH);
    return;
 }
 
@@ -179,7 +180,9 @@ void hdd_softap_tx_resume_cb(void *adapter_context,
        }
 
        hddLog(LOG1, FL("Enabling queues"));
-       netif_tx_wake_all_queues(pAdapter->dev);
+       wlan_hdd_netif_queue_control(pAdapter,
+            WLAN_WAKE_ALL_NETIF_QUEUE,
+            WLAN_DATA_FLOW_CONTROL);
        pAdapter->hdd_stats.hddTxRxStats.txflow_unpause_cnt++;
        pAdapter->hdd_stats.hddTxRxStats.is_txflow_paused = FALSE;
 
@@ -188,7 +191,9 @@ void hdd_softap_tx_resume_cb(void *adapter_context,
     else if (VOS_FALSE == tx_resume)  /* Pause TX  */
     {
         hddLog(LOG1, FL("Disabling queues"));
-        netif_tx_stop_all_queues(pAdapter->dev);
+        wlan_hdd_netif_queue_control(pAdapter,
+            WLAN_STOP_ALL_NETIF_QUEUE,
+            WLAN_DATA_FLOW_CONTROL);
         if (VOS_TIMER_STATE_STOPPED ==
             vos_timer_getCurrentState(&pAdapter->tx_flow_control_timer))
         {
@@ -334,7 +339,8 @@ int __hdd_softap_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
                (VOS_TIMER_STATE_STOPPED ==
                 vos_timer_getCurrentState(&pAdapter->tx_flow_control_timer))) {
                hddLog(LOG1, FL("Disabling queues"));
-               netif_tx_stop_all_queues(dev);
+               wlan_hdd_netif_queue_control(pAdapter, WLAN_STOP_ALL_NETIF_QUEUE,
+                           WLAN_DATA_FLOW_CONTROL);
                vos_timer_start(&pAdapter->tx_flow_control_timer,
                                WLAN_SAP_HDD_TX_FLOW_CONTROL_OS_Q_BLOCK_TIME);
                pAdapter->hdd_stats.hddTxRxStats.txflow_timer_cnt++;
@@ -1038,16 +1044,17 @@ VOS_STATUS hdd_softap_RegisterSTA( hdd_adapter_t *pAdapter,
    {
        VOS_TRACE( VOS_MODULE_ID_HDD_SAP_DATA, VOS_TRACE_LEVEL_INFO_HIGH,
                   "Turn on Monitor the carrier");
-       netif_carrier_on(pmonAdapter->dev);
            //Enable Tx queue
        hddLog(LOG1, FL("Enabling queues"));
-       netif_tx_start_all_queues(pmonAdapter->dev);
+       wlan_hdd_netif_queue_control(pAdapter,
+            WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
+            WLAN_CONTROL_PATH);
     }
-   netif_carrier_on(pAdapter->dev);
    //Enable Tx queue
    hddLog(LOG1, FL("Enabling queues"));
-   netif_tx_start_all_queues(pAdapter->dev);
-
+   wlan_hdd_netif_queue_control(pAdapter,
+        WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
+        WLAN_CONTROL_PATH);
    return( vosStatus );
 }
 
