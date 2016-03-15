@@ -81,6 +81,7 @@
 #include "wlan_hdd_misc.h"
 #include <vos_utils.h>
 #include "vos_cnss.h"
+#include "tl_shim.h"
 
 #include "wma.h"
 #ifdef DEBUG
@@ -1861,6 +1862,8 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                 spin_lock_bh(&pHddCtx->bus_bw_lock);
                 pHostapdAdapter->prev_tx_packets = pHostapdAdapter->stats.tx_packets;
                 pHostapdAdapter->prev_rx_packets = pHostapdAdapter->stats.rx_packets;
+                pHostapdAdapter->prev_fwd_packets =
+                  tlshim_get_fwd_to_tx_packet_count(pHostapdAdapter->sessionId);
                 pHostapdAdapter->prev_tx_bytes =
                         pHostapdAdapter->stats.tx_bytes;
                 spin_unlock_bh(&pHddCtx->bus_bw_lock);
@@ -2054,6 +2057,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                 spin_lock_bh(&pHddCtx->bus_bw_lock);
                 pHostapdAdapter->prev_tx_packets = 0;
                 pHostapdAdapter->prev_rx_packets = 0;
+                pHostapdAdapter->prev_fwd_packets = 0;
                 pHostapdAdapter->prev_tx_bytes = 0;
                 spin_unlock_bh(&pHddCtx->bus_bw_lock);
                 hdd_stop_bus_bw_compute_timer(pHostapdAdapter);
