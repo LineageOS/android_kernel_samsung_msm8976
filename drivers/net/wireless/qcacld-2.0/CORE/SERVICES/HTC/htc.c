@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, 2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -248,6 +248,7 @@ HTC_HANDLE HTCCreate(void *ol_sc, HTC_INIT_INFO *pInfo, adf_os_device_t osdev)
         pEndpoint = &target->EndPoint[j];
         adf_os_spinlock_init(&pEndpoint->htc_endpoint_rx_lock);
     }
+    target->is_nodrop_pkt = FALSE;
 
     do {
         A_MEMCPY(&target->HTCInitInfo,pInfo,sizeof(HTC_INIT_INFO));
