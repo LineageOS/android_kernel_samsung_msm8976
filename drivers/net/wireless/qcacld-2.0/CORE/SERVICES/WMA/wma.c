@@ -34856,7 +34856,7 @@ int wma_suspend_fw(void)
 	if (!wma)
 		return -EINVAL;
 
-    if (wma_check_scan_in_progress(wma)) {
+	if (wma_check_scan_in_progress(wma)) {
 		WMA_LOGE("%s: Scan in progress, Aborting suspend", __func__);
 		return -EBUSY;
 	}
