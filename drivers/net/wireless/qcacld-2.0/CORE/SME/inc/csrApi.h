@@ -151,7 +151,6 @@ typedef tANI_U8 tCsrBssid[VOS_MAC_ADDR_SIZE];
 
 typedef enum
 {
-    eCSR_BSS_TYPE_NONE,
     eCSR_BSS_TYPE_INFRASTRUCTURE,
     eCSR_BSS_TYPE_INFRA_AP,       // SoftAP AP
     eCSR_BSS_TYPE_IBSS,           // an IBSS network we will NOT start
