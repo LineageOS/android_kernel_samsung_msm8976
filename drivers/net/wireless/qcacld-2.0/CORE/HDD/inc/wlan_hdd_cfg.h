@@ -1344,6 +1344,11 @@ typedef enum
 #define CFG_VHT_ENABLE_2x2_CAP_FEATURE_MAX     ( 1 )
 #define CFG_VHT_ENABLE_2x2_CAP_FEATURE_DEFAULT ( 0 )
 
+#define CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK    "gEnableDynamicSTAChainMask"
+#define CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_MIN     (0)
+#define CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_MAX     (1)
+#define CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_DEFAULT (0)
+
 /*
  * Valid chain mask values.
  * 01 - enables chain0
@@ -4349,6 +4354,7 @@ struct hdd_config {
    bool                        bug_on_reinit_failure;
    /* parameter for defer timer for enabling TDLS on p2p listen */
    uint16_t                    tdls_enable_defer_time;
+   bool                        enable_dynamic_sta_chainmask;
    uint32_t                    rx_wakelock_timeout;
    uint32_t                    arp_ac_category;
 };

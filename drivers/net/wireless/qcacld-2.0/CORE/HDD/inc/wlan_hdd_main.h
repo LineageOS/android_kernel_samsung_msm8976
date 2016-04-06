@@ -2086,5 +2086,6 @@ void wlan_hdd_undo_acs(hdd_adapter_t *adapter);
  * Return: 0 for success non-zero for failure
  */
 int hdd_drv_cmd_validate(tANI_U8 *command, int len);
-
+void hdd_decide_dynamic_chain_mask(hdd_context_t *hdd_ctx,
+				enum antenna_mode forced);
 #endif    // end #if !defined( WLAN_HDD_MAIN_H )

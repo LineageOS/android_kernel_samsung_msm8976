@@ -2277,6 +2277,13 @@ REG_TABLE_ENTRY g_registry_table[] =
                  CFG_VHT_ENABLE_2x2_CAP_FEATURE_MIN,
                  CFG_VHT_ENABLE_2x2_CAP_FEATURE_MAX ),
 
+   REG_VARIABLE(CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK, WLAN_PARAM_Integer,
+                 hdd_config_t, enable_dynamic_sta_chainmask,
+                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                 CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_DEFAULT,
+                 CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_MIN,
+                 CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK_MAX),
+
    REG_VARIABLE( CFG_CHAIN_MASK_2G, WLAN_PARAM_Integer,
                  hdd_config_t, chain_mask_2g,
                  VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -5124,6 +5131,10 @@ void print_hdd_cfg(hdd_context_t *pHddCtx)
   hddLog(LOG2, "Name = [%s] Value = [%u]",
                  CFG_ARP_AC_CATEGORY,
                  pHddCtx->cfg_ini->arp_ac_category);
+
+  hddLog(LOG2, "Name = [%s] Value = [%u]",
+          CFG_ENABLE_VHT_DYNAMIC_STA_CHAINMASK,
+          pHddCtx->cfg_ini->enable_dynamic_sta_chainmask);
 }
 
 #define CFG_VALUE_MAX_LEN 256
