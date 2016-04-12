@@ -2049,4 +2049,7 @@ hdd_get_ibss_peer_info_cb(v_VOID_t *pUserData,
 
 int hdd_reassoc(hdd_adapter_t *pAdapter, const tANI_U8 *bssid,
 		const tANI_U8 channel, const handoff_src src);
+
+void wlan_hdd_undo_acs(hdd_adapter_t *adapter);
+
 #endif    // end #if !defined( WLAN_HDD_MAIN_H )
