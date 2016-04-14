@@ -666,4 +666,8 @@ void lim_merge_extcap_struct(tDot11fIEExtCap *dst, tDot11fIEExtCap *src,
 uint8_t
 lim_get_80Mhz_center_channel(uint8_t primary_channel);
 tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap);
+
+void lim_update_caps_info_for_bss(tpAniSirGlobal mac_ctx,
+				uint16_t *caps, uint16_t bss_caps);
+
 #endif /* __LIM_UTILS_H */
