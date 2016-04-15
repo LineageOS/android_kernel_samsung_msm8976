@@ -339,7 +339,7 @@ static void wlan_hdd_tdls_free_list(tdlsCtx_t *pHddTdlsCtx)
 
     if (NULL == pHddTdlsCtx)
     {
-       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                  FL("pHddTdlsCtx is NULL"));
        return;
     }
@@ -543,7 +543,7 @@ int wlan_hdd_tdls_init(hdd_adapter_t *pAdapter)
     if (FALSE == pHddCtx->cfg_ini->fEnableTDLSImplicitTrigger)
     {
         pHddCtx->tdls_mode = eTDLS_SUPPORT_EXPLICIT_TRIGGER_ONLY;
-        hddLog(VOS_TRACE_LEVEL_ERROR, "%s TDLS Implicit trigger not enabled!", __func__);
+        hddLog(VOS_TRACE_LEVEL_INFO, "%s TDLS Implicit trigger not enabled!", __func__);
     } else if (TRUE == pHddCtx->cfg_ini->fTDLSExternalControl) {
         pHddCtx->tdls_mode = eTDLS_SUPPORT_EXTERNAL_CONTROL;
     } else {
@@ -689,7 +689,7 @@ void wlan_hdd_tdls_exit(hdd_adapter_t *pAdapter)
     }
 
     if (!test_bit(TDLS_INIT_DONE, &pAdapter->event_flags)) {
-        hddLog(LOGE, FL("TDLS init was not done, exit"));
+        hddLog(LOG1, FL("TDLS init was not done, exit"));
         return;
     }
 
@@ -2128,7 +2128,7 @@ void wlan_hdd_tdls_disconnection_callback(hdd_adapter_t *pAdapter)
     if (NULL == pHddTdlsCtx)
     {
        mutex_unlock(&pHddCtx->tdls_lock);
-       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                 FL("pHddTdlsCtx is NULL"));
         return;
     }
@@ -2298,7 +2298,7 @@ static hddTdlsPeer_t *wlan_hdd_tdls_find_progress_peer(hdd_adapter_t *pAdapter,
 
     if (NULL == pHddTdlsCtx)
     {
-       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                 FL("pHddTdlsCtx is NULL"));
        return NULL;
      }
@@ -2369,7 +2369,7 @@ void wlan_hdd_tdls_implicit_send_discovery_request(tdlsCtx_t * pHddTdlsCtx)
 
     if (NULL == pHddTdlsCtx)
     {
-       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
                  FL("pHddTdlsCtx is NULL"));
        return;
     }
