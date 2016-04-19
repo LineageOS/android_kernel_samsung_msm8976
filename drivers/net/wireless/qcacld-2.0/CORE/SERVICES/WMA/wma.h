@@ -1743,4 +1743,7 @@ void wma_stop_radar_delay_timer(void);
  */
 void wma_ignore_radar_soon_after_assoc(void);
 
+WLAN_PHY_MODE wma_chan_to_mode(uint8_t chan, ePhyChanBondState chan_offset,
+		uint8_t vht_capable, uint8_t dot11_mode);
+
 #endif
