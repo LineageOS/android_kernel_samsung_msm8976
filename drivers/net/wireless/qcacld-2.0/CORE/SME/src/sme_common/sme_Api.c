@@ -2487,6 +2487,7 @@ eHalStatus sme_SetEseBeaconRequest(tHalHandle hHal, const tANI_U8 sessionId,
    if(status != eHAL_STATUS_SUCCESS)
       pSmeRrmContext->eseBcnReqInProgress = FALSE;
 
+   vos_mem_free(pSmeBcnReportReq);
    return status;
 }
 
@@ -7356,6 +7357,7 @@ eHalStatus smeIssueFastRoamNeighborAPEvent(tHalHandle hHal,
              pUsrCtx = vos_mem_malloc(sizeof(*pUsrCtx));
              if (NULL == pUsrCtx) {
                  smsLog(pMac, LOGE, FL("Memory allocation failed"));
+                 sme_ReleaseGlobalLock( &pMac->sme );
                  return eHAL_STATUS_FAILED_ALLOC;
              }
 
@@ -12185,6 +12187,7 @@ eHalStatus sme_get_rssi(tHalHandle hal, struct sir_rssi_req req,
 		if (!VOS_IS_STATUS_SUCCESS(vosstatus)) {
 			VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
 				"%s: Post get rssi msg fail", __func__);
+			vos_mem_free(vosmessage.bodyptr);
 			status = eHAL_STATUS_FAILURE;
 		}
 		sme_ReleaseGlobalLock(&mac->sme);
@@ -14139,6 +14142,12 @@ eHalStatus sme_SendRateUpdateInd(tHalHandle hHal,
 
         sme_ReleaseGlobalLock(&pMac->sme);
         return eHAL_STATUS_SUCCESS;
+    }
+    else
+    {
+        vos_mem_free(rateUpdate);
+        VOS_TRACE( VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                   FL("sme_AcquireGlobalLock error"));
     }
 
     return status;
