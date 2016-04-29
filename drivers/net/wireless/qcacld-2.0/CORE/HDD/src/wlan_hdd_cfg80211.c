@@ -15772,6 +15772,15 @@ void hdd_select_cbmode(hdd_adapter_t *pAdapter, v_U8_t operationChannel,
            iniDot11Mode);
     *vht_channel_width =
                (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini->vhtChannelWidth;
+
+    /*
+     * In IBSS mode while operating in 2.4 GHz,
+     * the device will be configured to CBW 20
+     */
+    if ((WLAN_HDD_IBSS == pAdapter->device_mode) &&
+            (SIR_11B_CHANNEL_END >= operationChannel))
+        *vht_channel_width = eHT_CHANNEL_WIDTH_20MHZ;
+
     switch ( iniDot11Mode )
     {
        case eHDD_DOT11_MODE_AUTO:
