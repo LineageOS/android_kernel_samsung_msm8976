@@ -1075,6 +1075,7 @@ typedef struct sMacOpenParameters
  */
     tANI_U8 olIniInfo;
     v_BOOL_t ssdp;
+    bool enable_mc_list;
     bool enable_bcst_ptrn;
     /*
      * DFS Phyerror Filtering offload status from ini
