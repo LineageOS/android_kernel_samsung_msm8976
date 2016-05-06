@@ -1429,6 +1429,7 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
         case eWNI_SME_EXT_CHANGE_CHANNEL:
         case eWNI_SME_ROAM_RESTART_REQ:
         case eWNI_SME_REGISTER_MGMT_FRAME_CB:
+        case eWNI_SME_REGISTER_P2P_ACK_CB:
             // These messages are from HDD
             limProcessNormalHddMsg(pMac, limMsg, false);   //no need to response to hdd
             break;
