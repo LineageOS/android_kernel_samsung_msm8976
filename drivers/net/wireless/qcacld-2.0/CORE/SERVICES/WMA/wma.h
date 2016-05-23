@@ -853,6 +853,7 @@ typedef struct wma_handle {
 
 	struct wma_runtime_pm_context runtime_context;
 	bool     pause_other_vdev_on_mcc_start;
+	tSirAddonPsReq psSetting;
 }t_wma_handle, *tp_wma_handle;
 
 struct wma_target_cap {
