@@ -119,6 +119,8 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_METADATA_MBI,
 	HAL_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI,
 	HAL_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI,
+	HAL_EXTRADATA_VUI_DISPLAY_INFO,
+	HAL_EXTRADATA_VPX_COLORSPACE,
 };
 
 enum hal_property {
@@ -222,6 +224,7 @@ enum hal_property {
 	HAL_PARAM_VENC_HIER_P_HYBRID_MODE,
 	HAL_PARAM_VENC_MBI_STATISTICS_MODE,
 	HAL_PARAM_VENC_BITRATE_TYPE,
+	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
 	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 };
 
@@ -967,6 +970,13 @@ enum hal_iframesize_type {
 	HAL_IFRAMESIZE_TYPE_MEDIUM,
 	HAL_IFRAMESIZE_TYPE_HUGE,
 	HAL_IFRAMESIZE_TYPE_UNLIMITED,
+};
+
+struct hal_video_signal_info {
+	u32 color_space;
+	u32 transfer_chars;
+	u32 matrix_coeffs;
+	bool full_range;
 };
 
 enum vidc_resource_id {
