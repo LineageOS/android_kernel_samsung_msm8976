@@ -1197,16 +1197,10 @@ adf_nbuf_t WLANTL_SendSTA_DataFrame(void *vos_ctx, void *vdev,
 {
 	struct txrx_tl_shim_ctx *tl_shim = vos_get_context(VOS_MODULE_ID_TL,
 							   vos_ctx);
-	void *adf_ctx = vos_get_context(VOS_MODULE_ID_ADF, vos_ctx);
 	adf_nbuf_t ret, skb_list_head;
 
 	if (!tl_shim) {
 		TLSHIM_LOGE("tl_shim is NULL");
-		return skb;
-	}
-
-	if (!adf_ctx) {
-		TLSHIM_LOGE("adf_ct is NULL");
 		return skb;
 	}
 
@@ -1219,7 +1213,6 @@ adf_nbuf_t WLANTL_SendSTA_DataFrame(void *vos_ctx, void *vdev,
 	while (skb) {
 		/* Zero out skb's context buffer for the driver to use */
 		adf_os_mem_set(skb->cb, 0, sizeof(skb->cb));
-		adf_nbuf_map_single(adf_ctx, skb, ADF_OS_DMA_TO_DEVICE);
 
 #ifdef QCA_PKT_PROTO_TRACE
 		adf_nbuf_trace_set_proto_type(skb, proto_type);
@@ -1234,16 +1227,8 @@ adf_nbuf_t WLANTL_SendSTA_DataFrame(void *vos_ctx, void *vdev,
 	}
 
 	ret = tl_shim->tx(vdev, skb_list_head);
-	if (ret) {
-		skb_list_head = ret;
-		TLSHIM_LOGW("Failed to tx");
-		while (ret) {
-			adf_nbuf_unmap_single(adf_ctx, ret,
-						ADF_OS_DMA_TO_DEVICE);
-			ret = ret->next;
-		}
-		return skb_list_head;
-	}
+	if (ret)
+		return ret;
 
 	return NULL;
 }
