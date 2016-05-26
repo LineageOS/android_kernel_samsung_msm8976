@@ -2831,6 +2831,8 @@ static int __ref update_offline_cores(int val)
 					cpu, ret);
 				pend_hotplug_req = true;
 			} else {
+				struct device *cpu_device = get_cpu_device(cpu);
+				kobject_uevent(&cpu_device->kobj, KOBJ_OFFLINE);
 				pr_debug("Offlined CPU%d\n", cpu);
 			}
 			trace_thermal_post_core_offline(cpu,
@@ -2853,6 +2855,8 @@ static int __ref update_offline_cores(int val)
 					"Unable to online CPU%d. err:%d\n",
 					cpu, ret);
 			} else {
+				struct device *cpu_device = get_cpu_device(cpu);
+				kobject_uevent(&cpu_device->kobj, KOBJ_ONLINE);
 				pr_debug("Onlined CPU%d\n", cpu);
 			}
 			trace_thermal_post_core_online(cpu,
