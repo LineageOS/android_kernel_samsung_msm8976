@@ -172,6 +172,7 @@
 
 	/delete-node/ qcom,cpubw;
 	cpubw: qcom,cpubw@0 {
+		label = "cpubw";
 		reg = <0 4>;
 		compatible = "qcom,devbw";
 		governor = "cpufreq";
