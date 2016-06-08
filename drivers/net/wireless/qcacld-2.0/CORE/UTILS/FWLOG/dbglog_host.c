@@ -1664,7 +1664,7 @@ send_fw_diag_nl_data(const u_int8_t *buffer,
         memcpy(nlmsg_data(nlh), buffer, len);
 
         res = nl_srv_bcast(skb_out);
-        if (res < 0)
+        if ((res < 0) && (res != -ESRCH))
         {
             AR_DEBUG_PRINTF(ATH_DEBUG_RSVD1,
                             ("%s: nl_srv_bcast failed 0x%x \n", __func__, res));
@@ -1710,7 +1710,7 @@ send_diag_netlink_data(const u_int8_t *buffer,
         memcpy(slot->payload, buffer, len);
 
         res = nl_srv_bcast(skb_out);
-        if (res < 0) {
+        if ((res < 0) && (res != -ESRCH)) {
             AR_DEBUG_PRINTF(ATH_DEBUG_RSVD1,
                             ("%s: nl_srv_bcast failed 0x%x \n", __func__, res));
             return res;
@@ -1756,7 +1756,7 @@ dbglog_process_netlink_data(wmi_unified_t wmi_handle, const u_int8_t *buffer,
         memcpy(slot->payload, buffer, len);
 
         res = nl_srv_bcast(skb_out);
-        if (res < 0)
+        if ((res < 0) && (res != -ESRCH))
         {
             AR_DEBUG_PRINTF(ATH_DEBUG_RSVD1,
                             ("%s: nl_srv_bcast failed 0x%x \n", __func__, res));
