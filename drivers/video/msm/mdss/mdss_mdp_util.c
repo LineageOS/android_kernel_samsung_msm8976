@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -616,7 +616,7 @@ static int mdss_mdp_put_img(struct mdss_mdp_img_data *data)
 		pr_debug("pmem buf=0x%pa\n", &data->addr);
 		data->srcp_file = NULL;
 	} else if (!IS_ERR_OR_NULL(data->srcp_ihdl)) {
-		pr_debug("ion hdl=%p buf=0x%pa\n", data->srcp_ihdl,
+		pr_debug("ion hdl=%pK buf=0x%pa\n", data->srcp_ihdl,
 							&data->addr);
 		if (!iclient) {
 			pr_err("invalid ion client\n");
