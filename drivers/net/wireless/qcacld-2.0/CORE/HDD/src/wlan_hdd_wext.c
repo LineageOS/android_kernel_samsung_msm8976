@@ -619,7 +619,7 @@ void *mem_alloc_copy_from_user_helper(const void *wrqu_data, size_t len)
     }
 
 
-    ptr = kmalloc(len + 1, GFP_KERNEL);
+    ptr = vos_mem_malloc(len + 1);
     if (NULL == ptr)
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
@@ -631,7 +631,7 @@ void *mem_alloc_copy_from_user_helper(const void *wrqu_data, size_t len)
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                   "%s: failed to copy data to user buffer", __func__);
-        kfree(ptr);
+        vos_mem_free(ptr);
         return NULL;
     }
     ptr[len] = '\0';
@@ -2833,7 +2833,7 @@ static int __iw_set_genie(struct net_device *dev, struct iw_request_info *info,
     }
 exit:
     EXIT();
-    kfree(base_genie);
+    vos_mem_free(base_genie);
     return ret;
 }
 
@@ -7146,7 +7146,7 @@ static int __iw_setchar_getnone(struct net_device *dev,
            break;
        }
     }
-    kfree(pBuffer);
+    vos_mem_free(pBuffer);
     EXIT();
     return ret;
 }
@@ -10015,7 +10015,7 @@ static int __iw_set_packet_filter_params(struct net_device *dev,
 
     ret = wlan_hdd_set_filter(WLAN_HDD_GET_CTX(pAdapter), pRequest,
                               pAdapter->sessionId);
-    kfree(pRequest);
+    vos_mem_free(pRequest);
     EXIT();
     return ret;
 }
@@ -10853,7 +10853,7 @@ static int __iw_set_power_params_priv(struct net_device *dev,
   }
 
   ret = iw_set_power_params(dev, info, wrqu, ptr, 0);
-  kfree(ptr);
+  vos_mem_free(ptr);
   EXIT();
   return ret;
 }
