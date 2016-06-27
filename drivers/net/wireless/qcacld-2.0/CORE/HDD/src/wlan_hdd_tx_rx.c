@@ -1372,7 +1372,6 @@ bool drop_ip6_mcast(struct sk_buff *skb)
 #define drop_ip6_mcast(_a) 0
 #endif
 
-#ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
 /**
  * hdd_is_arp_local() - check if local or non local arp
  * @skb: pointer to sk_buff
@@ -1412,7 +1411,6 @@ static bool hdd_is_arp_local(struct sk_buff *skb)
 	}
 	return true;
 }
-#endif
 
 /**============================================================================
   @brief hdd_rx_packet_cbk() - Receive callback registered with TL.
@@ -1439,9 +1437,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
    v_U8_t proto_type;
 #endif /* QCA_PKT_PROTO_TRACE */
    hdd_station_ctx_t *pHddStaCtx = NULL;
-#ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
    bool wake_lock = false;
-#endif
    //Sanity check on inputs
    if ((NULL == vosContext) || (NULL == rxBuf))
    {
@@ -1526,7 +1522,6 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
       ++pAdapter->stats.rx_packets;
       pAdapter->stats.rx_bytes += skb->len;
 
-#ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
       if (!wake_lock) {
          if (skb->protocol == htons(ETH_P_ARP)) {
             if (hdd_is_arp_local(skb))
@@ -1535,7 +1530,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
          else
             wake_lock = true;
       }
-#endif
+
       /*
        * If this is not a last packet on the chain
        * Just put packet into backlog queue, not scheduling RX sirq
@@ -1543,17 +1538,20 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
       if (skb->next) {
          rxstat = netif_rx(skb);
       } else {
-#ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
-      if (wake_lock)
-         vos_wake_lock_timeout_acquire(&pHddCtx->rx_wake_lock,
-                                       HDD_WAKE_LOCK_DURATION,
-                                       WIFI_POWER_EVENT_WAKELOCK_HOLD_RX);
-#endif
-         /*
-          * This is the last packet on the chain
-          * Scheduling rx sirq
-          */
-         rxstat = netif_rx_ni(skb);
+          if ((pHddCtx->cfg_ini->rx_wakelock_timeout) &&
+              (PACKET_BROADCAST != skb->pkt_type) &&
+              (PACKET_MULTICAST != skb->pkt_type))
+                wake_lock = true;
+
+          if (wake_lock)
+             vos_wake_lock_timeout_acquire(&pHddCtx->rx_wake_lock,
+                            pHddCtx->cfg_ini->rx_wakelock_timeout,
+                            WIFI_POWER_EVENT_WAKELOCK_HOLD_RX);
+             /*
+              * This is the last packet on the chain
+              * Scheduling rx sirq
+              */
+             rxstat = netif_rx_ni(skb);
       }
 
       if (NET_RX_SUCCESS == rxstat)

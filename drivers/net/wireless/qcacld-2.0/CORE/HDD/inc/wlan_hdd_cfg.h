@@ -3595,6 +3595,11 @@ enum dot11p_mode {
 #define CFG_SAP_TX_LEAKAGE_THRESHOLD_MAX     (1000)
 #define CFG_SAP_TX_LEAKAGE_THRESHOLD_DEFAULT (310)
 
+#define CFG_RX_WAKELOCK_TIMEOUT_NAME         "rx_wakelock_timeout"
+#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT      (50)
+#define CFG_RX_WAKELOCK_TIMEOUT_MIN          (0)
+#define CFG_RX_WAKELOCK_TIMEOUT_MAX          (100)
+
 /*
  * <ini>
  * arp_ac_category - ARP access category
@@ -4344,6 +4349,7 @@ struct hdd_config {
    bool                        bug_on_reinit_failure;
    /* parameter for defer timer for enabling TDLS on p2p listen */
    uint16_t                    tdls_enable_defer_time;
+   uint32_t                    rx_wakelock_timeout;
    uint32_t                    arp_ac_category;
 };
 
