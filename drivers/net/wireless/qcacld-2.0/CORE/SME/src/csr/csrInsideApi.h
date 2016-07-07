@@ -1080,3 +1080,6 @@ csr_get_bssdescr_from_scan_handle(tScanResultHandle result_handle,
                                   tSirBssDescription *bss_descr);
 eHalStatus csr_prepare_disconnect_command(tpAniSirGlobal mac,
                                     tANI_U32 session_id, tSmeCmd **sme_cmd);
+
+void csr_remove_bssid_from_scan_list(tpAniSirGlobal mac_ctx,
+                                     tSirMacAddr bssid);
