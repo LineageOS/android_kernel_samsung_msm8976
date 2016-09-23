@@ -1028,7 +1028,7 @@ static int32_t msm_sensor_driver_get_gpio_data(
 
 	/* Validate input paramters */
 	if (!sensordata || !of_node) {
-		pr_err("failed: invalid params sensordata %p of_node %p",
+		pr_err("failed: invalid params sensordata %pK of_node %pK",
 			sensordata, of_node);
 		return -EINVAL;
 	}
