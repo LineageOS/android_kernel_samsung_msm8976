@@ -563,7 +563,7 @@ static void bu24219_ois_init_shift_table (struct bu24219_ois_ctrl_t *a_ctrl)
         ret = bu24219_ois_verify_sum(&buf[ois_shift_start_addr],\
               a_ctrl->fw_info.shift_data_size, *(int *)(buf + a_ctrl->fw_info.shift_chksum_offset));
         if (ret < 0) {
-            pr_err("ERROR %s :check sum verification failed! checksum[%p] fw[%p]\n", __func__,
+            pr_err("ERROR %s :check sum verification failed! checksum[%pK] fw[%pK]\n", __func__,
                 &buf[a_ctrl->fw_info.shift_chksum_offset], &buf[ois_shift_start_addr]);
             return;
         }
@@ -668,7 +668,7 @@ int bu24219_ois_download_factory_fw_set(struct bu24219_ois_ctrl_t *a_ctrl)
     ret = bu24219_ois_verify_sum(&buf[ois_set_fw_addr],\
           a_ctrl->fw_info.fa_fw_data_size, *(int *)(buf + a_ctrl->fw_info.fa_fw_chksum_offset));
     if (ret < 0) {
-        pr_err("%s: OIS_FW check sum verification failed! checksum[%p] fw[%p]\n", __func__,
+        pr_err("%s: OIS_FW check sum verification failed! checksum[%pK] fw[%pK]\n", __func__,
             &buf[a_ctrl->fw_info.fa_fw_chksum_offset], &buf[ois_set_fw_addr]);
         return -EINVAL;
     }
@@ -767,7 +767,7 @@ int bu24219_ois_download_fw_set(struct bu24219_ois_ctrl_t *a_ctrl)
     ret = bu24219_ois_verify_sum(&buf[ois_set_fw_addr],\
           a_ctrl->fw_info.fw_data_size, *(int *)(buf + a_ctrl->fw_info.fw_chksum_offset));
     if (ret < 0) {
-        pr_err("OIS_FW check sum verification failed! checksum[%p] fw[%p]\n", &buf[a_ctrl->fw_info.fw_chksum_offset],\
+        pr_err("OIS_FW check sum verification failed! checksum[%pK] fw[%pK]\n", &buf[a_ctrl->fw_info.fw_chksum_offset],\
             &buf[ois_set_fw_addr]);
         return -EINVAL;
     }
@@ -852,7 +852,7 @@ int bu24219_ois_download_cal_data(struct bu24219_ois_ctrl_t *a_ctrl, int mode)
         ret = bu24219_ois_verify_sum(&buf[ois_cal_start_addr],\
               a_ctrl->fw_info.cal_data_size, *(int *)(buf + a_ctrl->fw_info.cal_chksum_offset));
         if (ret < 0) {
-            pr_err("OIS_CAL check sum verification failed! checksum[%p] fw[%p]\n", &buf[a_ctrl->fw_info.cal_chksum_offset],\
+            pr_err("OIS_CAL check sum verification failed! checksum[%pK] fw[%pK]\n", &buf[a_ctrl->fw_info.cal_chksum_offset],\
                 &buf[ois_cal_start_addr]);
             return -EINVAL;
         }
@@ -1430,7 +1430,7 @@ static long bu24219_ois_subdev_ioctl(struct v4l2_subdev *sd,
 {
     struct bu24219_ois_ctrl_t *a_ctrl = v4l2_get_subdevdata(sd);
     void __user *argp = (void __user *)arg;
-    CDBG_I("%s:%d a_ctrl %p argp %p command %d \n", __func__, __LINE__, a_ctrl, argp, cmd);
+    CDBG_I("%s:%d a_ctrl %pK argp %pK command %d \n", __func__, __LINE__, a_ctrl, argp, cmd);
     switch (cmd) {
     case VIDIOC_MSM_SENSOR_GET_SUBDEV_ID:
         return bu24219_ois_get_subdev_id(a_ctrl, argp);
@@ -1475,7 +1475,7 @@ static int bu24219_ois_power_up(struct bu24219_ois_ctrl_t *ctrl)
 
     if (ctrl->is_camera_run == FALSE && ctrl->ois_state == OIS_POWER_DOWN) {
 
-        CDBG("[%p] [%p]\n", ctrl->pinctrl_info.pinctrl,
+        CDBG("[%pK] [%pK]\n", ctrl->pinctrl_info.pinctrl,
             ctrl->pinctrl_info.gpio_state_active);
 
         pinctrl_select_state(ctrl->pinctrl_info.pinctrl,
@@ -1518,7 +1518,7 @@ static int bu24219_ois_power_down(struct bu24219_ois_ctrl_t *ctrl)
 
     if (ctrl->is_camera_run == FALSE && ctrl->ois_state == OIS_POWER_UP) {
 
-        CDBG("[%p] [%p]\n", ctrl->pinctrl_info.pinctrl,
+        CDBG("[%pK] [%pK]\n", ctrl->pinctrl_info.pinctrl,
             ctrl->pinctrl_info.gpio_state_suspend);
 
         gpio_direction_output(ctrl->ois_en, 0);
@@ -1662,7 +1662,7 @@ static int32_t bu24219_ois_i2c_probe(struct i2c_client *client,
     }
     ois_ctrl_t->dev = &client->dev;
 
-    CDBG("client = 0x%p\n",  client);
+    CDBG("client = 0x%pK\n",  client);
 
     rc = of_property_read_u32(client->dev.of_node, "cell-index",
 		    &ois_ctrl_t->subdev_id);
