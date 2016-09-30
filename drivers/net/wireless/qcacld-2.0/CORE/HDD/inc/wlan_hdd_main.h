@@ -1892,6 +1892,7 @@ void hdd_wlan_green_ap_start_bss(hdd_context_t *hdd_ctx);
 void hdd_wlan_green_ap_stop_bss(struct hdd_context_s *hdd_ctx);
 void hdd_wlan_green_ap_add_sta(struct hdd_context_s *hdd_ctx);
 void hdd_wlan_green_ap_del_sta(struct hdd_context_s *hdd_ctx);
+int hdd_wlan_enable_egap(struct hdd_context_s *hdd_ctx);
 #else
 static inline void hdd_wlan_green_ap_init(struct hdd_context_s *hdd_ctx) {}
 static inline void hdd_wlan_green_ap_deinit(struct hdd_context_s *hdd_ctx) {}
@@ -1899,6 +1900,9 @@ static inline void hdd_wlan_green_ap_start_bss(hdd_context_t *hdd_ctx) {}
 static inline void hdd_wlan_green_ap_stop_bss(struct hdd_context_s *hdd_ctx) {}
 static inline void hdd_wlan_green_ap_add_sta(struct hdd_context_s *hdd_ctx) {}
 static inline void hdd_wlan_green_ap_del_sta(struct hdd_context_s *hdd_ctx) {}
+static inline int hdd_wlan_enable_egap(struct hdd_context_s *hdd_ctx) {
+    return -EINVAL;
+}
 #endif
 
 #ifdef WLAN_FEATURE_STATS_EXT

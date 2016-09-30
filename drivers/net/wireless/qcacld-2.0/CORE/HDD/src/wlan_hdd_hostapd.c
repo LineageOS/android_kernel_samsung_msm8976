@@ -1491,8 +1491,6 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
 
             pHostapdState->bssState = BSS_START;
 
-            hdd_wlan_green_ap_start_bss(pHddCtx);
-
             // Send current operating channel of SoftAP to BTC-ES
             send_btc_nlink_msg(WLAN_BTC_SOFTAP_BSS_START, 0);
 
@@ -1605,8 +1603,6 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
 
             hdd_hostapd_channel_allow_suspend(pHostapdAdapter,
                     pHddApCtx->operatingChannel);
-
-            hdd_wlan_green_ap_stop_bss(pHddCtx);
 
             //Free up Channel List incase if it is set
 #ifdef WLAN_FEATURE_MBSSID
