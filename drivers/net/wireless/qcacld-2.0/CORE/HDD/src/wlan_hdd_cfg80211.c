@@ -9491,6 +9491,7 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 	uint32_t is_fast_roam_enabled;
 	eHalStatus status;
 	int ret;
+	hdd_station_ctx_t *hddstactx;
 
 	ENTER();
 
@@ -9520,6 +9521,26 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 				tb[QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY]);
 	hddLog(LOG1, FL("isFastRoamEnabled %d"), is_fast_roam_enabled);
 
+	/*
+	 * If framework sends pause_roam, host to send WAIT indication to
+	 * framework if roaming is in progress. This can help framework to
+	 * defer out-network roaming. EBUSY is used to convey wait indication.
+	 */
+	if (!is_fast_roam_enabled) {
+		if (sme_staInMiddleOfRoaming(hdd_ctx->hHal,
+					adapter->sessionId)) {
+			hddLog(LOG1, FL("Roaming in progress, do not allow disable"));
+			return -EBUSY;
+		}
+
+		hddstactx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+		if (hddstactx->hdd_ReassocScenario) {
+			hddLog(LOG1,
+				FL("Roaming in progress, so unable to disable roaming"));
+			return -EBUSY;
+		}
+	}
+
 	/* Update roaming */
 	status = sme_config_fast_roaming(hdd_ctx->hHal, adapter->sessionId,
 					 is_fast_roam_enabled);
@@ -9528,6 +9549,7 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 			FL("sme_config_fast_roaming (err=%d)"), status);
 		return -EINVAL;
 	}
+
 	EXIT();
 	return 0;
 }
@@ -16140,7 +16162,6 @@ int wlan_hdd_cfg80211_connect_start( hdd_adapter_t  *pAdapter,
         vos_mem_copy((void *)(pRoamProfile->SSIDs.SSIDList->SSID.ssId),
                 ssid, ssid_len);
 
-        pRoamProfile->do_not_roam = false;
         if (bssid)
         {
             pRoamProfile->BSSIDs.numOfBSSIDs = 1;
