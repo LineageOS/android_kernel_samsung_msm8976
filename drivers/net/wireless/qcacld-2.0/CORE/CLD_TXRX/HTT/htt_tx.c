@@ -69,9 +69,6 @@
 
 /*--- setup / tear-down functions -------------------------------------------*/
 
-#ifdef QCA_SUPPORT_TXDESC_SANITY_CHECKS
-u_int32_t *g_dbg_htt_desc_end_addr, *g_dbg_htt_desc_start_addr;
-#endif
 
 /**
  * htt_tx_desc_get_size() - get tx descripotrs size
