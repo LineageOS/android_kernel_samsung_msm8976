@@ -882,6 +882,9 @@ WLANSAP_StartBss
          */
         pmac->sap.SapDfsInfo.disable_dfs_ch_switch =
                                    pConfig->disableDFSChSwitch;
+
+        pmac->sap.SapDfsInfo.sap_enable_radar_war =
+                                   pConfig->enable_radar_war;
         // Copy MAC filtering settings to sap context
         pSapCtx->eSapMacAddrAclMode = pConfig->SapMacaddr_acl;
         vos_mem_copy(pSapCtx->acceptMacList, pConfig->accept_mac, sizeof(pConfig->accept_mac));

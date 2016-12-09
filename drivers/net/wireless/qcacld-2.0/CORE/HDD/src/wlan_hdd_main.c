@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -8782,6 +8782,30 @@ void hdd_update_tgt_cfg(void *context, void *param)
             HDD_ANTENNA_MODE_2X2 : HDD_ANTENNA_MODE_1X1;
     hddLog(LOG1, FL("Current antenna mode: %d"),
            hdd_ctx->current_antenna_mode);
+}
+
+void hdd_update_dfs_cac_block_tx_flag(void *context, bool cac_block_tx)
+{
+	hdd_context_t *hdd_ctx = (hdd_context_t *)context;
+	hdd_adapter_list_node_t *adapter_node = NULL, *next = NULL;
+	hdd_adapter_t *adapter;
+	VOS_STATUS status;
+
+	if (wlan_hdd_validate_context(hdd_ctx))
+		return;
+	if (hdd_ctx->cfg_ini->disableDFSChSwitch)
+		return;
+	status = hdd_get_front_adapter(hdd_ctx, &adapter_node);
+	while (NULL != adapter_node && VOS_STATUS_SUCCESS == status) {
+		adapter = adapter_node->pAdapter;
+		if (WLAN_HDD_SOFTAP == adapter->device_mode ||
+				WLAN_HDD_P2P_GO == adapter->device_mode)
+			WLAN_HDD_GET_AP_CTX_PTR(adapter)->dfs_cac_block_tx =
+					cac_block_tx;
+
+		status = hdd_get_next_adapter(hdd_ctx, adapter_node, &next);
+		adapter_node = next;
+	}
 }
 
 /* This function is invoked in atomic context when a radar
