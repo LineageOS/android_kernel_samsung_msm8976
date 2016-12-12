@@ -598,8 +598,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 			   hdrincl ? IPPROTO_RAW : sk->sk_protocol,
 			   inet_sk_flowi_flags(sk) | FLOWI_FLAG_CAN_SLEEP |
 			    (hdrincl ? FLOWI_FLAG_KNOWN_NH : 0),
-			   daddr, saddr, 0, 0,
-			   sock_i_uid(sk));
+			   daddr, saddr, 0, 0);
 
 	if (!hdrincl) {
 		rfv.iov = msg->msg_iov;
