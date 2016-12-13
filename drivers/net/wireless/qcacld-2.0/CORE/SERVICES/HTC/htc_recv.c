@@ -581,20 +581,14 @@ A_STATUS HTCWaitRecvCtrlMessage(HTC_TARGET *target)
 {
 //    int count = HTC_TARGET_MAX_RESPONSE_POLL;
 
-    HTC_INIT_INFO   *initInfo = &target->HTCInitInfo;
     AR_DEBUG_PRINTF(ATH_DEBUG_ERR,("+HTCWaitCtrlMessageRecv\n"));
 
     adf_os_re_init_completion(target->CtrlResponseValid);
     /* Wait for BMI request/response transaction to complete */
     if(!adf_os_wait_for_completion_timeout(&target->CtrlResponseValid,
         adf_os_msecs_to_ticks(HTC_CONTROL_RX_TIMEOUT))) {
-        /* Reset the target by invoking power off and power on sequence to
-         * the card to bring back into active state.
-         */
-        printk("%s: ++\n", __func__);
-        sdio_ramdump_handler(initInfo->pContext);
-        printk("%s: --\n", __func__);
-        VOS_BUG(0);
+        if(hif_set_target_reset(target->hif_dev))
+            VOS_BUG(0);
         return A_ERROR;
     }
 
