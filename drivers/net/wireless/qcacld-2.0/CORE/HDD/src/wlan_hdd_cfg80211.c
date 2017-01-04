@@ -5912,8 +5912,7 @@ static void hdd_link_layer_process_radio_stats(hdd_adapter_t *pAdapter,
  * after receiving Link Layer indications from FW.This callback converts the
  * firmware data to the NL data and send the same to the kernel/upper layers.
  */
-static void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx,
-                                                        int indType,
+static void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx, int indType,
                                                         void *pRsp)
 {
     hdd_adapter_t *pAdapter = NULL;
@@ -6042,10 +6041,9 @@ static void wlan_hdd_cfg80211_link_layer_stats_callback(void *ctx,
 
 void wlan_hdd_cfg80211_link_layer_stats_init(hdd_context_t *pHddCtx)
 {
-    sme_SetLinkLayerStatsIndCB(pHddCtx->hHal,
-                                 wlan_hdd_cfg80211_link_layer_stats_callback);
+        sme_SetLinkLayerStatsIndCB(pHddCtx->hHal,
+                                   wlan_hdd_cfg80211_link_layer_stats_callback);
 }
-
 
 const struct
 nla_policy
