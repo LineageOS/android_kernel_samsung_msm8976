@@ -20,7 +20,6 @@
 #include "msm8976-sec-gts210vewifi-eur-battery-r04.dtsi"
 #include "msm8976-sm5703.dtsi"
 //#include "msm8976-s2mpb02.dtsi"
-#include "msm8976-sec-a9xlte-chn-mst-r02.dtsi"
 #include "msm8976-camera-sensor-tabs-r01.dtsi"
 
 /{
