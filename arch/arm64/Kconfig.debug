@@ -128,7 +128,7 @@ config SEC_RESTRICT_ROOTING
 config SEC_RESTRICT_SETUID
 	bool "Restrict changing root privilege except allowed process"
 	depends on SEC_RESTRICT_ROOTING
-	default y
+	default n
 	help
 	  Say Y here if you want to restrict functions related setuid. Only allowed
 	  process can chanage ROOT privilege. Saying N will not restrict changing
@@ -137,7 +137,7 @@ config SEC_RESTRICT_SETUID
 config SEC_RESTRICT_FORK
 	bool "Restrict forking process except allowed process"
 	depends on SEC_RESTRICT_ROOTING
-	default y
+	default n
 	help
 	  Say Y here if you want to restrict function related fork. Process matched
 	  special condition will be not forked. Saying N will not restrict forking
