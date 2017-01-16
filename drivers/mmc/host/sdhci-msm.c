@@ -973,6 +973,13 @@ int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode)
 		(ios.timing == MMC_TIMING_UHS_SDR104)))
 		return 0;
 
+	/*
+	 * Don't allow re-tuning for CRC errors observed for any commands
+	 * that are sent during tuning sequence itself.
+	 */
+	if (msm_host->tuning_in_progress)
+		return 0;
+	msm_host->tuning_in_progress = true;
 	pr_debug("%s: Enter %s\n", mmc_hostname(mmc), __func__);
 
 	/* CDC/SDC4 DLL HW calibration is only required for HS400 mode*/
@@ -1148,6 +1155,7 @@ out:
 	if (!rc)
 		msm_host->tuning_done = true;
 	spin_unlock_irqrestore(&host->lock, flags);
+	msm_host->tuning_in_progress = false;
 	pr_debug("%s: Exit %s, err(%d)\n", mmc_hostname(mmc), __func__, rc);
 	return rc;
 }
@@ -3793,6 +3801,8 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
 	host->quirks2 |= SDHCI_QUIRK2_USE_RESERVED_MAX_TIMEOUT;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_LED_CONTROL;
+	host->quirks2 |= SDHCI_QUIRK2_NON_STANDARD_TUNING;
+	host->quirks2 |= SDHCI_QUIRK2_USE_PIO_FOR_EMMC_TUNING;
 
 	if (host->quirks2 & SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK)
 		host->quirks2 |= SDHCI_QUIRK2_DIVIDE_TOUT_BY_4;

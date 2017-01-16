@@ -2413,7 +2413,7 @@ long kgsl_ioctl_gpuobj_import(struct kgsl_device_private *dev_priv,
 		entry->memdesc.size);
 
 	trace_kgsl_mem_map(entry, fd);
-	
+
 	kgsl_mem_entry_commit_process(private, entry);
 	return 0;
 
@@ -4127,9 +4127,8 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 	disable_irq(device->pwrctrl.interrupt_num);
 
 	KGSL_DRV_INFO(device,
-		"dev_id %d regs phys 0x%08lx size 0x%08x virt %p\n",
-		device->id, device->reg_phys, device->reg_len,
-		device->reg_virt);
+		"dev_id %d regs phys 0x%08lx size 0x%08x\n",
+		device->id, device->reg_phys, device->reg_len);
 
 	rwlock_init(&device->context_lock);
 

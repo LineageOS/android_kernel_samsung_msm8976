@@ -2000,6 +2000,11 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 	bool found_app = false;
 	bool found_dead_app = false;
 
+	if (!data) {
+		pr_err("Invalid/uninitialized device handle\n");
+		return -EINVAL;
+	}
+
 	if (!memcmp(data->client.app_name, "keymaste", strlen("keymaste"))) {
 		pr_debug("Do not unload keymaster app from tz\n");
 		goto unload_exit;
@@ -2029,7 +2034,8 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			pr_err("Cannot find app with id = %d (%s)\n",
 				data->client.app_id,
 				(char *)data->client.app_name);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto unload_exit;
 		}
 	}
 

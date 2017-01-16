@@ -746,7 +746,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 				__func__, ret);
 			return ret;
 		}
-		prtd->lsm_client->opened = true;		
+		prtd->lsm_client->opened = true;
 		dev_dbg(rtd->dev, "%s: Session_ID = %d, APP ID = %d\n",
 			__func__,
 			prtd->lsm_client->session,
@@ -1693,7 +1693,7 @@ static int msm_lsm_open(struct snd_pcm_substream *substream)
 		runtime->private_data = NULL;
 		return -ENOMEM;
 	}
-	prtd->lsm_client->opened = false;	
+	prtd->lsm_client->opened = false;
 	return 0;
 }
 

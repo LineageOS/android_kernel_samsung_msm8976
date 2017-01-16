@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -431,7 +431,7 @@ static const struct reg_default wsa881x_vi_txfe_en[] = {
 static const struct reg_default wsa881x_vi_txfe_en_2_0[] = {
 	{WSA881X_SPKR_PROT_FE_VSENSE_VCM, 0x85},
 	{WSA881X_SPKR_PROT_ATEST2, 0x0A},
-	{WSA881X_SPKR_PROT_FE_GAIN, 0xCF},
+	{WSA881X_SPKR_PROT_FE_GAIN, 0x47},
 };
 
 static int wsa881x_boost_ctrl(struct snd_soc_codec *codec, bool enable)
@@ -460,14 +460,26 @@ static int wsa881x_visense_txfe_ctrl(struct snd_soc_codec *codec, bool enable,
 		__func__, enable, isense1_gain, isense2_gain, vsense_gain);
 
 	if (enable) {
-		if (WSA881X_IS_2_0(wsa881x->version))
+		if (WSA881X_IS_2_0(wsa881x->version)) {
 			regmap_multi_reg_write(wsa881x->regmap,
 					wsa881x_vi_txfe_en_2_0,
 					ARRAY_SIZE(wsa881x_vi_txfe_en_2_0));
-		else
+			if (!wsa881x->comp_enable) {
+				if (((snd_soc_read(codec, WSA881X_SPKR_DRV_GAIN)
+						  & 0xF0) >> 4) < G_15DB)
+					snd_soc_update_bits(codec,
+						WSA881X_SPKR_PROT_FE_GAIN,
+						0xF8, 0xC8);
+				else
+					snd_soc_update_bits(codec,
+						WSA881X_SPKR_PROT_FE_GAIN,
+						0xF8, 0x40);
+			}
+		} else {
 			regmap_multi_reg_write(wsa881x->regmap,
 					       wsa881x_vi_txfe_en,
 					       ARRAY_SIZE(wsa881x_vi_txfe_en));
+		}
 	} else {
 		snd_soc_update_bits(codec, WSA881X_SPKR_PROT_FE_VSENSE_VCM,
 				    0x08, 0x08);
@@ -737,6 +749,9 @@ static int wsa881x_rdac_event(struct snd_soc_dapm_widget *w,
 			wsa881x_boost_ctrl(codec, ENABLE);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+		swr_slvdev_datapath_control(wsa881x->swr_slave,
+					    wsa881x->swr_slave->dev_num,
+					    false);
 		if (wsa881x->boost_enable)
 			wsa881x_boost_ctrl(codec, DISABLE);
 		wsa881x_resource_acquire(codec, DISABLE);
@@ -802,15 +817,21 @@ static int wsa881x_spkr_pa_event(struct snd_soc_dapm_widget *w,
 			regmap_multi_reg_write(wsa881x->regmap,
 					wsa881x_pre_pmu_pa,
 					ARRAY_SIZE(wsa881x_pre_pmu_pa));
+		swr_slvdev_datapath_control(wsa881x->swr_slave,
+					    wsa881x->swr_slave->dev_num,
+					    true);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		if (WSA881X_IS_2_0(wsa881x->version)) {
-			/*
-			 * 1ms delay is needed before change in gain as per
-			 * HW requirement.
-			 */
-			usleep_range(1000, 1010);
-			wsa881x_ramp_pa_gain(codec, G_13P5DB, G_18DB, 1000);
+			if (!wsa881x->comp_enable) {
+				/*
+				 * 1ms delay is needed before change in gain
+				 * as per HW requirement.
+				 */
+				usleep_range(1000, 1010);
+				wsa881x_ramp_pa_gain(codec, G_13P5DB, G_18DB,
+						     1000);
+			}
 		} else {
 			/*
 			 * 710us delay is needed after PA enable as per
@@ -820,12 +841,15 @@ static int wsa881x_spkr_pa_event(struct snd_soc_dapm_widget *w,
 			regmap_multi_reg_write(wsa881x->regmap,
 					       wsa881x_post_pmu_pa,
 					       ARRAY_SIZE(wsa881x_post_pmu_pa));
-			/*
-			 * 1ms delay is needed before change in gain as per
-			 * HW requirement.
-			 */
-			usleep_range(1000, 1010);
-			wsa881x_ramp_pa_gain(codec, G_12DB, G_13P5DB, 1000);
+			if (!wsa881x->comp_enable) {
+				/*
+				 * 1ms delay is needed before change in gain
+				 * as per HW requirement.
+				 */
+				usleep_range(1000, 1010);
+				wsa881x_ramp_pa_gain(codec, G_12DB, G_13P5DB,
+						     1000);
+			}
 			snd_soc_update_bits(codec, WSA881X_ADC_SEL_IBIAS,
 					    0x70, 0x40);
 		}

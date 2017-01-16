@@ -905,7 +905,7 @@ done:
 out:
 	fl6_sock_release(flowlabel);
 	txopt_put(opt_to_free);
-	return err<0?err:len;
+	return err < 0 ? err : len;
 do_confirm:
 	dst_confirm(dst);
 	if (!(msg->msg_flags & MSG_PROBE) || len)

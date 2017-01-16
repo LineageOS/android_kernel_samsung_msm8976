@@ -109,7 +109,7 @@ static ssize_t panel_debug_base_offset_read(struct file *file,
 	if (*ppos)
 		return 0;	/* the end */
 
-	len = snprintf(buf, sizeof(buf), "0x%02zx %zd\n", dbg->off, dbg->cnt);
+	len = snprintf(buf, sizeof(buf), "0x%02zx %zx\n", dbg->off, dbg->cnt);
 	if (len < 0 || len >= sizeof(buf))
 		return 0;
 
@@ -228,7 +228,7 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 				NULL, rx_buf, dbg->cnt);
 
 	len = snprintf(panel_reg_buf, reg_buf_len, "0x%02zx: ", dbg->off);
-	if (len < 0)
+	if (len < 0 || len >= sizeof(panel_reg_buf))
 		goto read_reg_fail;
 
 	for (i = 0; (len < reg_buf_len) && (i < ctrl_pdata->rx_len); i++)
@@ -240,7 +240,8 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 	if (mdata->debug_inf.debug_enable_clock)
 		mdata->debug_inf.debug_enable_clock(0);
 
-	if (copy_to_user(user_buf, panel_reg_buf, len))
+	if ((count < sizeof(panel_reg_buf))
+				|| copy_to_user(user_buf, panel_reg_buf, len))
 		goto read_reg_fail;
 
 	kfree(rx_buf);
@@ -761,7 +762,7 @@ static ssize_t mdss_debug_perf_mode_write(struct file *file,
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
 
-	buf[count] = 0;		/* end of string */
+	buf[count] = 0;	/* end of string */
 
 	if (sscanf(buf, "%d", &perf_mode) != 1)
 		return -EFAULT;
@@ -898,7 +899,7 @@ static ssize_t mdss_debug_perf_panic_write(struct file *file,
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
 
-	buf[count] = 0; 	/* end of string */
+	buf[count] = 0;	/* end of string */
 
 	if (sscanf(buf, "%d", &disable_panic) != 1)
 		return -EFAULT;
@@ -1325,6 +1326,7 @@ int mdss_misr_set(struct mdss_data_type *mdata,
 			mdata, req, ctl);
 		return -EINVAL;
 	}
+
 	map = mdss_misr_get_map(req->block_id, ctl, mdata);
 
 	if (!map) {

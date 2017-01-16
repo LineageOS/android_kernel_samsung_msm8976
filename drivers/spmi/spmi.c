@@ -243,6 +243,12 @@ int spmi_add_device(struct spmi_device *spmidev)
 		return id;
 	}
 
+	id = ida_simple_get(&spmi_devid_ida, 0, 0, GFP_KERNEL);
+	if (id < 0) {
+		pr_err("No id available status = %d\n", id);
+		return id;
+	}
+
 	/* Set the device name */
 	spmidev->id = id;
 	dev_set_name(dev, "%s-%d", spmidev->name, spmidev->id);
