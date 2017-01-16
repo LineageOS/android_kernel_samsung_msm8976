@@ -4354,6 +4354,14 @@ REG_TABLE_ENTRY g_registry_table[] =
                 CFG_TDLS_ENABLE_DEFER_TIMER_DEFAULT,
                 CFG_TDLS_ENABLE_DEFER_TIMER_MIN,
                 CFG_TDLS_ENABLE_DEFER_TIMER_MAX),
+
+   REG_VARIABLE(CFG_ARP_AC_CATEGORY, WLAN_PARAM_Integer,
+                hdd_config_t, arp_ac_category,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_ARP_AC_CATEGORY_DEFAULT,
+                CFG_ARP_AC_CATEGORY_MIN,
+                CFG_ARP_AC_CATEGORY_MAX),
+
 };
 
 #ifdef WLAN_FEATURE_MBSSID
@@ -5094,6 +5102,10 @@ void print_hdd_cfg(hdd_context_t *pHddCtx)
   hddLog(LOG2, "Name = [%s] Value = [%u] ",
                  CFG_TDLS_ENABLE_DEFER_TIMER,
                  pHddCtx->cfg_ini->tdls_enable_defer_time);
+
+  hddLog(LOG2, "Name = [%s] Value = [%u]",
+                 CFG_ARP_AC_CATEGORY,
+                 pHddCtx->cfg_ini->arp_ac_category);
 }
 
 #define CFG_VALUE_MAX_LEN 256
