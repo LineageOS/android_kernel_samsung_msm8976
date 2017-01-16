@@ -75,6 +75,15 @@ config QPNP_POWER_ON
 	  PNP PMIC. It currently supports reporting the change in status of
 	  the KPDPWR_N line (connected to the power-key).
 
+config QPNP_RESIN
+	bool "QPNP support RESIN"
+	depends on QPNP_POWER_ON
+	default n
+	help
+	  This supports the resin functionality on Qualcomm PNP PMIC.
+	  It supports reporting the change in status of the RESIN line
+	  (connected to the volume down key).
+
 config QPNP_CLKDIV
 	tristate "QPNP PMIC clkdiv driver"
 	depends on OF_SPMI && SPMI
@@ -305,4 +314,15 @@ config SEEMP_CORE
           This option enables Qualcomm Technologies, Inc. Snapdragron Smart Protection to
           detect anomalies in various activities. It records task activities in a log and
           rates the actions according to whether a typical user would use the tools.
+
+config VOLDOWN_QPNP_RESIN
+        bool "When QPNP_RESIN is used as Volume down key"
+        depends on QPNP_RESIN
+        default n
+        help
+	  Samsung uses volume down key to enter into safe mode. 
+	  Procedure is, press key from start of lk and held until home screen is
+ 	  launched. "CONFIG_VOLDOWN_QPNP_RESIN" flag is added to make sure this change applies
+	  for SS models which use QPNP_RESIN_N as volume down key.
+
 endmenu

@@ -26,8 +26,15 @@
 #include <soc/qcom/smem.h>
 #include <soc/qcom/spm.h>
 #include <soc/qcom/pm.h>
+#ifdef CONFIG_SEC_DEBUG
+#include "linux/qcom/sec_debug.h"
+#endif
 #include "board-dt.h"
 #include "platsmp.h"
+
+#ifdef CONFIG_PROC_AVC
+#include <linux/proc_avc.h>
+#endif
 
 static void __init msm8916_dt_reserve(void)
 {
@@ -60,6 +67,14 @@ void __init msm8916_add_drivers(void)
 static void __init msm8916_init(void)
 {
 	struct of_dev_auxdata *adata = msm8916_auxdata_lookup;
+
+#ifdef CONFIG_SEC_DEBUG
+	sec_debug_init();
+#endif
+
+#ifdef CONFIG_PROC_AVC
+	sec_avc_log_init();
+#endif
 
 	/*
 	 * populate devices from DT first so smem probe will get called as part

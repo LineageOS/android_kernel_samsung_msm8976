@@ -54,7 +54,7 @@
 #define C0_G_Y		0	/* G/luma */
 
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
-#define KOFF_TIMEOUT msecs_to_jiffies(84)
+#define KOFF_TIMEOUT msecs_to_jiffies(100)
 
 #define OVERFETCH_DISABLE_TOP		BIT(0)
 #define OVERFETCH_DISABLE_BOTTOM	BIT(1)
@@ -224,6 +224,9 @@ struct mdss_mdp_ctl_intfs_ops {
 					struct mdss_mdp_vsync_handler *);
 	int (*config_fps_fnc)(struct mdss_mdp_ctl *ctl, int new_fps);
 	int (*restore_fnc)(struct mdss_mdp_ctl *ctl);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	int (*wait_video_pingpong) (struct mdss_mdp_ctl *ctl, void *arg);
+#endif
 };
 
 struct mdss_mdp_ctl {
@@ -1186,5 +1189,9 @@ int mdss_mdp_cmd_set_autorefresh_mode(struct mdss_mdp_ctl *ctl,
 		int frame_cnt);
 int mdss_mdp_ctl_cmd_autorefresh_enable(struct mdss_mdp_ctl *ctl,
 		int frame_cnt);
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+void samsung_timing_engine_control(int enable);
+#endif
 
 #endif /* MDSS_MDP_H */

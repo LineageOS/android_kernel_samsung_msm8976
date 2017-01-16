@@ -517,14 +517,13 @@ static int cam_smmu_map_buffer_and_add_to_list(int idx, int ion_fd,
 		goto err_detach;
 	}
 
-	rc = dma_map_sg(iommu_cb_set.cb_info[idx].dev, table->sgl,
-			table->nents, dma_dir);
-	if (!rc) {
-		pr_err("Error: dma_map_sg failed\n");
-		goto err_unmap_sg;
-	}
-
-	if (table->sgl) {
+	if(table->sgl){
+		rc = dma_map_sg(iommu_cb_set.cb_info[idx].dev, table->sgl,
+				table->nents, dma_dir);
+		if (!rc) {
+			pr_err("Error: dma_map_sg failed\n");
+			goto err_unmap_sg;
+		}
 		CDBG("DMA buf: %p, device: %p, attach: %p, table: %p\n",
 				(void *)buf,
 				(void *)iommu_cb_set.cb_info[idx].dev,

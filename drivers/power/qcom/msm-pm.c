@@ -43,6 +43,10 @@
 #include "idle.h"
 #include "pm-boot.h"
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
+
 #define SCM_CMD_TERMINATE_PC	(0x2)
 #define SCM_CMD_CORE_HOTPLUGGED (0x10)
 #define SCM_FLUSH_FLAG_MASK	(0x3)
@@ -264,8 +268,16 @@ static bool __ref msm_pm_spm_power_collapse(
 		pr_info("CPU%u: %s: program vector to %p\n",
 			cpu, __func__, entry);
 
+#ifdef CONFIG_SEC_DEBUG
+        secdbg_sched_msg("+pc(I:%d,R:%d)", from_idle, notify_rpm);
+#endif
+
 	collapsed = save_cpu_regs ?
 		!__cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
+
+#ifdef CONFIG_SEC_DEBUG
+        secdbg_sched_msg("-pc(%d)", collapsed);
+#endif
 
 	if (collapsed)
 		local_fiq_enable();

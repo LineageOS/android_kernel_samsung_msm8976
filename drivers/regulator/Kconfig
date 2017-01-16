@@ -628,5 +628,19 @@ config REGULATOR_CPR2_GFX
 	  graphics (GFX) rail. The GFX CPR2 controller monitors the graphics voltage
 	  requirements. This driver reads initial voltage values out of hardware
 	  fuses and CPR target quotient values out of device tree.
+
+config REGULATOR_SM5705
+	tristate "SM705 regulator"
+	depends on MFD_SM5705
+	help
+	 This driver controls a SM5705 regulator
+          via I2C bus. SM5705 is comprised of USBLDOs.
+
+config REGULATOR_S2MPB02
+	tristate "Samsung S2MPB02 regulator"
+	depends on MFD_S2MPB02
+	help
+	  This driver controls a Samsung S2MPB02 regulator via I2C bus.
+
 endif
 

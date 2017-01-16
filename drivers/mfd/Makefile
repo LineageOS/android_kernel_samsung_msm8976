@@ -106,6 +106,9 @@ obj-$(CONFIG_SND_SOC_MSM8X16_WCD)	+= wcd9xxx-core.o wcd9xxx-irq.o\
 						wcd9xxx-slimslave.o wcd9xxx-core-resource.o
 obj-$(CONFIG_SND_SOC_MSM8909_WCD)	+= wcd9xxx-core.o wcd9xxx-irq.o\
 						wcd9xxx-slimslave.o wcd9xxx-core-resource.o
+obj-$(CONFIG_MFD_S2MU005)	+= s2mu005_core.o s2mu005_irq.o
+obj-$(CONFIG_MFD_S2MPB02)       += s2mpb02-core.o s2mpb02-irq.o
+obj-$(CONFIG_MFD_S2MPB01)       += s2mpb01-core.o s2mpb01-irq.o
 
 ifeq ($(CONFIG_SA1100_ASSABET),y)
 obj-$(CONFIG_MCP_UCB1200)	+= ucb1x00-assabet.o
@@ -126,11 +129,13 @@ obj-$(CONFIG_MFD_DA9055)	+= da9055.o
 
 obj-$(CONFIG_MFD_MAX77686)	+= max77686.o max77686-irq.o
 obj-$(CONFIG_MFD_MAX77693)	+= max77693.o max77693-irq.o
+obj-$(CONFIG_MFD_SM5705)        += sm5705.o sm5705-irq.o
 obj-$(CONFIG_MFD_MAX8907)	+= max8907.o
 max8925-objs			:= max8925-core.o max8925-i2c.o
 obj-$(CONFIG_MFD_MAX8925)	+= max8925.o
 obj-$(CONFIG_MFD_MAX8997)	+= max8997.o max8997-irq.o
 obj-$(CONFIG_MFD_MAX8998)	+= max8998.o max8998-irq.o
+obj-$(CONFIG_MFD_MAX77843)      += max77843.o max77843-irq.o
 
 pcf50633-objs			:= pcf50633-core.o pcf50633-irq.o
 obj-$(CONFIG_MFD_PCF50633)	+= pcf50633.o
@@ -175,3 +180,9 @@ obj-$(CONFIG_MFD_LM3533)	+= lm3533-core.o lm3533-ctrlbank.o
 obj-$(CONFIG_VEXPRESS_CONFIG)	+= vexpress-config.o vexpress-sysreg.o
 obj-$(CONFIG_MFD_RETU)		+= retu-mfd.o
 obj-$(CONFIG_MFD_AS3711)	+= as3711.o
+obj-$(CONFIG_MFD_RT5033)	+= rt5033_core.o rt5033_irq.o
+obj-$(CONFIG_MFD_SM5703) 	+= sm5703_core.o sm5703_irq.o
+obj-$(CONFIG_MFD_SM5701) 	+= sm5701_core.o sm5701_irq.o
+obj-$(CONFIG_MFD_S2MU003)	+= s2mu003_core.o s2mu003_irq.o
+obj-$(CONFIG_MFD_S2MU005)	+= s2mu005_core.o s2mu005_irq.o
+obj-$(CONFIG_MFD_LM3632)	+= lm3632.o

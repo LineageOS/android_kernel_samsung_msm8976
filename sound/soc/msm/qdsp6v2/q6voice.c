@@ -1,4 +1,4 @@
-/*  Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/*  Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -44,6 +44,11 @@ enum {
 
 static struct common_data common;
 static bool module_initialized;
+
+#ifdef CONFIG_SEC_VOC_SOLUTION
+static int loopback_mode = 0;
+static int loopback_prev_mode = 0;
+#endif /* CONFIG_SEC_VOC_SOLUTION */
 
 static int voice_send_enable_vocproc_cmd(struct voice_data *v);
 static int voice_send_netid_timing_cmd(struct voice_data *v);
@@ -111,6 +116,35 @@ static int voice_send_get_sound_focus_cmd(struct voice_data *v,
 				struct sound_focus_param *soundFocusData);
 static int voice_send_get_source_tracking_cmd(struct voice_data *v,
 			struct source_tracking_param *sourceTrackingData);
+
+#ifdef CONFIG_SEC_VOC_SOLUTION
+static int send_packet_loopback_cmd(struct voice_data *v, int mode);
+
+int voc_get_loopback_enable(void)
+{
+	return loopback_mode;
+}
+
+void voc_set_loopback_enable(int mode)
+{
+	loopback_prev_mode = loopback_mode;
+
+	if (mode >= LOOPBACK_MAX ||
+	    mode < LOOPBACK_DISABLE) {
+		pr_err("%s : out of range, mode = %d\n",
+			__func__, mode);
+		loopback_mode = LOOPBACK_DISABLE;
+	}
+	else {
+		loopback_mode = mode;
+	}
+
+	pr_info("%s : prev_mode = %d, mode = %d\n",
+		__func__,
+		loopback_prev_mode,
+		loopback_mode);
+}
+#endif /* CONFIG_SEC_VOC_SOLUTION */
 
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
@@ -348,7 +382,7 @@ static struct voice_data *voice_get_session(u32 session_id)
 		break;
 	}
 
-	pr_debug("%s:session_id 0x%x session handle %p\n",
+	pr_debug("%s:session_id 0x%x session handle %pK\n",
 		__func__, session_id, v);
 
 	return v;
@@ -2980,6 +3014,67 @@ fail:
 	return -EINVAL;
 }
 
+#ifdef CONFIG_SEC_VOC_SOLUTION
+static int send_packet_loopback_cmd(struct voice_data *v, int mode)
+{
+	struct cvs_set_loopback_enable_cmd cvs_set_loopback_cmd;
+	int ret = 0;
+	void *apr_cvs;
+	u16 cvs_handle;
+
+	if (v == NULL) {
+		pr_err("%s: v is NULL\n", __func__);
+		return -EINVAL;
+	}
+	apr_cvs = common.apr_q6_cvs;
+
+	if (!apr_cvs) {
+		pr_err("%s: apr_cvs is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	cvs_handle = voice_get_cvs_handle(v);
+
+	/* fill in the header */
+	cvs_set_loopback_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	cvs_set_loopback_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(cvs_set_loopback_cmd) - APR_HDR_SIZE);
+	cvs_set_loopback_cmd.hdr.src_port =
+				voice_get_idx_for_session(v->session_id);
+	cvs_set_loopback_cmd.hdr.dest_port = cvs_handle;
+	cvs_set_loopback_cmd.hdr.token = 0;
+	cvs_set_loopback_cmd.hdr.opcode = VOICE_CMD_SET_PARAM;
+
+	cvs_set_loopback_cmd.mem_handle = 0;
+	cvs_set_loopback_cmd.mem_address = 0;
+	cvs_set_loopback_cmd.mem_size = 0x10;
+
+	cvs_set_loopback_cmd.vss_set_loopback.module_id = VOICEPROC_MODULE_VENC;
+	cvs_set_loopback_cmd.vss_set_loopback.param_id = VOICE_PARAM_LOOPBACK_ENABLE;
+	cvs_set_loopback_cmd.vss_set_loopback.param_size = MOD_ENABLE_PARAM_LEN;
+	cvs_set_loopback_cmd.vss_set_loopback.reserved = 0;
+	cvs_set_loopback_cmd.vss_set_loopback.loopback_enable = mode;
+	cvs_set_loopback_cmd.vss_set_loopback.reserved_field = 0;
+
+	v->cvs_state = CMD_STATUS_FAIL;
+	ret = apr_send_pkt(apr_cvs, (uint32_t *) &cvs_set_loopback_cmd);
+	if (ret < 0) {
+		pr_err("%s: sending cvs set loopback enable failed\n", __func__);
+		goto fail;
+	}
+	ret = wait_event_timeout(v->cvs_wait,
+		(v->cvs_state == CMD_STATUS_SUCCESS),
+			msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: wait_event timeout\n", __func__);
+		goto fail;
+	}
+	return 0;
+fail:
+	return -EINVAL;
+}
+#endif /* CONFIG_SEC_VOC_SOLUTION */
+
 static int voice_pause_voice_call(struct voice_data *v)
 {
 	struct apr_hdr	mvm_pause_voice_cmd;
@@ -3087,7 +3182,7 @@ static int voice_map_cal_memory(struct cal_block_data *cal_block,
 		cal_block->map_data.map_size,
 		VOC_CAL_MEM_MAP_TOKEN);
 	if (result < 0) {
-		pr_err("%s: Mmap did not work! addr = 0x%pa, size = %zd\n",
+		pr_err("%s: Mmap did not work! addr = 0x%pK, size = %zd\n",
 			__func__,
 			&cal_block->cal_data.paddr,
 			cal_block->map_data.map_size);
@@ -3120,7 +3215,7 @@ static int remap_cal_data(struct cal_block_data *cal_block,
 			goto done;
 		}
 	} else {
-		pr_debug("%s:  Cal block 0x%pa, size %zd already mapped. Q6 map handle = %d\n",
+		pr_debug("%s:  Cal block 0x%pK, size %zd already mapped. Q6 map handle = %d\n",
 			__func__, &cal_block->cal_data.paddr,
 			cal_block->map_data.map_size,
 			cal_block->map_data.q6map_handle);
@@ -3318,7 +3413,7 @@ int voc_map_rtac_block(struct rtac_cal_block_data *cal_block)
 	if (!is_rtac_memory_allocated()) {
 		result = voice_alloc_rtac_mem_map_table();
 		if (result < 0) {
-			pr_err("%s: RTAC alloc mem map table did not work! addr = 0x%pa, size = %d\n",
+			pr_err("%s: RTAC alloc mem map table did not work! addr = 0x%pK, size = %d\n",
 				__func__,
 				&cal_block->cal_data.paddr,
 				cal_block->map_data.map_size);
@@ -3333,7 +3428,7 @@ int voc_map_rtac_block(struct rtac_cal_block_data *cal_block)
 		cal_block->map_data.map_size,
 		VOC_RTAC_MEM_MAP_TOKEN);
 	if (result < 0) {
-		pr_err("%s: RTAC mmap did not work! addr = 0x%pa, size = %d\n",
+		pr_err("%s: RTAC mmap did not work! addr = 0x%pK, size = %d\n",
 			__func__,
 			&cal_block->cal_data.paddr,
 			cal_block->map_data.map_size);
@@ -4444,7 +4539,7 @@ int voc_start_record(uint32_t port_id, uint32_t set, uint32_t session_id)
 
 			break;
 		}
-		pr_debug("%s: port_id: %d, set: %d, v: %p\n",
+		pr_debug("%s: port_id: %d, set: %d, v: %pK\n",
 			 __func__, port_id, set, v);
 
 		mutex_lock(&v->lock);
@@ -5309,7 +5404,21 @@ int voc_end_voice_call(uint32_t session_id)
 
 	if (v->voc_state == VOC_RUN || v->voc_state == VOC_ERROR ||
 	    v->voc_state == VOC_CHANGE || v->voc_state == VOC_STANDBY) {
-
+#ifdef CONFIG_SEC_VOC_SOLUTION
+		if ((loopback_mode == LOOPBACK_DISABLE) &&
+		    (loopback_prev_mode == LOOPBACK_ENABLE ||
+		     loopback_prev_mode == LOOPBACK_NODELAY)) {
+			ret = send_packet_loopback_cmd(v, loopback_mode);
+			if (ret < 0) {
+				pr_err("%s: packet loopback disable cmd failed(%d)\n",
+					__func__, ret);
+			} else {
+				pr_info("%s: disable packet loopback\n",
+					__func__);
+			}
+			loopback_prev_mode = 0;
+		}
+#endif /* CONFIG_SEC_VOC_SOLUTION */
 		pr_debug("%s: VOC_STATE: %d\n", __func__, v->voc_state);
 
 		ret = voice_destroy_vocproc(v);
@@ -5644,7 +5753,20 @@ int voc_start_voice_call(uint32_t session_id)
 			pr_err("start voice failed\n");
 			goto fail;
 		}
-
+#ifdef CONFIG_SEC_VOC_SOLUTION
+		if (loopback_mode == LOOPBACK_ENABLE ||
+		    loopback_mode == LOOPBACK_NODELAY) {
+			ret = send_packet_loopback_cmd(v, loopback_mode);
+			if (ret < 0) {
+				pr_err("%s: send packet loopback cmd failed(%d)\n",
+					__func__, ret);
+				goto fail;
+			} else {
+				pr_info("%s: enable packet loopback\n",
+					__func__);
+			}
+		}
+#endif /* CONFIG_SEC_VOC_SOLUTION */
 		v->voc_state = VOC_RUN;
 	} else {
 		pr_err("%s: Error: Start voice called in state %d\n",
@@ -5663,12 +5785,12 @@ int voc_set_ext_ec_ref(uint16_t port_id, bool state)
 	int ret = 0;
 
 	mutex_lock(&common.common_lock);
+	if (port_id == AFE_PORT_INVALID) {
+		pr_err("%s: Invalid port id", __func__);
+		ret = -EINVAL;
+		goto exit;
+	}
 	if (state == true) {
-		if (port_id == AFE_PORT_INVALID) {
-			pr_err("%s: Invalid port id", __func__);
-			ret = -EINVAL;
-			goto exit;
-		}
 		common.ec_port_id = port_id;
 		common.ec_ref_ext = true;
 	} else {
@@ -6047,6 +6169,22 @@ static int32_t qdsp_cvs_callback(struct apr_client_data *data, void *priv)
 				pr_debug("%s: VOICE_CMD_SET_PARAM\n", __func__);
 				rtac_make_voice_callback(RTAC_CVS, ptr,
 							data->payload_size);
+#ifdef CONFIG_SEC_VOC_SOLUTION
+				if ((loopback_mode == LOOPBACK_DISABLE) &&
+				    (loopback_prev_mode == LOOPBACK_ENABLE ||
+				     loopback_prev_mode == LOOPBACK_NODELAY)) {
+					pr_info("%s: loopback disable\n", __func__);
+					v->cvs_state = CMD_STATUS_SUCCESS;
+					wake_up(&v->cvs_wait);
+				}
+
+				if (loopback_mode == LOOPBACK_ENABLE ||
+				    loopback_mode == LOOPBACK_NODELAY) {
+					pr_info("%s: loopback enable\n", __func__);
+					v->cvs_state = CMD_STATUS_SUCCESS;
+					wake_up(&v->cvs_wait);
+				}
+#endif /* CONFIG_SEC_VOC_SOLUTION */
 				break;
 			case VOICE_CMD_GET_PARAM:
 				pr_debug("%s: VOICE_CMD_GET_PARAM\n",
@@ -6510,12 +6648,12 @@ static int voice_alloc_oob_shared_mem(void)
 		cnt++;
 	}
 
-	pr_debug("%s buf[0].data:[%p], buf[0].phys:[%pa], &buf[0].phys:[%p],\n",
+	pr_debug("%s buf[0].data:[%pK], buf[0].phys:[%pK], &buf[0].phys:[%pK],\n",
 		 __func__,
 		(void *)v->shmem_info.sh_buf.buf[0].data,
 		&v->shmem_info.sh_buf.buf[0].phys,
 		(void *)&v->shmem_info.sh_buf.buf[0].phys);
-	pr_debug("%s: buf[1].data:[%p], buf[1].phys[%pa], &buf[1].phys[%p]\n",
+	pr_debug("%s: buf[1].data:[%pK], buf[1].phys[%pK], &buf[1].phys[%pK]\n",
 		__func__,
 		(void *)v->shmem_info.sh_buf.buf[1].data,
 		&v->shmem_info.sh_buf.buf[1].phys,
@@ -6557,7 +6695,7 @@ static int voice_alloc_oob_mem_table(void)
 	}
 
 	v->shmem_info.memtbl.size = sizeof(struct vss_imemory_table_t);
-	pr_debug("%s data[%p]phys[%pa][%p]\n", __func__,
+	pr_debug("%s data[%pK]phys[%pK][%pK]\n", __func__,
 		 (void *)v->shmem_info.memtbl.data,
 		 &v->shmem_info.memtbl.phys,
 		 (void *)&v->shmem_info.memtbl.phys);
@@ -6909,7 +7047,7 @@ static int voice_alloc_cal_mem_map_table(void)
 	}
 
 	common.cal_mem_map_table.size = sizeof(struct vss_imemory_table_t);
-	pr_debug("%s: data %p phys %pa\n", __func__,
+	pr_debug("%s: data %pK phys %pK\n", __func__,
 		 common.cal_mem_map_table.data,
 		 &common.cal_mem_map_table.phys);
 
@@ -6936,7 +7074,7 @@ static int voice_alloc_rtac_mem_map_table(void)
 	}
 
 	common.rtac_mem_map_table.size = sizeof(struct vss_imemory_table_t);
-	pr_debug("%s: data %p phys %pa\n", __func__,
+	pr_debug("%s: data %pK phys %pK\n", __func__,
 		 common.rtac_mem_map_table.data,
 		 &common.rtac_mem_map_table.phys);
 
@@ -7537,7 +7675,7 @@ static int voice_alloc_source_tracking_shared_memory(void)
 	memset((void *)(common.source_tracking_sh_mem.sh_mem_block.data), 0,
 		   common.source_tracking_sh_mem.sh_mem_block.size);
 
-	pr_debug("%s: sh_mem_block: phys:[%pa], data:[0x%p], size:[%zd]\n",
+	pr_debug("%s: sh_mem_block: phys:[%pK], data:[0x%pK], size:[%zd]\n",
 		 __func__,
 		&(common.source_tracking_sh_mem.sh_mem_block.phys),
 		(void *)(common.source_tracking_sh_mem.sh_mem_block.data),
@@ -7568,7 +7706,7 @@ static int voice_alloc_source_tracking_shared_memory(void)
 	memset((void *)(common.source_tracking_sh_mem.sh_mem_table.data), 0,
 		common.source_tracking_sh_mem.sh_mem_table.size);
 
-	pr_debug("%s sh_mem_table: phys:[%pa], data:[0x%p], size:[%zd],\n",
+	pr_debug("%s sh_mem_table: phys:[%pK], data:[0x%pK], size:[%zd],\n",
 		 __func__,
 		&(common.source_tracking_sh_mem.sh_mem_table.phys),
 		(void *)(common.source_tracking_sh_mem.sh_mem_table.data),

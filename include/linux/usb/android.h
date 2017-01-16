@@ -34,6 +34,9 @@ struct android_usb_platform_data {
 	int (*update_pid_and_serial_num)(uint32_t, const char *);
 	u32 pm_qos_latency[MAX_VOTES];
 	u8 usb_core_id;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	u8 nluns;
+#endif
 	char streaming_func[MAX_STREAMING_FUNCS][FUNC_NAME_LEN];
 	int  streaming_func_count;
 	u8 uicc_nluns;

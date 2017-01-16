@@ -140,7 +140,7 @@ union IpaHwResetPipeCmdData_t {
 /**
  * union IpaHwmonitorHolbCmdData_t - Structure holding the parameters
  * for IPA_CPU_2_HW_CMD_UPDATE_HOLB_MONITORING command.
- * @monitorPipe : Indication whether to monitor the pipe. 0 – Do not Monitor Pipe, 1 – Monitor Pipe
+ * @monitorPipe : Indication whether to monitor the pipe. 0  Do not Monitor Pipe, 1  Monitor Pipe
  * @pipeNum : Pipe to be monitored/not monitored
  * @reserved_02_03 : Reserved
  *
@@ -537,6 +537,7 @@ int ipa_uc_interface_init(void)
 	}
 
 	ipa_ctx->uc_ctx.uc_inited = true;
+	init_completion(&ipa_ctx->uc_ctx.uc_completion);
 
 	IPADBG("IPA uC interface is initialized\n");
 	return 0;
@@ -579,7 +580,8 @@ int ipa_uc_send_cmd(u32 cmd, u32 opcode, u32 expected_status,
 		return -EBADF;
 	}
 
-	init_completion(&ipa_ctx->uc_ctx.uc_completion);
+	if (!polling_mode)
+		init_completion(&ipa_ctx->uc_ctx.uc_completion);
 
 	ipa_ctx->uc_ctx.uc_sram_mmio->cmdParams = cmd;
 	ipa_ctx->uc_ctx.uc_sram_mmio->cmdOp = opcode;

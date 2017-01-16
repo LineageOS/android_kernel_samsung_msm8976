@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -220,6 +220,7 @@ enum hal_property {
 	HAL_PARAM_VENC_HIER_P_HYBRID_MODE,
 	HAL_PARAM_VENC_MBI_STATISTICS_MODE,
 	HAL_PARAM_VENC_BITRATE_TYPE,
+	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 };
 
 enum hal_domain {
@@ -957,6 +958,13 @@ struct hal_vpe_color_space_conversion {
 	u32 csc_matrix[HAL_MAX_MATRIX_COEFFS];
 	u32 csc_bias[HAL_MAX_BIAS_COEFFS];
 	u32 csc_limit[HAL_MAX_LIMIT_COEFFS];
+};
+
+enum hal_iframesize_type {
+	HAL_IFRAMESIZE_TYPE_DEFAULT,
+	HAL_IFRAMESIZE_TYPE_MEDIUM,
+	HAL_IFRAMESIZE_TYPE_HUGE,
+	HAL_IFRAMESIZE_TYPE_UNLIMITED,
 };
 
 enum vidc_resource_id {

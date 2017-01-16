@@ -29,6 +29,10 @@
 #include "splash.h"
 #include "mdss_mdp_splash_logo.h"
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG) && defined(CONFIG_SEC_DEBUG)
+#include <linux/qcom/sec_debug.h>
+#endif
+
 #define INVALID_PIPE_INDEX 0xFFFF
 #define MAX_FRAME_DONE_COUNT_WAIT 2
 
@@ -279,7 +283,17 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 	 */
 	mfd->fbi->var.reserved[3] = mfd->panel_info->cont_splash_enabled |
 					mfd->splash_info.splash_pipe_allocated;
-
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG) && defined(CONFIG_SEC_DEBUG)
+		if (!sec_debug_is_enabled()) {
+			if (mdp5_data->splash_mem_addr) {
+				/* Give back the reserved memory to the system */
+				memblock_free(mdp5_data->splash_mem_addr,
+							mdp5_data->splash_mem_size);
+				mdss_free_bootmem(mdp5_data->splash_mem_addr,
+							mdp5_data->splash_mem_size);
+			}
+		}
+#else
 	if (mdp5_data->splash_mem_addr) {
 		/* Give back the reserved memory to the system */
 		memblock_free(mdp5_data->splash_mem_addr,
@@ -287,7 +301,7 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 		mdss_free_bootmem(mdp5_data->splash_mem_addr,
 					mdp5_data->splash_mem_size);
 	}
-
+#endif
 	mdss_mdp_footswitch_ctrl_splash(0);
 end:
 	return rc;

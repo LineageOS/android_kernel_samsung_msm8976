@@ -7,6 +7,8 @@ obj-$(CONFIG_GPIOLIB)		+= gpiolib.o
 obj-$(CONFIG_OF_GPIO)		+= gpiolib-of.o
 obj-$(CONFIG_GPIO_ACPI)		+= gpiolib-acpi.o
 
+# GPIO DVS
+obj-$(CONFIG_SEC_GPIO_DVS)	+= secgpio_dvs.o
 # Device drivers. Generally keep list sorted alphabetically
 obj-$(CONFIG_GPIO_GENERIC)	+= gpio-generic.o
 
@@ -89,3 +91,4 @@ obj-$(CONFIG_GPIO_WM8994)	+= gpio-wm8994.o
 obj-$(CONFIG_GPIO_XILINX)	+= gpio-xilinx.o
 obj-$(CONFIG_MSM_SMP2P)		+= gpio-msm-smp2p.o
 obj-$(CONFIG_MSM_SMP2P_TEST)	+= gpio-msm-smp2p-test.o
+obj-$(CONFIG_GPIO_PCAL6416A)    += gpio-pcal6416a.o

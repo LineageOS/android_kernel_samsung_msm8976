@@ -20,6 +20,12 @@
 #include <linux/device-mapper.h>
 #include <linux/reboot.h>
 #include <crypto/hash.h>
+#include <linux/ctype.h>
+
+#if defined(CONFIG_TZ_ICCC)
+#include <linux/security/iccc_interface.h>
+int dmv_check_failed;
+#endif
 
 #define DM_MSG_PREFIX			"verity"
 
@@ -32,6 +38,27 @@
 
 #define DM_VERITY_MAX_LEVELS		63
 #define DM_VERITY_MAX_CORRUPTED_ERRS	100
+
+#define	FLAT_HASH_VERIFICATION		0
+//#define SEC_HEX_DEBUG
+
+#ifdef VERIFY_META_ONLY
+extern struct rb_root *ext4_system_zone_root(struct super_block *sb);
+
+static struct rb_root *system_blks;
+
+struct ext4_system_zone {
+    struct rb_node  node;
+    unsigned long long  start_blk;
+    unsigned int    count;
+};
+int start_meta = 0;
+#endif
+
+#ifdef SEC_HEX_DEBUG
+static void print_block_data(unsigned long long blocknr, unsigned char *data_to_dump
+		, int start, int len);
+#endif
 
 static unsigned dm_verity_prefetch_cluster = DM_VERITY_DEFAULT_PREFETCH_SIZE;
 
@@ -261,9 +288,11 @@ static int verity_verify_level(struct dm_verity_io *io, sector_t block,
 {
 	struct dm_verity *v = io->v;
 	struct dm_buffer *buf;
+#if	!FLAT_HASH_VERIFICATION
 	struct buffer_aux *aux;
-	u8 *data;
 	int r;
+#endif
+	u8 *data;
 	sector_t hash_block;
 	unsigned offset;
 
@@ -273,6 +302,8 @@ static int verity_verify_level(struct dm_verity_io *io, sector_t block,
 	if (unlikely(IS_ERR(data)))
 		return PTR_ERR(data);
 
+/* Implicitly trust the obtained hash meta-data for flat verification */
+#if	!FLAT_HASH_VERIFICATION
 	aux = dm_bufio_get_aux_data(buf);
 
 	if (!aux->hash_verified) {
@@ -322,6 +353,11 @@ static int verity_verify_level(struct dm_verity_io *io, sector_t block,
 			goto release_ret_r;
 		}
 		if (unlikely(memcmp(result, io_want_digest(v, io), v->digest_size))) {
+#ifdef SEC_HEX_DEBUG
+			print_block_data(0, (unsigned char *)(result), 0, v->digest_size);
+			print_block_data(0, (unsigned char *)(io_want_digest(v, io)), 0, v->digest_size);
+			print_block_data((unsigned long long)hash_block, (unsigned char *)data, 0, PAGE_SIZE);
+#endif
 			v->hash_failed = 1;
 
 			if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_METADATA,
@@ -332,6 +368,7 @@ static int verity_verify_level(struct dm_verity_io *io, sector_t block,
 		} else
 			aux->hash_verified = 1;
 	}
+#endif
 
 	data += offset;
 
@@ -340,11 +377,57 @@ static int verity_verify_level(struct dm_verity_io *io, sector_t block,
 	dm_bufio_release(buf);
 	return 0;
 
+#if	!FLAT_HASH_VERIFICATION
 release_ret_r:
 	dm_bufio_release(buf);
 
 	return r;
+#endif
 }
+#ifdef SEC_HEX_DEBUG
+static void print_block_data(unsigned long long blocknr, unsigned char *data_to_dump
+			, int start, int len)
+{
+	int i, j;
+	int bh_offset = (start / 16) * 16;
+	char row_data[17] = { 0, };
+	char row_hex[50] = { 0, };
+	char ch;
+	if (blocknr == 0) {
+		printk(KERN_ERR "printing Hash dump %dbyte\n", len);
+	} else {
+		printk(KERN_ERR "dm-verity corrupted, printing data in hex\n");
+		printk(KERN_ERR " dump block# : %llu, start offset(byte) : %d\n"
+				, blocknr, start);
+		printk(KERN_ERR " length(byte) : %d, data_to_dump 0x%p\n"
+				, len, (void *)data_to_dump);
+		printk(KERN_ERR "-------------------------------------------------\n");
+	}
+	for (i = 0; i < (len + 15) / 16; i++) {
+		for (j = 0; j < 16; j++) {
+			ch = *(data_to_dump + bh_offset + j);
+			if (start <= bh_offset + j
+				&& start + len > bh_offset + j) {
+
+				if (isascii(ch) && isprint(ch))
+					sprintf(row_data + j, "%c", ch);
+				else
+					sprintf(row_data + j, ".");
+
+				sprintf(row_hex + (j * 3), "%2.2x ", ch);
+			} else {
+				sprintf(row_data + j, " ");
+				sprintf(row_hex + (j * 3), "-- ");
+			}
+		}
+
+		printk(KERN_ERR "0x%4.4x : %s | %s\n"
+				, bh_offset, row_hex, row_data);
+		bh_offset += 16;
+	}
+	printk(KERN_ERR "---------------------------------------------------\n");
+}
+#endif
 
 /*
  * Verify one "dm_verity_io" structure.
@@ -353,7 +436,9 @@ static int verity_verify_io(struct dm_verity_io *io)
 {
 	struct dm_verity *v = io->v;
 	unsigned b;
+#if	!FLAT_HASH_VERIFICATION
 	int i;
+#endif
 	unsigned vector = 0, offset = 0;
 
 	for (b = 0; b < io->n_blocks; b++) {
@@ -376,6 +461,8 @@ static int verity_verify_io(struct dm_verity_io *io)
 			if (r < 0)
 				return r;
 		}
+#if	!FLAT_HASH_VERIFICATION
+/* flat model does not need meta-data verification */
 
 		memcpy(io_want_digest(v, io), v->root_digest, v->digest_size);
 
@@ -384,6 +471,7 @@ static int verity_verify_io(struct dm_verity_io *io)
 			if (unlikely(r))
 				return r;
 		}
+#endif
 
 test_block_hash:
 		desc = io_hash_desc(v, io);
@@ -445,11 +533,28 @@ test_block_hash:
 			return r;
 		}
 		if (unlikely(memcmp(result, io_want_digest(v, io), v->digest_size))) {
-			v->hash_failed = 1;
+			if (io->block != 0) {
+#ifdef SEC_HEX_DEBUG
+				struct bio_vec *bv;
+				u8 *page;
+				print_block_data(0, (unsigned char *)(result), 0, v->digest_size);
+				print_block_data(0, (unsigned char *)(io_want_digest(v, io)), 0, v->digest_size);
+				page = kmap_atomic(bv->bv_page);
+				print_block_data((unsigned long long)(io->block+b), (unsigned char *)page, 0, PAGE_SIZE);
+				kunmap_atomic(page);
+#endif
+				v->hash_failed = 1;
+#if defined(CONFIG_TZ_ICCC)
+                	if (!dmv_check_failed) {
+                    		dmv_check_failed = 1;
+                    		Iccc_SaveData_Kernel(DMV_HASH, 0x1);
+                	}
+#endif
 
-			if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_DATA,
+				if (verity_handle_err(v, DM_VERITY_BLOCK_TYPE_DATA,
 					      io->block + b))
-				return -EIO;
+					return -EIO;
+			}
 		}
 	}
 	BUG_ON(vector != io->io_vec_size);
@@ -507,7 +612,14 @@ static void verity_prefetch_io(struct work_struct *work)
 	struct dm_verity *v = pw->v;
 	int i;
 
+#if	!FLAT_HASH_VERIFICATION
 	for (i = v->levels - 2; i >= 0; i--) {
+#else
+	/* changed from v->levels  - 2. Default dmverity assumes atleast 2 levels. data + roothash. 
+	 * Flat model has exactly one level - leaves. So this change supposedly prefetches only leaf nodes
+	 */
+	for (i = 0; i >= 0; i--) {
+#endif
 		sector_t hash_block_start;
 		sector_t hash_block_end;
 		verity_hash_at_level(v, pw->block, i, &hash_block_start, NULL);
@@ -552,6 +664,28 @@ static void verity_submit_prefetch(struct dm_verity *v, struct dm_verity_io *io)
 	queue_work(v->verify_wq, &pw->work);
 }
 
+#ifdef VERIFY_META_ONLY
+static bool is_metablock(unsigned long long n_block)
+{
+    struct rb_node *node;
+    struct ext4_system_zone *entry;
+    bool result = false;
+
+    node = rb_first(system_blks);
+	if(node == NULL)
+		return true;
+    while (node) {
+        entry = rb_entry(node, struct ext4_system_zone, node);
+        if (n_block >= entry->start_blk && n_block <= entry->start_blk + entry->count - 1 ) {
+            result = true;
+            return result;
+        }
+        node = rb_next(node);
+    }
+    return result;
+}
+#endif
+
 /*
  * Bio map function. It allocates dm_verity_io structure and bio vector and
  * fills them. Then it issues prefetches and the I/O.
@@ -560,7 +694,13 @@ static int verity_map(struct dm_target *ti, struct bio *bio)
 {
 	struct dm_verity *v = ti->private;
 	struct dm_verity_io *io;
-
+#ifdef VERIFY_META_ONLY
+	if (!start_meta && bio->bi_bdev->bd_super) {
+		system_blks = ext4_system_zone_root(bio->bi_bdev->bd_super);
+		DMERR_LIMIT("Successfully Get the system block information");
+		start_meta = 1;
+	}
+#endif
 	bio->bi_bdev = v->data_dev->bdev;
 	bio->bi_sector = verity_map_sector(v, bio->bi_sector);
 
@@ -578,6 +718,11 @@ static int verity_map(struct dm_target *ti, struct bio *bio)
 
 	if (bio_data_dir(bio) == WRITE)
 		return -EIO;
+
+#ifdef VERIFY_META_ONLY
+	if (start_meta && !is_metablock(bio->bi_sector >> (v->data_dev_block_bits - SECTOR_SHIFT)))
+		goto skip_verity;
+#endif
 
 	io = dm_per_bio_data(bio, ti->per_bio_data_size);
 	io->v = v;
@@ -597,7 +742,9 @@ static int verity_map(struct dm_target *ti, struct bio *bio)
 	       io->io_vec_size * sizeof(struct bio_vec));
 
 	verity_submit_prefetch(v, io);
-
+#ifdef VERIFY_META_ONLY
+skip_verity:
+#endif
 	generic_make_request(bio);
 
 	return DM_MAPIO_SUBMITTED;

@@ -607,6 +607,27 @@ static int msm_voice_cvd_version_get(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+
+#ifdef CONFIG_SEC_VOC_SOLUTION
+static int msm_loopback_put(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	int loopback_enable = ucontrol->value.integer.value[0];
+
+	pr_debug("%s: loopback enable=%d\n", __func__, loopback_enable);
+
+	voc_set_loopback_enable(loopback_enable);
+	return 0;
+}
+
+static int msm_loopback_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = voc_get_loopback_enable();
+	return 0;
+}
+#endif /*CONFIG_SEC_VOC_SOLUTION*/
+
 static struct snd_kcontrol_new msm_voice_controls[] = {
 	SOC_SINGLE_MULTI_EXT("Voice Rx Device Mute", SND_SOC_NOPM, 0, VSID_MAX,
 				0, 3, NULL, msm_voice_rx_device_mute_put),
@@ -625,6 +646,10 @@ static struct snd_kcontrol_new msm_voice_controls[] = {
 			     msm_voice_topology_disable_put),
 	SOC_SINGLE_MULTI_EXT("HD Voice Enable", SND_SOC_NOPM, 0, VSID_MAX, 0, 2,
 			     NULL, msm_voice_hd_voice_put),
+#ifdef CONFIG_SEC_VOC_SOLUTION
+	SOC_SINGLE_EXT("Loopback Enable", SND_SOC_NOPM, 0, LOOPBACK_MAX, 0,
+				msm_loopback_get, msm_loopback_put),
+#endif /*CONFIG_SEC_VOC_SOLUTION*/
 	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,

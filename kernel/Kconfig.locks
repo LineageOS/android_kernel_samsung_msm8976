@@ -228,3 +228,14 @@ config ARCH_SUPPORTS_ATOMIC_RMW
 config MUTEX_SPIN_ON_OWNER
 	def_bool y
 	depends on SMP && !DEBUG_MUTEXES && ARCH_SUPPORTS_ATOMIC_RMW
+
+#
+# If you enable this, the regular mutex code will be appended with
+# cancellable optimal spinning queue lock and regular ticket based
+# spinlock will be replaced by queue spinlock which follows the
+# MCS alogirthm. If in doubt, say n
+
+config OSQ_MUTEX_AND_QUEUE_SPINLOCK
+	tristate "Enable MCS lock algorithm on kernel locking primitive (ARM support)"
+	default n
+	depends on SMP && !DEBUG_SPINLOCK && !DEBUG_MUTEXES && MUTEX_SPIN_ON_OWNER

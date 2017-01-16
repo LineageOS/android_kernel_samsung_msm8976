@@ -20,6 +20,20 @@
 
 #define INVALID_VREG 100
 
+#if 1// To check firmware in FROM
+#define SYSFS_COMP_FW_PATH "/sys/class/camera/rear/rear_companionfw_full"
+#define SYSFS_FW_CHECK_PATH "/sys/class/camera/rear/rear_fwcheck"
+#define SYSFS_ISP_CORE_PATH "/sys/class/camera/rear/isp_core"
+
+enum check_fw {
+	CHECK_CAMERA_FW,
+	CHECK_COMPANION_FW,
+};
+
+int msm_camera_write_sysfs(char* path, const char* data, uint32_t data_size);
+int msm_camera_fw_check(const char read_fw_crc, uint8_t index);
+#endif
+
 int msm_sensor_get_sub_module_index(struct device_node *of_node,
 	struct  msm_sensor_info_t **s_info);
 
@@ -47,6 +61,10 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 
 int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 	struct camera_vreg_t **cam_vreg, int *num_vreg);
+
+#if defined (CONFIG_CAMERA_SYSFS_V2)
+int msm_camera_get_dt_camera_info(struct device_node *of_node, char *buf);
+#endif
 
 int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 	enum msm_camera_device_type_t device_type,

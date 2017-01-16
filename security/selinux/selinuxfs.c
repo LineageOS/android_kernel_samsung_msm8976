@@ -41,6 +41,10 @@
 #include "objsec.h"
 #include "conditional.h"
 
+#if defined(CONFIG_TZ_ICCC)
+#include <linux/security/iccc_interface.h>
+#endif
+
 /* Policy capability filenames */
 static char *policycap_names[] = {
 	"network_peer_controls",
@@ -183,6 +187,14 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 		selinux_status_update_setenforce(selinux_enforcing);
 	}
 	length = count;
+
+#if defined(CONFIG_TZ_ICCC)
+	if (selinux_enabled && selinux_enforcing)
+		Iccc_SaveData_Kernel(SELINUX_STATUS, 0x0);
+	else
+		Iccc_SaveData_Kernel(SELINUX_STATUS, 0x1);
+#endif
+
 out:
 	free_page((unsigned long) page);
 	return length;
@@ -1894,7 +1906,9 @@ static struct kobject *selinuxfs_kobj;
 static int __init init_sel_fs(void)
 {
 	int err;
-
+#ifdef CONFIG_ALWAYS_ENFORCE
+	selinux_enabled = 1;
+#endif
 	if (!selinux_enabled)
 		return 0;
 

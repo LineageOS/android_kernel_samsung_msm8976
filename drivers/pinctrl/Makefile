@@ -1,6 +1,7 @@
 # generic pinmux support
 
 ccflags-$(CONFIG_DEBUG_PINCTRL)	+= -DDEBUG
+ccflags-y += $(KBUILD_FP_SENSOR_CFLAGS)
 
 obj-$(CONFIG_PINCTRL)		+= core.o
 obj-$(CONFIG_PINMUX)		+= pinmux.o
@@ -23,7 +24,7 @@ obj-$(CONFIG_PINCTRL_IMX53)	+= pinctrl-imx53.o
 obj-$(CONFIG_PINCTRL_IMX6Q)	+= pinctrl-imx6q.o
 obj-$(CONFIG_PINCTRL_IMX6Q)	+= pinctrl-imx6dl.o
 obj-$(CONFIG_PINCTRL_FALCON)	+= pinctrl-falcon.o
-obj-$(CONFIG_PINCTRL_MSM_TLMM)	+= pinctrl-msm.o pinctrl-msm-tlmm.o
+obj-$(CONFIG_PINCTRL_MSM_TLMM)	+= pinctrl-msm.o pinctrl-msm-tlmm.o sec-pinmux.o
 obj-$(CONFIG_PINCTRL_MXS)	+= pinctrl-mxs.o
 obj-$(CONFIG_PINCTRL_IMX23)	+= pinctrl-imx23.o
 obj-$(CONFIG_PINCTRL_IMX28)	+= pinctrl-imx28.o

@@ -149,6 +149,11 @@ void blk_rq_init(struct request_queue *q, struct request *rq)
 	rq->start_time = jiffies;
 	set_start_time_ns(rq);
 	rq->part = NULL;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	rq->owner = NULL;
+	rq->owner_id = -1;
+	rq->req_start_time_ns = 0;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 }
 EXPORT_SYMBOL(blk_rq_init);
 
@@ -1633,6 +1638,11 @@ get_rq:
 		req->cpu = raw_smp_processor_id();
 
 	plug = current->plug;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	req->owner = current;
+	req->owner_id = current->pid;
+	req->req_start_time_ns = sched_clock();
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 	if (plug) {
 		/*
 		 * If this is the first request added after a plug, fire

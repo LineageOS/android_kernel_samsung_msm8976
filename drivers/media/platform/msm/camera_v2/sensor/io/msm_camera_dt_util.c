@@ -31,7 +31,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 {
 	uint16_t i = 0;
 	int      j = 0;
-
+#if 0
 	/* Validate input parameters */
 	if (!cam_vreg || !power_setting) {
 		pr_err("%s:%d failed: cam_vreg %p power_setting %p", __func__,
@@ -44,6 +44,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 		pr_err("failed: num_vreg %d", num_vreg);
 		return -EINVAL;
 	}
+#endif
 
 	for (i = 0; i < power_setting_size; i++) {
 		if (power_setting[i].seq_type != SENSOR_VREG)
@@ -1106,11 +1107,168 @@ ERROR:
 	return rc;
 }
 
+#if defined (CONFIG_CAMERA_SYSFS_V2)
+int msm_camera_get_dt_camera_info(struct device_node *of_node, char *buf)
+{
+	int rc = 0, val = 0;
+	char camera_info[100] = {0, };
+
+	rc = of_property_read_u32(of_node, "cam,isp",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcpy(camera_info, "ISP=");
+	switch(val) {
+		case CAM_INFO_ISP_TYPE_INTERNAL :
+			strcat(camera_info, "INT;");
+			break;
+		case CAM_INFO_ISP_TYPE_EXTERNAL :
+			strcat(camera_info, "EXT;");
+			break;
+		case CAM_INFO_ISP_TYPE_SOC :
+			strcat(camera_info, "SOC;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,cal_memory",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "CALMEM=");
+	switch(val) {
+		case CAM_INFO_CAL_MEM_TYPE_NONE :
+			strcat(camera_info, "N;");
+			break;
+		case CAM_INFO_CAL_MEM_TYPE_FROM :
+		case CAM_INFO_CAL_MEM_TYPE_EEPROM :
+		case CAM_INFO_CAL_MEM_TYPE_OTP :
+			strcat(camera_info, "Y;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,read_version",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "READVER=");
+	switch(val) {
+		case CAM_INFO_READ_VER_SYSFS :
+			strcat(camera_info, "SYSFS;");
+			break;
+		case CAM_INFO_READ_VER_CAMON :
+			strcat(camera_info, "CAMON;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,core_voltage",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "COREVOLT=");
+	switch(val) {
+		case CAM_INFO_CORE_VOLT_NONE :
+			strcat(camera_info, "N;");
+			break;
+		case CAM_INFO_CORE_VOLT_USE :
+			strcat(camera_info, "Y;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,upgrade",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "UPGRADE=");
+	switch(val) {
+		case CAM_INFO_FW_UPGRADE_NONE :
+			strcat(camera_info, "N;");
+			break;
+		case CAM_INFO_FW_UPGRADE_SYSFS :
+			strcat(camera_info, "SYSFS;");
+			break;
+		case CAM_INFO_FW_UPGRADE_CAMON :
+			strcat(camera_info, "CAMON;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,companion_chip",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "CC=");
+	switch(val) {
+		case CAM_INFO_COMPANION_NONE :
+			strcat(camera_info, "N;");
+			break;
+		case CAM_INFO_COMPANION_USE :
+			strcat(camera_info, "Y;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	rc = of_property_read_u32(of_node, "cam,ois",
+			&val);
+	if (rc < 0) {
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		goto ERROR1;
+	}
+	strcat(camera_info, "OIS=");
+	switch(val) {
+		case CAM_INFO_OIS_NONE :
+			strcat(camera_info, "N;");
+			break;
+		case CAM_INFO_OIS_USE :
+			strcat(camera_info, "Y;");
+			break;
+		default :
+			strcat(camera_info, "NULL;");
+			break;
+	}
+
+	snprintf(buf, sizeof(camera_info), "%s", camera_info);
+	return 0;
+
+ERROR1:
+	strcpy(camera_info, "ISP=NULL;CALMEM=NULL;READVER=NULL;COREVOLT=NULL;UPGRADE=NULL;FW_CC=NULL;OIS=NULL");
+	snprintf(buf, sizeof(camera_info), "%s", camera_info);
+	return 0;
+}
+#endif
+
 int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 	struct camera_vreg_t **cam_vreg, int *num_vreg)
 {
 	int rc = 0, i = 0;
-	uint32_t count = 0;
+	int32_t count = 0;
 	uint32_t *vreg_array = NULL;
 	struct camera_vreg_t *vreg = NULL;
 	bool custom_vreg_name =  false;
@@ -1118,7 +1276,7 @@ int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 	count = of_property_count_strings(of_node, "qcom,cam-vreg-name");
 	CDBG("%s qcom,cam-vreg-name count %d\n", __func__, count);
 
-	if (!count)
+	if (count <= 0)
 		return 0;
 
 	vreg = kzalloc(sizeof(*vreg) * count, GFP_KERNEL);
@@ -1618,3 +1776,59 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	CDBG("%s exit\n", __func__);
 	return 0;
 }
+
+#if 1// To check firmware in FROM
+extern char fw_crc[10];
+
+int msm_camera_write_sysfs(char* path, const char* data, uint32_t data_size)
+{
+	struct file *filp = NULL;
+	mm_segment_t old_fs;
+	int ret = 0;
+
+	if(path == NULL || data == NULL) {
+		pr_err("%s : path or data is NULL\n",__func__);
+		return -1;
+	}
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	filp = filp_open(path, O_RDWR|O_CREAT, 0666);
+	if(IS_ERR(filp)){
+		pr_err("%s: sysfs open file failed. [%s]", __func__, path);
+		return -1;
+	}
+
+	ret = vfs_write(filp, data, data_size, &filp->f_pos);
+	if (ret < 0) {
+		pr_err("%s: sysfs write file failed. [%s]", __func__, path);
+		ret = -1;
+		goto ERROR;
+	}
+
+ERROR:
+	if (filp) {
+		filp_close(filp, NULL);
+		filp = NULL;
+	}
+	set_fs(old_fs);
+	return ret;
+}
+
+int msm_camera_fw_check(const char read_fw_crc, uint8_t index)
+{
+	int ret = 0;
+
+	fw_crc[index] = read_fw_crc;
+	CDBG("%s: index: %d, read_fw_crc: %c", __func__, index, read_fw_crc);
+	CDBG("%s: fw_crc: %s", __func__, fw_crc);
+	ret = msm_camera_write_sysfs(SYSFS_FW_CHECK_PATH, fw_crc, sizeof(fw_crc));
+	if (ret < 0) {
+		pr_err("%s: msm_camera_write_sysfs failed.", __func__);
+		ret = -1;
+	}
+
+	return ret;
+}
+#endif
+

@@ -27,10 +27,16 @@ static inline int msm_dcvs_get_mbs_per_frame(struct msm_vidc_inst *inst)
 {
 	int height, width;
 
-	height = max(inst->prop.height[CAPTURE_PORT],
-			inst->prop.height[OUTPUT_PORT]);
-	width = max(inst->prop.width[CAPTURE_PORT],
-			inst->prop.width[OUTPUT_PORT]);
+	if (!inst->in_reconfig) {
+		height = max(inst->prop.height[CAPTURE_PORT],
+				inst->prop.height[OUTPUT_PORT]);
+		width = max(inst->prop.width[CAPTURE_PORT],
+				inst->prop.width[OUTPUT_PORT]);
+	} else {
+		height = inst->reconfig_height;
+		width = inst->reconfig_width;
+	}
+
 	return NUM_MBS_PER_FRAME(height, width);
 }
 

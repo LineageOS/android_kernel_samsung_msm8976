@@ -23,6 +23,15 @@
 #include <linux/err.h>
 
 #include "mdss_dsi.h"
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+#include "mdss_debug.h"
+#include "samsung/ss_dsi_panel_common.h"
+DEFINE_MUTEX(STATUS_CHANGE);
+DEFINE_MUTEX(LP_STOP_MODE_LOCK); /* For Hall ic panel reset funtion */
+
+/*#define PANEL_CMD_DEBUG*/
+
+#endif
 #include "mdss_dba_utils.h"
 
 #define DT_CMD_HDR 6
@@ -151,17 +160,34 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	return 0;
 }
 
-static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
 	struct dcs_cmd_req cmdreq;
 	struct mdss_panel_info *pinfo;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG) && defined(PANEL_CMD_DEBUG)
+	int i, j;
+#endif
+
 
 	pinfo = &(ctrl->panel_data.panel_info);
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			return;
 	}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if (!mdss_panel_attach_get(ctrl)) {
+		pr_err("%s: mdss_panel_attach_get(%d) : %d\n",__func__, ctrl->ndx, mdss_panel_attach_get(ctrl));
+		return;
+	}
+
+	if (IS_ERR_OR_NULL(pcmds->cmds)) {
+		pr_err("%s: pcmds is NULL\n",__func__);
+		return;
+	}
+
+	mutex_lock(&LP_STOP_MODE_LOCK);
+#endif
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds = pcmds->cmds;
@@ -177,7 +203,21 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG) && defined(PANEL_CMD_DEBUG)
+	for (i = 0; i < pcmds->cmd_cnt; i++) {
+		printk("%s: [CMD] :", __func__);
+		for (j = 0; j < pcmds->cmds[i].dchdr.dlen; j++)
+			printk("%x ", pcmds->cmds[i].payload[j]);
+		printk("\n");
+	}
+#endif
+
+
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mutex_unlock(&LP_STOP_MODE_LOCK);
+#endif
+
 }
 
 static char led_pwm1[2] = {0x51, 0x0};	/* DTYPE_DCS_WRITE1 */
@@ -198,6 +238,23 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	}
 
 	pr_debug("%s: level=%d\n", __func__, level);
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	/*
+	*	To avoid DSI0 & DSI1 twice update.
+	*	Triggered by cmd_sync_wait_trigger.
+	*/
+	if (ctrl->cmd_sync_wait_broadcast && !ctrl->cmd_sync_wait_trigger)
+		return;
+	else {
+		if (pinfo->dcs_cmd_by_left && (ctrl->ndx != DSI_CTRL_LEFT))
+			return;
+		else
+			mdss_samsung_brightness_dcs(ctrl, level);
+
+		return;
+	}
+#endif
 
 	led_pwm1[1] = (unsigned char)level;
 
@@ -268,6 +325,9 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
 	int i, rc = 0, mode_sel = 0;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -278,7 +338,11 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				panel_data);
 
 	pinfo = &ctrl_pdata->panel_data.panel_info;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if ((mdss_dsi_is_right_ctrl(ctrl_pdata) && !vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init &&
+#else
 	if ((mdss_dsi_is_right_ctrl(ctrl_pdata) &&
+#endif
 		mdss_dsi_is_hw_config_split(ctrl_pdata->shared_data)) ||
 			pinfo->is_dba_panel) {
 		pr_debug("%s:%d, gpio configuration not needed\n",
@@ -315,18 +379,18 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 					goto gpio_err;
 				}
 			}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_on_reset_delay)
+			usleep(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_on_reset_delay);
+#endif
 
-			rc = gpio_direction_output(ctrl_pdata->rst_gpio, 1);
-			if (rc) {
-				pr_err("%s: unable to set dir for rst gpio\n",
-					__func__);
-				goto gpio_err;
-			}
-			for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
-				gpio_set_value((ctrl_pdata->rst_gpio),
-					pdata->panel_info.rst_seq[i]);
-				if (pdata->panel_info.rst_seq[++i])
-					usleep(pinfo->rst_seq[i] * 1000);
+			if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+				for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
+					gpio_set_value((ctrl_pdata->rst_gpio),
+						pdata->panel_info.rst_seq[i]);
+					if (pdata->panel_info.rst_seq[++i])
+						usleep(pinfo->rst_seq[i] * 1000);
+				}
 			}
 
 			if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
@@ -367,12 +431,24 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value((ctrl_pdata->bklt_en_gpio), 0);
 			gpio_free(ctrl_pdata->bklt_en_gpio);
 		}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+		gpio_free(ctrl_pdata->rst_gpio);
+		}
+		msleep(5);
+		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
+			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
+			gpio_free(ctrl_pdata->disp_en_gpio);
+		}
+#else
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
 			gpio_free(ctrl_pdata->disp_en_gpio);
 		}
 		gpio_set_value((ctrl_pdata->rst_gpio), 0);
 		gpio_free(ctrl_pdata->rst_gpio);
+#endif
 		if (gpio_is_valid(ctrl_pdata->lcd_mode_sel_gpio))
 			gpio_free(ctrl_pdata->lcd_mode_sel_gpio);
 	}
@@ -430,6 +506,13 @@ static int mdss_dsi_roi_merge(struct mdss_dsi_ctrl_pdata *ctrl,
 		ans = 1;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pr_debug("%s l.x:%04d l.y:%04d l.w:%04d l.h:%04d "
+		"r.x:%04d r.y:%04d r.w:%04d r.h:%04d\n", __func__,
+		l_roi->x, l_roi->y, l_roi->w, l_roi->h,
+		r_roi->x, r_roi->y, r_roi->w, r_roi->h);
+#endif
+
 	return ans;
 }
 
@@ -464,6 +547,11 @@ static void mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	if (unicast)
 		cmdreq.flags |= CMD_REQ_UNICAST;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	/*Set link state to HS Mode for samsung*/
+	cmdreq.flags |= CMD_REQ_HS_MODE;
+#endif
+
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
@@ -612,6 +700,14 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 	return;
 }
 
+static int mdss_dsi_panel_registered(struct mdss_panel_data *pdata)
+{
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mdss_samsung_dsi_panel_registered(pdata);
+#endif
+	return 0;
+}
+
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
@@ -678,10 +774,19 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
 	struct dsi_panel_cmds *on_cmds;
-	int ret = 0;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	u32 reg_data, i;
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
+
+	ATRACE_BEGIN(__func__);
+	mutex_lock(&STATUS_CHANGE);
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		mutex_unlock(&STATUS_CHANGE);
+#endif
 		return -EINVAL;
 	}
 
@@ -696,13 +801,62 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 			goto end;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pinfo->blank_state = MDSS_PANEL_BLANK_READY_TO_UNBLANK;
+
+	if (vdd->support_hall_ic && \
+		(vdd->display_status_dsi[DISPLAY_1].hall_ic_mode_change_trigger == true)) {
+
+		/* Panel Select */
+		if (vdd->display_status_dsi[DISPLAY_1].hall_ic_status == HALL_IC_OPEN)
+			mdss_samsung_dsi_pinctrl_set_state(ctrl, SAMSUNG_GPIO_CONTROL0, false); /*OPEN : Internal PANEL */
+		else
+			mdss_samsung_dsi_pinctrl_set_state(ctrl, SAMSUNG_GPIO_CONTROL0, true); /*CLOSE : External PANEL */
+
+		/* Enter LP11 */
+		reg_data = MIPI_INP(ctrl->ctrl_base + 0x0004);
+		MIPI_OUTP(ctrl->ctrl_base + 0x0004, (reg_data & ~(0x07)));
+		wmb();
+
+		/* RESET PANEL */
+		for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
+			gpio_set_value((ctrl->rst_gpio),
+				pdata->panel_info.rst_seq[i]);
+			if (pdata->panel_info.rst_seq[++i])
+				usleep_range(pinfo->rst_seq[i] * 1000, pinfo->rst_seq[i] * 1000);
+		}
+
+		/* Exit LP11 */
+		MIPI_OUTP(ctrl->ctrl_base + 0x0004, reg_data);
+		wmb();	/* make sure dsi controller enabled again */
+
+		/*
+			Timing-generator enable.
+			Timing-generator disabld at mdss_dsi_panel_off();
+		*/
+		samsung_timing_engine_control(true);
+
+		mutex_unlock(&LP_STOP_MODE_LOCK);
+	}
+
+	if (ctrl->cmd_sync_wait_broadcast) {
+		if (ctrl->cmd_sync_wait_trigger)
+			mdss_samsung_panel_on_pre(pdata);
+	} else {
+		if (pinfo->dcs_cmd_by_left && (ctrl->ndx != DSI_CTRL_LEFT))
+			pr_debug("%s %d DSI:%d skip tx cmds\n", __func__, __LINE__, ctrl->ndx);
+		else
+			mdss_samsung_panel_on_pre(pdata);
+	}
+#endif
+
 	on_cmds = &ctrl->on_cmds;
 
 	if ((pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_IMMEDIATE) &&
 			(pinfo->mipi.boot_mode != pinfo->mipi.mode))
 		on_cmds = &ctrl->post_dms_on_cmds;
 
-	pr_debug("%s: ctrl=%p cmd_cnt=%d\n", __func__, ctrl, on_cmds->cmd_cnt);
+	pr_info("%s: ctrl=%p cmd_cnt=%d\n", __func__, ctrl, on_cmds->cmd_cnt);
 
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds);
@@ -710,8 +864,30 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if (ctrl->ds_registered)
 		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
 end:
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
+
+	if (ctrl->cmd_sync_wait_broadcast) {
+		if (ctrl->cmd_sync_wait_trigger)
+			mdss_samsung_panel_on_post(pdata);
+	} else {
+		if (pinfo->dcs_cmd_by_left && (ctrl->ndx != DSI_CTRL_LEFT))
+			pr_debug("%s %d DSI:%d skip tx cmds\n", __func__, __LINE__, ctrl->ndx);
+		else
+			mdss_samsung_panel_on_post(pdata);
+	}
+	pinfo->panel_state = true;
+#endif
+
 	pr_debug("%s:-\n", __func__);
-	return ret;
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mutex_unlock(&STATUS_CHANGE);
+	ATRACE_END(__func__);
+#endif
+
+	return 0;
 }
 
 static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
@@ -763,8 +939,17 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
+
+	mutex_lock(&STATUS_CHANGE);
+#endif
+
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		mutex_unlock(&STATUS_CHANGE);
+#endif
 		return -EINVAL;
 	}
 
@@ -779,6 +964,11 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 			goto end;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
+	mdss_samsung_panel_off_pre(pdata);
+#endif
+
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
 
@@ -786,9 +976,26 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		mdss_dba_utils_video_off(pinfo->dba_data);
 		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
 	}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mdss_samsung_panel_off_post(pdata);
+	pinfo->panel_state = false;
+
+	if (vdd->support_hall_ic && \
+		(vdd->display_status_dsi[DISPLAY_1].hall_ic_mode_change_trigger == true)) {
+		mutex_lock(&LP_STOP_MODE_LOCK);
+		samsung_timing_engine_control(false); /* Timing-generator disable */
+	}
+#endif
 
 end:
-	pr_debug("%s:-\n", __func__);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
+#endif
+	pr_err("%s:-\n", __func__);
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mutex_unlock(&STATUS_CHANGE);
+#endif
 	return 0;
 }
 
@@ -809,8 +1016,17 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 
 	pr_debug("%s: ctrl=%p ndx=%d enable=%d\n", __func__, ctrl, ctrl->ndx,
 		enable);
-
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
 	/* Any panel specific low power commands/config */
+	if (enable)
+		pinfo->blank_state = MDSS_PANEL_BLANK_LOW_POWER;
+	else
+		pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
+#endif
+	/* Any panel specific low power commands/config */
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		mdss_samsung_panel_low_power_config(pdata, enable);
+#endif
 
 	pr_debug("%s:-\n", __func__);
 	return 0;
@@ -844,9 +1060,17 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 	char *buf, *bp;
 	struct dsi_ctrl_hdr *dchdr;
 	int i, cnt;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	int read_cmd = 0;
+	int len_cmd = 0;
+#endif
 
 	data = of_get_property(np, cmd_key, &blen);
 	if (!data) {
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		len_cmd = strlen(cmd_key);
+		if (strncmp(&cmd_key[len_cmd - 4], "rev", 3))
+#endif
 		pr_err("%s: failed, key=%s\n", __func__, cmd_key);
 		return -ENOMEM;
 	}
@@ -874,6 +1098,18 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 		bp += dchdr->dlen;
 		len -= dchdr->dlen;
 		cnt++;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if (dchdr->dtype == DTYPE_GEN_READ ||
+			dchdr->dtype == DTYPE_GEN_READ1 ||
+			dchdr->dtype == DTYPE_GEN_READ2 ||
+			dchdr->dtype == DTYPE_DCS_READ) {
+			/* Read command :last byte contain read size, read start */
+			bp += 2;
+			len -= 2;
+			read_cmd = 1;
+		}
+#endif
+
 	}
 
 	if (len != 0) {
@@ -891,6 +1127,29 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 	pcmds->buf = buf;
 	pcmds->blen = blen;
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if (read_cmd) {
+		/*
+			Allocate an array which will store the number
+			for bytes to read for each read command
+		*/
+		pcmds->read_size = kzalloc(sizeof(char) * \
+				pcmds->cmd_cnt, GFP_KERNEL);
+		if (!pcmds->read_size) {
+			pr_err("%s:%d, Unable to read NV cmds",
+				__func__, __LINE__);
+			goto exit_free;
+		}
+		pcmds->read_startoffset = kzalloc(sizeof(char) * \
+				pcmds->cmd_cnt, GFP_KERNEL);
+		if (!pcmds->read_startoffset) {
+			pr_err("%s:%d, Unable to read NV cmds",
+				__func__, __LINE__);
+			goto error;
+		}
+	}
+#endif
+
 	bp = buf;
 	len = blen;
 	for (i = 0; i < cnt; i++) {
@@ -901,10 +1160,27 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 		pcmds->cmds[i].payload = bp;
 		bp += dchdr->dlen;
 		len -= dchdr->dlen;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if (read_cmd) {
+			pcmds->read_size[i] = *bp++;
+			pcmds->read_startoffset[i] = *bp++;
+			len -= 2;
+			pr_debug("%s address : 0x%x size : 0x%x offset : 0x%x\n", __func__,
+				pcmds->cmds[i].payload[0],
+				pcmds->read_size[0],
+				pcmds->read_startoffset[0]);
+		}
+#endif
+
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	/*Set default link state to HS Mode for samsung*/
+	pcmds->link_state = DSI_HS_MODE;
+#else
 	/*Set default link state to LP Mode*/
 	pcmds->link_state = DSI_LP_MODE;
+#endif
 
 	if (link_key) {
 		data = of_get_property(np, link_key, NULL);
@@ -918,6 +1194,11 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 		pcmds->buf[0], pcmds->blen, pcmds->cmd_cnt, pcmds->link_state);
 
 	return 0;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+error:
+	kfree(pcmds->read_size);
+	/* Prevent : "remove error2 label" double_free: Calling kfree frees pointer buf which has already been freed. */
+#endif
 
 exit_free:
 	kfree(buf);
@@ -2208,6 +2489,48 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
-
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	ctrl_pdata->registered = mdss_dsi_panel_registered;
+#endif
 	return 0;
 }
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+int mdss_samsung_parse_dcs_cmds(struct device_node *np,
+		struct dsi_panel_cmds *pcmds, char *cmd_key, char *link_key)
+{
+	return mdss_dsi_parse_dcs_cmds(np, pcmds, cmd_key, link_key);
+}
+
+u32 mdss_samsung_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
+		struct dsi_panel_cmds *pcmds, int read_size)
+{
+	struct dcs_cmd_req cmdreq;
+	struct mdss_panel_info *pinfo;
+
+	pinfo = &(ctrl->panel_data.panel_info);
+	if (pinfo->dcs_cmd_by_left) {
+		if (ctrl->ndx != DSI_CTRL_LEFT)
+			return -EINVAL;
+	}
+
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = pcmds->cmds;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
+
+	if (read_size)
+		cmdreq.rlen = read_size;
+	else
+		cmdreq.rlen = pcmds->read_size[0];
+
+	cmdreq.rbuf = ctrl->rx_buf.data;
+	cmdreq.cb = NULL; /* call back */
+	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	/*
+	 * blocked here, until call back called
+	 */
+
+	return ctrl->rx_buf.len;
+}
+#endif
+

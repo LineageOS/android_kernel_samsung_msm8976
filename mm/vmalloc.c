@@ -33,6 +33,9 @@
 #include <asm/uaccess.h>
 #include <asm/tlbflush.h>
 #include <asm/shmparam.h>
+#include <linux/show_mem_notifier.h>
+
+atomic_long_t nr_vmalloc_pages;
 
 struct vfree_deferred {
 	struct llist_head list;
@@ -1371,19 +1374,15 @@ void unmap_kernel_range(unsigned long addr, unsigned long size)
 	flush_tlb_kernel_range(addr, end);
 }
 
-int map_vm_area(struct vm_struct *area, pgprot_t prot, struct page ***pages)
+int map_vm_area(struct vm_struct *area, pgprot_t prot, struct page **pages)
 {
 	unsigned long addr = (unsigned long)area->addr;
 	unsigned long end = addr + area->size - PAGE_SIZE;
 	int err;
 
-	err = vmap_page_range(addr, end, prot, *pages);
-	if (err > 0) {
-		*pages += err;
-		err = 0;
-	}
+	err = vmap_page_range(addr, end, prot, pages);
 
-	return err;
+	return err > 0 ? 0 : err;
 }
 EXPORT_SYMBOL_GPL(map_vm_area);
 
@@ -1601,6 +1600,7 @@ static void __vunmap(const void *addr, int deallocate_pages)
 			BUG_ON(!page);
 			__free_page(page);
 		}
+		atomic_long_sub(area->nr_pages, &nr_vmalloc_pages);
 
 		if (area->flags & VM_VPAGES)
 			vfree(area->pages);
@@ -1687,7 +1687,7 @@ void *vmap(struct page **pages, unsigned int count,
 	if (!area)
 		return NULL;
 
-	if (map_vm_area(area, prot, &pages)) {
+	if (map_vm_area(area, prot, pages)) {
 		vunmap(area->addr);
 		return NULL;
 	}
@@ -1744,8 +1744,9 @@ static void *__vmalloc_area_node(struct vm_struct *area, gfp_t gfp_mask,
 		area->pages[i] = page;
 	}
 
-	if (map_vm_area(area, prot, &pages))
+	if (map_vm_area(area, prot, pages))
 		goto fail;
+	atomic_long_add(area->nr_pages, &nr_vmalloc_pages);
 	return area->addr;
 
 fail:
@@ -2801,9 +2802,32 @@ static const struct file_operations proc_vmalloc_operations = {
 	.release	= seq_release_private,
 };
 
+static int vmalloc_size_notifier(struct notifier_block *nb,
+					unsigned long is_simple, void *data)
+{
+	struct seq_file *s;
+
+	s = (struct seq_file *)data;
+	if (!is_simple)
+		return 0;
+	if (s != NULL)
+		seq_printf(s, "VmallocAPIsize: %8lu kB\n",
+			atomic_long_read(&nr_vmalloc_pages) << (PAGE_SHIFT - 10));
+	else
+		printk("VmallocAPIsize:%lukB ",
+			atomic_long_read(&nr_vmalloc_pages) << (PAGE_SHIFT - 10));
+	return 0;
+}
+
+static struct notifier_block vmalloc_size_nb = {
+	.notifier_call = vmalloc_size_notifier,
+};
+
 static int __init proc_vmalloc_init(void)
 {
 	proc_create("vmallocinfo", S_IRUSR, NULL, &proc_vmalloc_operations);
+	atomic_long_set(&nr_vmalloc_pages, 0);
+	show_mem_notifier_register(&vmalloc_size_nb);
 	return 0;
 }
 module_init(proc_vmalloc_init);

@@ -20,6 +20,14 @@ source "drivers/block/Kconfig"
 
 source "drivers/misc/Kconfig"
 
+source "drivers/muic/Kconfig"
+
+source "drivers/staging/samsung/sec_notifier/Kconfig"
+
+source "drivers/muic/Kconfig"
+
+source "drivers/muic/universal/Kconfig"
+
 source "drivers/ide/Kconfig"
 
 source "drivers/scsi/Kconfig"
@@ -176,6 +184,8 @@ source "drivers/ipack/Kconfig"
 
 source "drivers/gud/Kconfig"
 
+source "drivers/battery/Kconfig"
+
 source "drivers/reset/Kconfig"
 
 source "drivers/android/Kconfig"
@@ -190,6 +200,18 @@ source "drivers/phy/Kconfig"
 
 source "drivers/soc/Kconfig"
 
+source "drivers/debug/Kconfig"
+
 source "drivers/firmware/Kconfig"
 
+source "drivers/fingerprint/Kconfig"
+
+source "drivers/motor/Kconfig"
+
+#source "drivers/sensorhub/stm/Kconfig"
+
+#source "drivers/sensorhub/atmel/Kconfig"
+
+#source "drivers/sensorhub/brcm/Kconfig"
+source "drivers/sensorhub/Kconfig"
 endmenu

@@ -28,6 +28,7 @@
 #include <glink_private.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
+#include <linux/wakelock.h>
 #include "wcd-mbhc-v2.h"
 #include "wcdcal-hwdep.h"
 
@@ -63,6 +64,8 @@ enum wcd_mbhc_cs_mb_en_flag {
 	WCD_MBHC_EN_PULLUP,
 	WCD_MBHC_EN_NONE,
 };
+
+struct wake_lock det_wake_lock;
 
 static void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 				struct snd_soc_jack *jack, int status, int mask)
@@ -426,6 +429,34 @@ static void wcd_schedule_hs_detect_plug(struct wcd_mbhc *mbhc,
 	schedule_work(work);
 }
 
+static ssize_t key_state_onoff_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct wcd_mbhc *mbhc = dev_get_drvdata(dev);
+	int value = 0;
+
+	if (mbhc->buttons_pressed & SND_JACK_BTN_0)
+		value = 1;
+
+	return snprintf(buf, 4, "%d\n", value);
+}
+static DEVICE_ATTR(key_state, S_IRUGO, key_state_onoff_show,
+	NULL);
+
+static ssize_t earjack_state_onoff_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct wcd_mbhc *mbhc = dev_get_drvdata(dev);
+	int value = 0;
+
+	if (mbhc->hph_status == SND_JACK_HEADSET)
+		value = 1;
+
+	return snprintf(buf, 4, "%d\n", value);
+}
+static DEVICE_ATTR(state, S_IRUGO, earjack_state_onoff_show,
+	NULL);
+
 /* called under codec_resource_lock acquisition */
 static void wcd_cancel_hs_detect_plug(struct wcd_mbhc *mbhc,
 					 struct work_struct *work)
@@ -521,6 +552,9 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 
 	pr_debug("%s: enter insertion %d hph_status %x\n",
 		 __func__, insertion, mbhc->hph_status);
+
+	wake_lock_timeout(&det_wake_lock, (HZ * 5));
+
 	if (!insertion) {
 		/* Report removal */
 		mbhc->hph_status &= ~jack_type;
@@ -2078,6 +2112,8 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 	struct snd_soc_card *card = codec->card;
 	const char *hph_switch = "qcom,msm-mbhc-hphl-swh";
 	const char *gnd_switch = "qcom,msm-mbhc-gnd-swh";
+	struct class *audio;
+	struct device *earjack;
 
 	pr_debug("%s: enter\n", __func__);
 
@@ -2155,6 +2191,53 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 				__func__);
 			return ret;
 		}
+
+		snd_jack_set_key(mbhc->button_jack.jack,
+					SND_JACK_BTN_1,
+					KEY_VOICECOMMAND);
+		if (ret) {
+			pr_err("%s: Failed to set code for btn-1\n",
+				__func__);
+			return ret;
+		}
+
+		snd_jack_set_key(mbhc->button_jack.jack,
+					SND_JACK_BTN_2,
+					KEY_VOLUMEUP);
+		if (ret) {
+			pr_err("%s: Failed to set code for btn-2\n",
+				__func__);
+			return ret;
+		}
+
+		snd_jack_set_key(mbhc->button_jack.jack,
+					SND_JACK_BTN_3,
+					KEY_VOLUMEDOWN);
+		if (ret) {
+			pr_err("%s: Failed to set code for btn-3\n",
+				__func__);
+			return ret;
+		}
+
+		audio = class_create(THIS_MODULE, "audio");
+		if (IS_ERR(audio))
+			pr_err("Failed to create class(audio)!\n");
+
+		earjack = device_create(audio, NULL, 0, NULL, "earjack");
+		if (IS_ERR(earjack))
+			pr_err("Failed to create device(earjack)!\n");
+
+		ret = device_create_file(earjack, &dev_attr_key_state);
+		if (ret)
+			pr_err("Failed to create device file in sysfs entries(%s)!\n",
+				dev_attr_key_state.attr.name);
+
+		ret = device_create_file(earjack, &dev_attr_state);
+		if (ret)
+			pr_err("Failed to create device file in sysfs entries(%s)!\n",
+				dev_attr_state.attr.name);
+
+		dev_set_drvdata(earjack, mbhc);
 
 		set_bit(INPUT_PROP_NO_DUMMY_RELEASE,
 			mbhc->button_jack.jack->input_dev->propbit);
@@ -2253,6 +2336,8 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 		goto err_hphr_ocp_irq;
 	}
 
+	wake_lock_init(&det_wake_lock, WAKE_LOCK_SUSPEND, "mbhc_wake_lock");
+
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 
@@ -2275,6 +2360,7 @@ err_mbhc_sw_irq:
 		mbhc->mbhc_cb->register_notifier(codec, &mbhc->nblock, false);
 	mutex_destroy(&mbhc->codec_resource_lock);
 err:
+	wake_lock_destroy(&det_wake_lock);
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 }
@@ -2296,6 +2382,8 @@ void wcd_mbhc_deinit(struct wcd_mbhc *mbhc)
 	if (mbhc->mbhc_cb && mbhc->mbhc_cb->register_notifier)
 		mbhc->mbhc_cb->register_notifier(codec, &mbhc->nblock, false);
 	mutex_destroy(&mbhc->codec_resource_lock);
+	
+	wake_lock_destroy(&det_wake_lock);
 }
 EXPORT_SYMBOL(wcd_mbhc_deinit);
 

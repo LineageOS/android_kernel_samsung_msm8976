@@ -52,7 +52,12 @@
 #define DSI_PHY_PLL_UNIPHY_PLL_STATUS		(0x00C0)
 
 #define DSI_PLL_POLL_MAX_READS			10
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+#define DSI_PLL_POLL_TIMEOUT_US			1000
+#else
 #define DSI_PLL_POLL_TIMEOUT_US			50
+#endif
 
 int set_byte_mux_sel(struct mux_clk *clk, int sel)
 {

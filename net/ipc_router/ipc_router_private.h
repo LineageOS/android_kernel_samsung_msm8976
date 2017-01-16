@@ -133,4 +133,11 @@ void msm_ipc_router_free_skb(struct sk_buff_head *skb_head);
  */
 int ipc_router_set_conn(struct msm_ipc_port *port_ptr,
 			struct msm_ipc_addr *addr);
+
+/**
+ * ipc_router_dummy_write_space() - Dummy write space available callback
+ * @sk:	Socket pointer for which the callback is called.
+ */
+void ipc_router_dummy_write_space(struct sock *sk);
+
 #endif

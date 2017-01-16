@@ -760,6 +760,36 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		.probe = fe_dai_probe,
 	},
 	{
+		.capture = {
+			.stream_name = "Quinary MI2S_TX Hostless Capture",
+			.aif_name = "QUIN_MI2S_UL_HL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min = 8000,
+			.rate_max = 48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "QUIN_MI2S_TX_HOSTLESS",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "Quinary MI2S_RX Hostless Playback",
+			.aif_name = "QUIN_MI2S_DL_HL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =    48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "QUIN_MI2S_RX_HOSTLESS",
+		.probe = fe_dai_probe,
+	},
+	{
 		.playback = {
 			.stream_name = "Voice2 Playback",
 			.aif_name = "VOICE2_DL",
@@ -1216,6 +1246,37 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		.name = "MultiMedia16",
 		.probe = fe_dai_probe,
 	},
+#if defined(CONFIG_SND_SOC_JACK_AUDIO)
+	{
+		.playback = {
+			.stream_name = "MultiMedia17 Playback",
+			.aif_name = "MM_DL17",
+			.rates = (SNDRV_PCM_RATE_8000_192000 |
+				SNDRV_PCM_RATE_KNOT),
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE),
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min = 8000,
+			.rate_max = 192000,
+		},
+		.capture = {
+			.stream_name = "MultiMedia17 Capture",
+			.aif_name = "MM_UL17",
+			.rates = (SNDRV_PCM_RATE_8000_48000|
+				SNDRV_PCM_RATE_KNOT),
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min = 8000,
+			.rate_max = 48000,
+		},
+		.ops = &msm_fe_Multimedia_dai_ops,
+		.name = "MultiMedia17",
+		.probe = fe_dai_probe,
+	},
+#endif
+
 	{
 		.playback = {
 			.stream_name = "VoiceMMode1 Playback",

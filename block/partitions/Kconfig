@@ -241,6 +241,12 @@ config EFI_PARTITION
 	  Say Y here if you would like to use hard disks under Linux which
 	  were partitioned using EFI GPT.
 
+config CHECK_GPT
+	bool "Check and stop bad primary gpt"
+	default n
+	help
+	  Say Y here if you would like to check and stop with bad primary gpt.
+
 config SYSV68_PARTITION
 	bool "SYSV68 partition table support" if PARTITION_ADVANCED
 	default y if VME

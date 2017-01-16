@@ -385,7 +385,43 @@ config ARCH_MSM8226
 	select PINCTRL_MSM_TLMM
 	select ENABLE_VMALLOC_SAVINGS
 	select MSM_IRQ
+
+	config ARCH_MSM8952
+        bool "MSM8952"
+        depends on ARCH_MSM8916
+        help
+          The SAMSUNG intend to divide MSM8916 & MSM8952 KERNEL feature to cover many
+          products using these ARCH_8916/8952 series chipse.
+
 endmenu
+
+config SEC_J7XLTE_PROJECT
+  depends on ARCH_MSM8952
+	default n
+	bool "Samsung J7X LTE Project"
+	help
+	Support for Samsung J7X LTE Project.
+
+config MACH_J7XLTE_CHN_CTC
+	bool "Samsung J7XLTE CHN CTC"
+	depends on SEC_J7XLTE_PROJECT
+	default n
+	help
+	  Support for Samsung J7XLTE CHN CTC.
+
+config SEC_C5LTE_PROJECT
+  depends on ARCH_MSM8952
+	default n
+	bool "Samsung C5 LTE Project"
+	help
+	Support for Samsung C5 LTE Project.
+
+config MACH_C5LTE_CHN_OPEN
+	bool "Samsung C5LTE CHN OPEN"
+	depends on SEC_C5LTE_PROJECT
+	default n
+	help
+	Support for Samsung C5LTE CHN OPEN.
 
 config MSM_KRAIT_TBB_ABORT_HANDLER
 	bool "Krait TBB/TBH data abort handler"
@@ -1085,6 +1121,10 @@ config KRAIT_REGULATOR
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
 
+config EXTEND_SERIAL_NUM_16
+	bool "serial number is 16 digit"
+	default n
+
 config MSM_PP2S_FEMTO
 	bool "Enable FSM PP2S Interrupt Notification"
 	depends on ARCH_FSM9010 || ARCH_FSM9900
@@ -1104,4 +1144,11 @@ config FSM9900_GSM_NL
 	  The serial port connection can be established to communicate with the
 	  GSM NL module.
 
+config SKU_THEME
+        bool "Bootloader SKU THEME MSM8952"
+        depends on ARCH_MSM8952
+        default n
+        help
+          This option is used to add sku theme Func.
+          Say Y if you want to enable this feature.
 endif

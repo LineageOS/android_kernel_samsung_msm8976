@@ -508,11 +508,13 @@ static int camera_v4l2_fh_release(struct file *filep)
 	if (sp) {
 		v4l2_fh_del(&sp->fh);
 		v4l2_fh_exit(&sp->fh);
+		mutex_destroy(&sp->lock);
+		kzfree(sp);
+		return 0;
+	} else {
+		pr_err("File Pointer is NULL");
+		return -EBADF;
 	}
-
-	mutex_destroy(&sp->lock);
-	kzfree(sp);
-	return 0;
 }
 
 static int camera_v4l2_vb2_q_init(struct file *filep)

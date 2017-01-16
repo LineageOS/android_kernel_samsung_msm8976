@@ -1937,7 +1937,12 @@ static void ep_prime_timer_func(unsigned long data)
 
 	spin_lock_irqsave(mep->lock, flags);
 
-	if (_udc && (!_udc->vbus_active || _udc->suspended)) {
+	if (!_udc) {
+		pr_debug("_udc is null\n");
+		goto out;
+	}
+
+	if (!_udc->vbus_active || _udc->suspended) {
 		pr_debug("ep%d%s prime timer when vbus_active=%d,suspend=%d\n",
 			mep->num, mep->dir ? "IN" : "OUT",
 			_udc->vbus_active, _udc->suspended);
@@ -2502,6 +2507,7 @@ __acquires(udc->lock)
 	int retval;
 
 	trace("%p", udc);
+	printk(KERN_INFO "usb:: %s udc: %p\n", __func__, udc);
 
 	if (udc == NULL) {
 		err("EINVAL");

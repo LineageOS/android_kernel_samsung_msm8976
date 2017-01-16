@@ -30,3 +30,6 @@ obj-$(CONFIG_THERMAL_MONITOR)	+= msm_thermal.o msm_thermal-dev.o
 obj-$(CONFIG_LIMITS_MONITOR)	+= lmh_interface.o
 obj-$(CONFIG_LIMITS_LITE_HW)	+= lmh_lite.o
 obj-$(CONFIG_SUPPLY_LM_MONITOR)	+= supply_lm_core.o
+
+# Sec thermal cpu wear leveling
+obj-$(CONFIG_SS_THERMAL_CPU_WEAR_LEVEL) += ss_thermal.o

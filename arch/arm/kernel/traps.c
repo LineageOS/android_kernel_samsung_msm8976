@@ -36,7 +36,9 @@
 #include <asm/unwind.h>
 #include <asm/tls.h>
 #include <asm/system_misc.h>
-
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
 #include <trace/events/exception.h>
 
 static const char *handler[]= {
@@ -252,14 +254,17 @@ static int __die(const char *str, int err, struct pt_regs *regs)
 	__show_regs(regs);
 	printk(KERN_EMERG "Process %.*s (pid: %d, stack limit = 0x%p)\n",
 		TASK_COMM_LEN, tsk->comm, task_pid_nr(tsk), end_of_stack(tsk));
-
+#ifndef CONFIG_SEC_DEBUG
+		dump_mem(KERN_EMERG, "Stack: ", regs->ARM_sp,
+			 THREAD_SIZE + (unsigned long)task_stack_page(tsk));
+#else
 	if (!user_mode(regs) || in_interrupt()) {
 		dump_mem(KERN_EMERG, "Stack: ", regs->ARM_sp,
 			 THREAD_SIZE + (unsigned long)task_stack_page(tsk));
 		dump_backtrace(regs, tsk);
 		dump_instr(KERN_EMERG, regs);
 	}
-
+#endif
 	return 0;
 }
 
@@ -321,7 +326,9 @@ void die(const char *str, struct pt_regs *regs, int err)
 	enum bug_trap_type bug_type = BUG_TRAP_TYPE_NONE;
 	unsigned long flags = oops_begin();
 	int sig = SIGSEGV;
-
+#ifdef CONFIG_SEC_DEBUG
+	secdbg_sched_msg("!!die!!");
+#endif
 	if (!user_mode(regs))
 		bug_type = report_bug(regs->ARM_pc, regs);
 	if (bug_type != BUG_TRAP_TYPE_NONE)

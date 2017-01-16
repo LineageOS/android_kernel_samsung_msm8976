@@ -2275,6 +2275,7 @@ void a5x_gpc_err_int_callback(struct adreno_device *adreno_dev, int bit)
 	adreno_dispatcher_schedule(device);
 }
 
+
 #define A5XX_INT_MASK \
 	((1 << A5XX_INT_RBBM_AHB_ERROR) |		\
 	 (1 << A5XX_INT_RBBM_TRANSFER_TIMEOUT) |		\

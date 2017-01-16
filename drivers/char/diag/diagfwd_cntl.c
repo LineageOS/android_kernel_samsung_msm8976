@@ -33,7 +33,7 @@ static void diag_mask_update_work_fn(struct work_struct *work)
 {
 	uint8_t peripheral;
 
-	for (peripheral = 0; peripheral <= NUM_PERIPHERALS; peripheral++) {
+	for (peripheral = 0; peripheral < NUM_PERIPHERALS; peripheral++) {
 		if (!(driver->mask_update & PERIPHERAL_MASK(peripheral)))
 			continue;
 		mutex_lock(&driver->cntl_lock);
@@ -277,7 +277,7 @@ static void diag_close_transport_work_fn(struct work_struct *work)
 	uint8_t peripheral;
 
 	mutex_lock(&driver->cntl_lock);
-	for (peripheral = 0; peripheral <= NUM_PERIPHERALS; peripheral++) {
+	for (peripheral = 0; peripheral < NUM_PERIPHERALS; peripheral++) {
 		if (!(driver->close_transport & PERIPHERAL_MASK(peripheral)))
 			continue;
 		driver->close_transport ^= PERIPHERAL_MASK(peripheral);
@@ -797,7 +797,7 @@ void diag_update_real_time_vote(uint16_t proc, uint8_t real_time, int index)
 {
 	int i;
 
-	if (index > DIAG_NUM_PROC) {
+	if (index >= DIAG_NUM_PROC) {
 		pr_err("diag: In %s, invalid index %d\n", __func__, index);
 		return;
 	}

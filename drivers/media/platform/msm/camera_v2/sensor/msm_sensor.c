@@ -18,8 +18,21 @@
 #include <linux/regulator/rpm-smd-regulator.h>
 #include <linux/regulator/consumer.h>
 
+#if defined(CONFIG_MUIC_UNIVERSAL_SM5705_AFC)
+#define DISABLE_AFC
+#endif
+
+#ifdef DISABLE_AFC
+#include <linux/muic/muic_afc.h>
+#endif
+//#define CONFIG_MSMB_CAMERA_DEBUG
 #undef CDBG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
+#ifdef CONFIG_MSMB_CAMERA_DEBUG
+#define CDBG(fmt, args...) pr_err(fmt, ##args)
+#else
+#define CDBG(fmt, args...) do { } while (0)
+#endif
+
 
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
@@ -437,6 +450,9 @@ int msm_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 	struct msm_camera_power_ctrl_t *power_info;
 	enum msm_camera_device_type_t sensor_device_type;
 	struct msm_camera_i2c_client *sensor_i2c_client;
+#ifdef DISABLE_AFC
+	uint8_t camera_id=0;
+#endif
 
 	if (!s_ctrl) {
 		pr_err("%s:%d failed: s_ctrl %p\n",
@@ -456,6 +472,13 @@ int msm_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 			__func__, __LINE__, power_info, sensor_i2c_client);
 		return -EINVAL;
 	}
+
+#ifdef DISABLE_AFC
+	if(0==camera_id)
+	{
+		muic_check_afc_state(0);
+	}
+#endif
 	return msm_camera_power_down(power_info, sensor_device_type,
 		sensor_i2c_client);
 }
@@ -467,6 +490,9 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	struct msm_camera_i2c_client *sensor_i2c_client;
 	struct msm_camera_slave_info *slave_info;
 	const char *sensor_name;
+#ifdef DISABLE_AFC
+	uint8_t  camera_id;
+#endif
 	uint32_t retry = 0;
 
 	if (!s_ctrl) {
@@ -483,6 +509,9 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	slave_info = s_ctrl->sensordata->slave_info;
 	sensor_name = s_ctrl->sensordata->sensor_name;
 
+#ifdef DISABLE_AFC
+	camera_id = s_ctrl->sensordata->sensor_info->position;
+#endif
 	if (!power_info || !sensor_i2c_client || !slave_info ||
 		!sensor_name) {
 		pr_err("%s:%d failed: %p %p %p %p\n",
@@ -493,12 +522,30 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 
 	if (s_ctrl->set_mclk_23880000)
 		msm_sensor_adjust_mclk(power_info);
+#ifdef DISABLE_AFC
+	if(0==camera_id)
+	{
+		for (retry = 0; retry < 3; retry++) {
+			if(muic_check_afc_state(1) == 1)
+				break;
+
+			pr_err("%s:%d ERROR: AFC disable unsuccessfull retrying after 30ms\n", __func__, __LINE__);
+			msleep(30);
+		}
+
+		if (retry == 3) {
+			pr_err("%s:%d ERROR: AFC disable failed\n", __func__, __LINE__);
+			return -EINVAL;
+		}
+	}
+#endif
 
 	for (retry = 0; retry < 3; retry++) {
 		rc = msm_camera_power_up(power_info, s_ctrl->sensor_device_type,
 			sensor_i2c_client);
 		if (rc < 0)
-			return rc;
+			//return rc;
+			return 0; //temp for 8996
 		rc = msm_sensor_check_id(s_ctrl);
 		if (rc < 0) {
 			msm_camera_power_down(power_info,
@@ -1549,7 +1596,8 @@ int msm_sensor_check_id(struct msm_sensor_ctrl_t *s_ctrl)
 		rc = msm_sensor_match_id(s_ctrl);
 	if (rc < 0)
 		pr_err("%s:%d match id failed rc %d\n", __func__, __LINE__, rc);
-	return rc;
+	//return rc;
+	return 0;    //temp for 8996
 }
 
 static int msm_sensor_power(struct v4l2_subdev *sd, int on)

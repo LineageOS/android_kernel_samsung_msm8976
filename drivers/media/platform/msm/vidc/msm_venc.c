@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -200,6 +200,13 @@ static const char *const intra_refresh_modes[] = {
 static const char *const timestamp_mode[] = {
 	"Honor",
 	"Ignore",
+};
+
+static const char *const iframe_sizes[] = {
+	"Default",
+	"Medium",
+	"Huge",
+	"Unlimited"
 };
 
 static struct msm_vidc_ctrl msm_venc_ctrls[] = {
@@ -1144,6 +1151,20 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_VENC_BITRATE_ENABLE,
 		.step = 1,
 	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE,
+		.name = "Bounds of I-frame size",
+		.type = V4L2_CTRL_TYPE_MENU,
+		.minimum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
+		.maximum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED,
+		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
+		.menu_skip_mask = ~(
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED)),
+		.qmenu = iframe_sizes,
+        },
 };
 
 #define NUM_CTRLS ARRAY_SIZE(msm_venc_ctrls)
@@ -1908,7 +1929,21 @@ static inline int venc_v4l2_to_hal(int id, int value)
 		default:
 			goto unknown_value;
 		}
+	case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE:
+		switch (value) {
+		case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT:
+			return HAL_IFRAMESIZE_TYPE_DEFAULT;
+		case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM:
+			return HAL_IFRAMESIZE_TYPE_MEDIUM;
+		case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE:
+			return HAL_IFRAMESIZE_TYPE_HUGE;
+		case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED:
+			return HAL_IFRAMESIZE_TYPE_UNLIMITED;
+		default:
+			goto unknown_value;
+		}
 	}
+
 
 unknown_value:
 	dprintk(VIDC_WARN, "Unknown control (%x, %d)\n", id, value);
@@ -1946,6 +1981,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	u32 hier_p_layers = 0, hier_b_layers = 0, mbi_statistics_mode = 0;
 	struct hal_venc_perf_mode venc_mode;
 	int max_hierp_layers;
+	enum hal_iframesize_type iframesize_type = HAL_IFRAMESIZE_TYPE_DEFAULT;
 
 	if (!inst || !inst->core || !inst->core->device) {
 		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
@@ -2854,6 +2890,13 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &enable;
 		break;
 	}
+	case V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE:
+		property_id = HAL_PARAM_VENC_IFRAMESIZE_TYPE;
+		iframesize_type = venc_v4l2_to_hal(
+				V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE,
+				ctrl->val);
+		pdata = &iframesize_type;
+		break;
 	default:
 		dprintk(VIDC_ERR, "Unsupported index: %x\n", ctrl->id);
 		rc = -ENOTSUPP;

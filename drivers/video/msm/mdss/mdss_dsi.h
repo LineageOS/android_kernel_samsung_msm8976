@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -98,6 +98,9 @@ enum dsi_panel_status_mode {
 	ESD_BTA,
 	ESD_REG,
 	ESD_REG_NT35596,
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	ESD_REG_IRQ,
+#endif
 	ESD_TE,
 	ESD_MAX,
 };
@@ -318,6 +321,11 @@ struct dsi_panel_cmds {
 	struct dsi_cmd_desc *cmds;
 	int cmd_cnt;
 	int link_state;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	char *read_size;
+	char *read_startoffset;
+#endif
+
 };
 
 struct dsi_kickoff_action {
@@ -330,6 +338,12 @@ struct dsi_pinctrl_res {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *gpio_state_active;
 	struct pinctrl_state *gpio_state_suspend;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct pinctrl_state *samsung_gpio_control0_state_active;
+	struct pinctrl_state *samsung_gpio_control0_state_suspend;
+	struct pinctrl_state *samsung_gpio_control1_state_active;
+	struct pinctrl_state *samsung_gpio_control1_state_suspend;
+#endif
 };
 
 struct panel_horizontal_idle {
@@ -366,6 +380,10 @@ struct mdss_dsi_ctrl_pdata {
 	int (*check_read_status) (struct mdss_dsi_ctrl_pdata *pdata);
 	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 	void (*switch_mode) (struct mdss_panel_data *pdata, int mode);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	int (*event_handler) (struct mdss_panel_data *pdata, int event, void *arg);
+	int (*registered) (struct mdss_panel_data *pdata);
+#endif
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
 	struct dss_io_data ctrl_io;
@@ -423,6 +441,7 @@ struct mdss_dsi_ctrl_pdata {
 	u32 dsi_irq_mask;
 	struct mdss_hw *dsi_hw;
 	struct mdss_intf_recovery *recovery;
+	struct mdss_intf_recovery *mdp_callback;
 
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds post_dms_on_cmds;
@@ -459,6 +478,7 @@ struct mdss_dsi_ctrl_pdata {
 	char dlane_swap;	/* data lane swap */
 	bool is_phyreg_enabled;
 	bool burst_mode_enabled;
+	bool is_cmdlist_from_mdp;
 
 	struct dsi_buf tx_buf;
 	struct dsi_buf rx_buf;
@@ -783,5 +803,12 @@ static inline bool mdss_dsi_cmp_panel_reg(struct dsi_buf status_buf,
 {
 	return status_buf.data[i] == status_val[i];
 }
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+int mdss_samsung_parse_dcs_cmds(struct device_node *np,	struct dsi_panel_cmds *pcmds, char *cmd_key, char *link_key);
+u32 mdss_samsung_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,struct dsi_panel_cmds *pcmds, int read_size);
+struct mdss_dsi_ctrl_pdata *mdss_dsi_get_ctrl(u32 ctrl_id);
+int mdss_samsung_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata, int control_number, bool active);
+#endif
 
 #endif /* MDSS_DSI_H */

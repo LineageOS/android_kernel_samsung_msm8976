@@ -18,7 +18,7 @@
 #include "msm_cci.h"
 
 DEFINE_MSM_MUTEX(msm_ois_mutex);
-/*#define MSM_OIS_DEBUG*/
+#define MSM_OIS_DEBUG
 #undef CDBG
 #ifdef MSM_OIS_DEBUG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)

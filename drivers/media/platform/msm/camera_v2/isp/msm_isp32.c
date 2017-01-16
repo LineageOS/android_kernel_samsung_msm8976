@@ -1412,6 +1412,8 @@ static int msm_vfe32_get_platform_data(struct vfe_device *vfe_dev)
 
 	if (!vfe_dev->iommu_ctx[0]) {
 		pr_err("%s: no iommux ctx resource?\n", __func__);
+		regulator_put(vfe_dev->fs_vfe);
+		vfe_dev->fs_vfe = NULL;
 		rc = -ENODEV;
 		goto vfe_no_resource;
 	}
@@ -1423,6 +1425,8 @@ static int msm_vfe32_get_platform_data(struct vfe_device *vfe_dev)
 
 	if (!vfe_dev->iommu_ctx[1]) {
 		pr_err("%s: no iommux ctx resource?\n", __func__);
+		regulator_put(vfe_dev->fs_vfe);
+		vfe_dev->fs_vfe = NULL;
 		rc = -ENODEV;
 		goto vfe_no_resource;
 	}

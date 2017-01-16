@@ -26,8 +26,33 @@
  * instructions.
  */
 
+/*
+ * BluesMan: This is a common code which is required by Qspinlocks and
+ * tickets as well. So, define it well ahead before we dive in.
+ */
 #define arch_spin_unlock_wait(lock) \
 	do { while (arch_spin_is_locked(lock)) cpu_relax(); } while (0)
+
+#ifdef CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK
+
+/* Backporting Queue Spinlocks from 3.18.0-rc2 */
+#include <asm/qspinlock.h>
+
+#else
+/*
+ * BluesMan:
+ * Fall back to regular ticket lock
+ *
+ */
+
+/*
+ * ARMv6 ticket-based spin-locking.
+ *
+ * A memory barrier is required after we get a lock, and before we
+ * release it, because V6 CPUs are assumed to have weakly ordered
+ * memory.
+ */
+
 
 #define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
 
@@ -114,6 +139,8 @@ static inline int arch_spin_is_contended(arch_spinlock_t *lock)
 	return (lockval.next - lockval.owner) > 1;
 }
 #define arch_spin_is_contended	arch_spin_is_contended
+
+#endif /* CONFIG_QUEUE_SPINLOCK */
 
 /*
  * Write lock implementation.

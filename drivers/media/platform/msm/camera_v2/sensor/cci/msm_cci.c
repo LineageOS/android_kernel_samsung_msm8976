@@ -728,6 +728,7 @@ static int32_t msm_cci_i2c_read(struct v4l2_subdev *sd,
 	if (rc < 0) {
 		pr_err("%s:%d msm_cci_set_clk_param failed rc = %d\n",
 			__func__, __LINE__, rc);
+		mutex_unlock(&cci_dev->cci_master_info[master].mutex_q[queue]);
 		return rc;
 	}
 

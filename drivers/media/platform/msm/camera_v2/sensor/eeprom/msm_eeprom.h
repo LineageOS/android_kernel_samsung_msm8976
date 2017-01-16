@@ -48,4 +48,13 @@ struct msm_eeprom_ctrl_t {
 	uint8_t is_supported;
 };
 
+static int msm_eeprom_cmm_dts(struct msm_eeprom_board_info *eb_info,
+	struct device_node *of_node);
+
+static int msm_eeprom_get_dt_data(struct msm_eeprom_ctrl_t *e_ctrl);
+#ifdef CONFIG_COMPAT
+static long msm_eeprom_subdev_fops_ioctl32(struct file *file, unsigned int cmd,
+	unsigned long arg);
+#endif
+
 #endif

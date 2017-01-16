@@ -1722,6 +1722,7 @@ void msm_prim_auxpcm_shutdown(struct snd_pcm_substream *substream)
 				__func__, "quat_i2s");
 }
 
+/*
 int msm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -1744,7 +1745,7 @@ int msm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
 	}
 	atomic_inc(&pdata->clk_ref.sec_auxpcm_mi2s_clk_ref);
 
-	/* enable the gpio's used for the external AUXPCM interface */
+	// enable the gpio's used for the external AUXPCM interface 
 	ret = msm_gpioset_activate(CLIENT_WCD_EXT, "quin_i2s");
 	if (ret < 0)
 		pr_err("%s(): configure gpios failed = %s\n",
@@ -1768,6 +1769,7 @@ void msm_sec_auxpcm_shutdown(struct snd_pcm_substream *substream)
 		pr_err("%s(): configure gpios failed = %s\n",
 				__func__, "quin_i2s");
 }
+*/
 
 int msm_quat_mi2s_snd_startup(struct snd_pcm_substream *substream)
 {

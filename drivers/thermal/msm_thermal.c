@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -48,6 +48,10 @@
 #include <linux/suspend.h>
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
+
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
@@ -379,6 +383,9 @@ static struct cluster_info *core_ptr;
 static struct msm_thermal_debugfs_entry *msm_therm_debugfs;
 static struct devmgr_devices *devices;
 static struct msm_thermal_debugfs_thresh_config *mit_config;
+#if defined(CONFIG_DEBUG_THERMAL)
+static struct delayed_work temp_log_work;
+#endif /* CONFIG_DEBUG_THERMAL */
 
 struct vdd_rstr_enable {
 	struct kobj_attribute ko_attr;
@@ -2601,14 +2608,27 @@ static void vdd_mx_notify(struct therm_threshold *trig_thresh)
 			pr_err("Failed to remove vdd mx restriction\n");
 	}
 	mutex_unlock(&vdd_mx_mutex);
-
-	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
-		sensor_mgr_set_threshold(trig_thresh->sensor_id,
+	sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
-		trig_thresh->cur_state = trig_thresh->trip_triggered;
+}
+#ifdef CONFIG_SEC_DEBUG
+void simulate_msm_thermal_bite(void)
+{
+	struct scm_desc desc;
+#ifndef CONFIG_ARCH_MSM8952
+	sec_debug_prepare_for_thermal_reset();
+#endif
+	if (!is_scm_armv8()) {
+		scm_call(SCM_SVC_BOOT, THERM_SECURE_BITE_CMD,
+			NULL, 0, NULL, 0);
+	} else {
+		desc.args[0] = 0;
+		desc.arginfo = SCM_ARGS(1);
+		scm_call2(SCM_SIP_FNID(SCM_SVC_BOOT,
+			 THERM_SECURE_BITE_CMD), &desc);
 	}
 }
-
+#endif
 static void msm_thermal_bite(int zone_id, long temp)
 {
 	struct scm_desc desc;
@@ -2623,6 +2643,11 @@ static void msm_thermal_bite(int zone_id, long temp)
 		pr_err("Tsens:%d reached temperature:%ld. System reset\n",
 			tsens_id, temp);
 	}
+#ifdef CONFIG_SEC_DEBUG
+#ifndef CONFIG_ARCH_MSM8952
+	sec_debug_prepare_for_thermal_reset();
+#endif
+#endif
 	if (!is_scm_armv8()) {
 		scm_call(SCM_SVC_BOOT, THERM_SECURE_BITE_CMD,
 			NULL, 0, NULL, 0);
@@ -4062,11 +4087,8 @@ static void cx_phase_ctrl_notify(struct therm_threshold *trig_thresh)
 cx_phase_unlock_exit:
 	mutex_unlock(&cx_mutex);
 cx_phase_ctrl_exit:
-	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
-		sensor_mgr_set_threshold(trig_thresh->sensor_id,
+	sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
-		trig_thresh->cur_state = trig_thresh->trip_triggered;
-	}
 	return;
 }
 
@@ -4289,11 +4311,8 @@ static void vdd_restriction_notify(struct therm_threshold *trig_thresh)
 unlock_and_exit:
 	mutex_unlock(&vdd_rstr_mutex);
 set_and_exit:
-	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
-		sensor_mgr_set_threshold(trig_thresh->sensor_id,
+	sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
-		trig_thresh->cur_state = trig_thresh->trip_triggered;
-	}
 	return;
 }
 
@@ -4341,11 +4360,8 @@ static void ocr_notify(struct therm_threshold *trig_thresh)
 unlock_and_exit:
 	mutex_unlock(&ocr_mutex);
 set_and_exit:
-	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
-		sensor_mgr_set_threshold(trig_thresh->sensor_id,
-				trig_thresh->threshold);
-		trig_thresh->cur_state = trig_thresh->trip_triggered;
-	}
+	sensor_mgr_set_threshold(trig_thresh->sensor_id,
+					trig_thresh->threshold);
 	return;
 }
 
@@ -4689,7 +4705,6 @@ int sensor_mgr_init_threshold(struct device *dev,
 			thresh_ptr[i].notify = callback;
 			thresh_ptr[i].trip_triggered = -1;
 			thresh_ptr[i].parent = thresh_inp;
-			thresh_ptr[i].cur_state = -1;
 			thresh_ptr[i].threshold[0].temp =
 				high_temp * tsens_scaling_factor;
 			thresh_ptr[i].threshold[0].trip =
@@ -4713,7 +4728,6 @@ int sensor_mgr_init_threshold(struct device *dev,
 		thresh_ptr->notify = callback;
 		thresh_ptr->trip_triggered = -1;
 		thresh_ptr->parent = thresh_inp;
-		thresh_ptr->cur_state = -1;
 		thresh_ptr->threshold[0].temp = high_temp * tsens_scaling_factor;
 		thresh_ptr->threshold[0].trip =
 			THERMAL_TRIP_CONFIGURABLE_HI;
@@ -5263,6 +5277,33 @@ pre_init_exit:
 	return ret;
 }
 
+/* Method to log the tsens values for every 5secs. */
+#if defined(CONFIG_DEBUG_THERMAL)
+static void __ref msm_therm_temp_log(struct work_struct *work)
+{
+    struct tsens_device tsens_dev;
+    long temp = 0;
+    uint32_t max_sensors = 0;
+
+    if(!(tsens_get_max_sensor_num(&max_sensors)))
+    {
+          int i ,added = 0;
+          char buffer[500];
+          for (i = 0 ; i< max_sensors;i++)
+          {
+               int ret = 0;
+               tsens_dev.sensor_num = i;
+               tsens_get_temp(&tsens_dev,&temp);
+               ret = sprintf(buffer + added , "(%d --- %ld)", i ,temp );
+               added += ret;
+          }
+          pr_info("%s: Debug Temp for Sensors %s",KBUILD_MODNAME,buffer);
+
+    }
+    schedule_delayed_work(&temp_log_work, HZ*5);
+}
+#endif /* CONFIG_DEBUG_THERMAL */
+
 static int devmgr_devices_init(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -5388,6 +5429,11 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 	INIT_DELAYED_WORK(&retry_hotplug_work, retry_hotplug);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	schedule_delayed_work(&check_temp_work, 0);
+
+#if defined(CONFIG_DEBUG_THERMAL)
+	INIT_DELAYED_WORK(&temp_log_work,msm_therm_temp_log);
+        schedule_delayed_work(&temp_log_work,HZ*2);
+#endif /* CONFIG_DEBUG_THERMAL */
 
 	if (num_possible_cpus() > 1) {
 		cpus_previously_online_update();
@@ -6023,13 +6069,6 @@ static int probe_vdd_mx(struct device_node *node,
 	if (ret)
 		goto read_node_done;
 
-	/*
-	 * Monitor only this sensor if defined, otherwise monitor all tsens
-	 */
-	key = "qcom,mx-restriction-sensor_id";
-	if (of_property_read_u32(node, key, &data->vdd_mx_sensor_id))
-		data->vdd_mx_sensor_id = MONITOR_ALL_TSENS;
-
 	vdd_mx = devm_regulator_get(&pdev->dev, "vdd-mx");
 	if (IS_ERR_OR_NULL(vdd_mx)) {
 		ret = PTR_ERR(vdd_mx);
@@ -6042,7 +6081,7 @@ static int probe_vdd_mx(struct device_node *node,
 
 	ret = sensor_mgr_init_threshold(&pdev->dev,
 			&thresh[MSM_VDD_MX_RESTRICTION],
-			data->vdd_mx_sensor_id,
+			MONITOR_ALL_TSENS,
 			data->vdd_mx_temp_degC + data->vdd_mx_temp_hyst_degC,
 			data->vdd_mx_temp_degC, vdd_mx_notify);
 
@@ -7176,9 +7215,6 @@ static void thermal_mx_config_read(struct seq_file *m, void *data)
 				+ msm_thermal_info.vdd_mx_temp_hyst_degC);
 		seq_printf(m, "retention value:%d\n",
 				msm_thermal_info.vdd_mx_min);
-		if (msm_thermal_info.vdd_mx_sensor_id != MONITOR_ALL_TSENS)
-			seq_printf(m, "tsens sensor:tsens_tz_sensor%d\n",
-				msm_thermal_info.vdd_mx_sensor_id);
 	}
 }
 
@@ -7568,6 +7604,9 @@ static int msm_thermal_dev_exit(struct platform_device *inp_dev)
 {
 	int i = 0;
 	struct thermal_progressive_rule *prog = NULL, *next_prog = NULL;
+#if defined(CONFIG_DEBUG_THERMAL)
+	cancel_delayed_work_sync(&temp_log_work);
+#endif /* CONFIG_DEBUG_THERMAL */
 
 	unregister_reboot_notifier(&msm_thermal_reboot_notifier);
 	if (msm_therm_debugfs && msm_therm_debugfs->parent)

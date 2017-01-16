@@ -40,6 +40,8 @@
 #define MAX_AF_ITERATIONS 3
 #define MAX_NUMBER_OF_STEPS 47
 
+#define MSM_OIS_VER_SIZE 6
+
 #define MSM_V4L2_PIX_FMT_META v4l2_fourcc('M', 'E', 'T', 'A') /* META */
 #define MSM_V4L2_PIX_FMT_SBGGR14 v4l2_fourcc('B', 'G', '1', '4')
 	/* 14  BGBG.. GRGR.. */
@@ -255,6 +257,13 @@ struct csiphy_cfg_data {
 	} cfg;
 };
 
+struct msm_ois_cal_info_t {
+	char  cal_ver[MSM_OIS_VER_SIZE+1];
+	uint16_t  cal_checksum_rumba;
+	uint16_t  cal_checksum_line;
+	uint8_t  is_different_crc;
+};
+
 enum eeprom_cfg_type_t {
 	CFG_EEPROM_GET_INFO,
 	CFG_EEPROM_GET_CAL_DATA,
@@ -262,6 +271,13 @@ enum eeprom_cfg_type_t {
 	CFG_EEPROM_WRITE_DATA,
 	CFG_EEPROM_GET_MM_INFO,
 	CFG_EEPROM_INIT,
+	CFG_EEPROM_READ_DATA,
+	CFG_EEPROM_READ_COMPRESSED_DATA,
+	CFG_EEPROM_GET_ERASESIZE,
+	CFG_EEPROM_ERASE,
+	CFG_EEPROM_POWER_ON,
+	CFG_EEPROM_POWER_OFF,
+	CFG_EEPROM_READ_DATA_FROM_HW
 };
 
 struct eeprom_get_t {
@@ -271,11 +287,16 @@ struct eeprom_get_t {
 struct eeprom_read_t {
 	uint8_t *dbuffer;
 	uint32_t num_bytes;
+	uint32_t addr;
+	uint32_t comp_size;
 };
 
 struct eeprom_write_t {
 	uint8_t *dbuffer;
 	uint32_t num_bytes;
+	uint32_t addr;
+	uint32_t *write_size;
+	uint8_t compress;
 };
 
 struct eeprom_get_cmm_t {
@@ -371,11 +392,16 @@ struct csid_cfg_data32 {
 struct eeprom_read_t32 {
 	compat_uptr_t dbuffer;
 	uint32_t num_bytes;
+	uint32_t addr;
+	uint32_t comp_size;
 };
 
 struct eeprom_write_t32 {
 	compat_uptr_t dbuffer;
 	uint32_t num_bytes;
+	uint32_t addr;
+	compat_uptr_t write_size;
+	uint8_t compress;
 };
 
 struct msm_eeprom_info_t32 {
@@ -392,6 +418,7 @@ struct msm_eeprom_cfg_data32 {
 		struct eeprom_get_t get_data;
 		struct eeprom_read_t32 read_data;
 		struct eeprom_write_t32 write_data;
+		struct eeprom_get_cmm_t get_cmm_data;
 		struct msm_eeprom_info_t32 eeprom_info;
 	} cfg;
 };
@@ -454,6 +481,12 @@ enum msm_ois_cfg_type_t {
 	CFG_OIS_POWERUP,
 	CFG_OIS_CONTROL,
 	CFG_OIS_I2C_WRITE_SEQ_TABLE,
+	CFG_OIS_SET_MODE,
+	CFG_OIS_READ_MODULE_VER,
+	CFG_OIS_READ_PHONE_VER,
+	CFG_OIS_READ_CAL_INFO,
+	CFG_OIS_GET_FW_STATUS,
+	CFG_OIS_FW_UPDATE,
 };
 
 enum msm_ois_i2c_operation {
@@ -555,15 +588,16 @@ enum af_camera_name {
 	ACTUATOR_WEB_CAM_1,
 	ACTUATOR_WEB_CAM_2,
 };
-
 struct msm_ois_cfg_data {
 	int cfgtype;
+	uint16_t set_mode_value;
+	uint8_t  *version;
+	struct msm_ois_cal_info_t *ois_cal_info;
 	union {
 		struct msm_ois_set_info_t set_info;
 		struct msm_camera_i2c_seq_reg_setting *settings;
 	} cfg;
 };
-
 struct msm_actuator_set_position_t {
 	uint16_t number_of_steps;
 	uint32_t hw_params;
@@ -596,6 +630,7 @@ struct msm_camera_led_cfg_t {
 	int32_t torch_current[MAX_LED_TRIGGERS];
 	int32_t flash_current[MAX_LED_TRIGGERS];
 	int32_t flash_duration[MAX_LED_TRIGGERS];
+	int32_t flash_front;
 };
 
 struct msm_flash_init_info_t {
@@ -771,6 +806,9 @@ struct msm_ois_set_info_t32 {
 
 struct msm_ois_cfg_data32 {
 	int cfgtype;
+	uint16_t set_mode_value;
+	compat_uptr_t version;
+	compat_uptr_t ois_cal_info;
 	union {
 		struct msm_ois_set_info_t32 set_info;
 		compat_uptr_t settings;

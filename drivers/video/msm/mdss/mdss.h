@@ -423,4 +423,9 @@ static inline bool mdss_has_quirk(struct mdss_data_type *mdata,
 #define MDSS_REG_READ(mdata, offset) \
 		dss_reg_r(&mdata->mdss_io, offset, 0)
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+extern void mdss_dump_reg(u32 reg_dump_flag,
+	char *addr, int len, u32 **dump_mem);
+#endif
+
 #endif /* MDSS_H */

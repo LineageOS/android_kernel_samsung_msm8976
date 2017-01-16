@@ -1038,7 +1038,12 @@ static int sysfs_readdir(struct file * filp, void * dirent, filldir_t filldir)
 		int len, ret;
 
 		name = pos->s_name;
-		len = strlen(name);
+
+		if (name != NULL)
+			len = strlen(name);
+		else
+			len = 0;
+
 		ino = pos->s_ino;
 		type = dt_type(pos);
 		off = filp->f_pos = pos->s_hash;

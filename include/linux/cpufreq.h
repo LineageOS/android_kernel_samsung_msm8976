@@ -157,6 +157,48 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
 static inline void disable_cpufreq(void) { }
 #endif
 
+#if defined (CONFIG_CPU_FREQ_LIMIT_USERSPACE)
+enum {
+	BOOT_CPU = 0,
+};
+
+#define MIN_TOUCH_LOW_LIMIT	1497600
+#define MIN_TOUCH_HIGH_LIMIT	2457600
+#define MIN_CAMERA_LIMIT	998400
+
+#if defined(CONFIG_ARCH_MSM8939) || defined(CONFIG_ARCH_MSM8976)
+#define MIN_TOUCH_LIMIT         556600
+#define MIN_TOUCH_LIMIT_SECOND  499200
+#elif defined(CONFIG_ARCH_MSM8916)
+#define MIN_TOUCH_LIMIT		1190400
+#define MIN_TOUCH_LIMIT_SECOND	998400
+#else
+#define MIN_TOUCH_LIMIT		1728000
+#define MIN_TOUCH_LIMIT_SECOND	1190400
+#endif
+
+enum {
+	DVFS_NO_ID			= 0,
+
+	/* need to update now */
+	DVFS_TOUCH_ID			= 0x00000001,
+	DVFS_APPS_MIN_ID		= 0x00000002,
+	DVFS_APPS_MAX_ID		= 0x00000004,
+	DVFS_UNICPU_ID			= 0x00000008,
+	DVFS_LTETP_ID			= 0x00000010,
+	DVFS_CAMERA_ID			= 0x00000012,
+	DVFS_FINGER_ID			= 0x00000014,
+
+	/* DO NOT UPDATE NOW */
+	DVFS_THERMALD_ID		= 0x00000100,
+
+	DVFS_MAX_ID
+};
+
+
+int set_freq_limit(unsigned long id, unsigned int freq);
+#endif
+
 /*********************************************************************
  *                      CPUFREQ DRIVER INTERFACE                     *
  *********************************************************************/
@@ -256,6 +298,23 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data);
 int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
 
 const char *cpufreq_get_current_driver(void);
+
+#ifdef CONFIG_ARCH_MSM8976
+
+#define MAX_NUM_PERIOD 3
+
+typedef struct {
+	bool on;
+	u32 freq[MAX_NUM_PERIOD][2];
+	int timeout[MAX_NUM_PERIOD];
+	u32 num_period;
+	u32 cur_period;
+	u32 stored_freq[2];
+	struct timer_list timer;
+	struct work_struct time_out_work;
+} cpufreq_boot_limit_t;
+
+#endif
 
 static inline void cpufreq_verify_within_limits(struct cpufreq_policy *policy,
 		unsigned int min, unsigned int max)
@@ -482,5 +541,7 @@ static inline int cpufreq_generic_exit(struct cpufreq_policy *policy)
 	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
+
+#define MIN_FINGER_LIMIT 1804800
 
 #endif /* _LINUX_CPUFREQ_H */

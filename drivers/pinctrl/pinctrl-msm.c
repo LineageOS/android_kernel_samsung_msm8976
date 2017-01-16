@@ -312,8 +312,10 @@ static int msm_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	/* Allocate memory for pin-map entries */
 	map = kzalloc(sizeof(*map) * map_cnt, GFP_KERNEL);
-	if (!map)
+	if (!map) {
+		kfree(cfg);
 		return -ENOMEM;
+	}
 	*nmaps = 0;
 
 	/* Get group name from node */

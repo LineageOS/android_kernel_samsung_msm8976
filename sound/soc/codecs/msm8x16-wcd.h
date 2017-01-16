@@ -233,7 +233,21 @@ struct msm8916_asoc_mach_data {
 	void __iomem *vaddr_gpio_mux_mic_ctl;
 	void __iomem *vaddr_gpio_mux_quin_ctl;
 	void __iomem *vaddr_gpio_mux_pcm_ctl;
+#if defined (CONFIG_SND_SOC_SECONDARY_AUXPCM)
+	void __iomem *vaddr_gpio_mux_sec_pcm_ctl;
+#endif
 	struct on_demand_supply wsa_switch_supply;
+#ifdef CONFIG_SND_SOC_MSM8X16_RT5659
+	struct snd_soc_codec *codec;
+	struct clk *rt5659_ext_clk;
+	int codec_ldo_1p8_en;
+	int codec_ldo_3p3_en;
+	int codec_irq_gpio;
+	int codec_ear_bias;
+#endif /* CONFIG_SND_SOC_MSM8X16_RT5659 */
+#ifdef CONFIG_SAMSUNG_JACK
+	int mpp_ch_scale[3];
+#endif /* CONFIG_SAMSUNG_JACK */
 };
 
 struct msm8x16_wcd_pdata {
@@ -293,6 +307,9 @@ struct msm8x16_wcd_priv {
 	bool dec_active[NUM_DECIMATORS];
 	struct on_demand_supply on_demand_list[ON_DEMAND_SUPPLIES_MAX];
 	struct regulator *spkdrv_reg;
+#ifdef CONFIG_SAMSUNG_JACK
+	int micb_2_ref_cnt;
+#endif /* CONFIG_SAMSUNG_JACK */
 	/* mbhc module */
 	struct wcd_mbhc mbhc;
 	/* cal info for codec */

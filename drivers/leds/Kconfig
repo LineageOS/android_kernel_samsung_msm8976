@@ -398,6 +398,15 @@ config LEDS_INTEL_SS4200
 	  drive or power LEDs on the front panel.  Using this driver
 	  can stop the front LED from blinking after startup.
 
+config LEDS_KTD2026
+	tristate "LED driver for KTD2026 LED"
+	depends on I2C
+	  help
+	  This option enables support for RGB LED driver
+	  accessed via the I2C bus.
+	  KTD2026 is a fully programmable, constant current
+	  three channel LED driver with flexible control interface.
+
 config LEDS_LT3593
 	tristate "LED driver for LT3593 controllers"
 	depends on LEDS_CLASS
@@ -524,6 +533,54 @@ config LEDS_AW2013
 	help
 	  This option enables support for the AW2013 RGB LED connected
 	  through I2C. Say Y to enable support for the AW2013 LED.
+
+config FLASHLIGHT
+	bool "Flashlight Support"
+	help
+	  This option enables the led sysfs class in /sys/class/flashlight.
+
+config SM_FLASH_LED
+	tristate "Siliconmitus flash LED driver support"
+	depends on FLASHLIGHT
+	help
+	  Say Y here to enable Siliconmitus's flash LED driver HAL architecture
+
+config FLED_SM5703
+	tristate "Siliconmitus SM5703 flash LED driver"
+	depends on SM_FLASH_LED
+	help
+	  A driver for Siliconmitus SM5703 flash LED
+config LEDS_S2MPB02
+	bool "LED support for the S2MPB02"
+	depends on LEDS_CLASS
+	help
+	  A driver for S2MPB02 LED
+config LEDS_SM5705
+	tristate "Siliconmitus SM5705 flash LED driver"
+	depends on SM_FLASH_LED
+	help
+	  A driver for Siliconmitus SM5705 flash LED
+	  This option enables support for the LEDs on the SM5705.
+config LEDS_SM5705_RGB
+	tristate "Siliconmitus SM5705 flash LED driver"
+	depends on LEDS_CLASS && I2C
+	help
+	  A driver for Siliconmitus SM5705 RGB LED
+	  This option enables support for the LEDs on the SM5705.
+
+config DUAL_LEDS_FLASH
+	tristate "Dual leds flash driver for main camera"
+	depends on SM_FLASH_LED
+	help
+	  A driver for dual LEDs flash
+	  This option enables support for the dual LEDs on the SM5705.
+
+config LEDS_MAX77843_RGB
+	tristate "Led max77843 rgb"
+	depends on MFD_MAX77843 && LEDS_CLASS && I2C
+	help
+	  If you say yes here you will get support for
+	  for the MAX77843 RGB led chip.
 
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"

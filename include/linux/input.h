@@ -13,7 +13,14 @@
 #include <uapi/linux/input.h>
 /* Implementation details, userspace should not care about these */
 #define ABS_MT_FIRST		ABS_MT_TOUCH_MAJOR
-#define ABS_MT_LAST		ABS_MT_TOOL_Y
+#define ABS_MT_LAST		ABS_MT_GRIP
+
+/*
+ * Switch events
+*/
+
+#define SW_FLIP                 0x15  /* set = flip cover */
+#define SW_CERTIFYHALL          0x1b    /* set = flip cover attach */
 
 /*
  * In-kernel definitions.
@@ -176,6 +183,8 @@ struct input_dev {
 
 	unsigned int users;
 	bool going_away;
+	unsigned int users_private;
+	bool disabled;
 
 	struct device dev;
 

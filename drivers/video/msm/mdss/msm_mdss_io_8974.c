@@ -53,15 +53,14 @@ void mdss_dsi_phy_sw_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	sdata = ctrl->shared_data;
 	octrl = mdss_dsi_get_other_ctrl(ctrl);
-
 	/*
-	 * For dual dsi case if we do DSI PHY sw reset,
-	 * this will reset DSI PHY regulators also.
-	 * Since DSI PHY regulator is shared among both
-	 * the DSI controllers, we should not do DSI PHY
-	 * sw reset when the other DSI controller is still
-	 * active.
-	 */
+	  * For dual dsi case if we do DSI PHY sw reset,
+	  * this will reset DSI PHY regulators also.
+	  * Since DSI PHY regulator is shared among both
+	  * the DSI controllers, we should not do DSI PHY
+	  * sw reset when the other DSI controller is still
+	  * active.
+	  */
 	mutex_lock(&sdata->phy_reg_lock);
 	if ((sdata->hw_rev != MDSS_DSI_HW_REV_103) &&
 		mdss_dsi_is_hw_config_dual(sdata) &&
@@ -80,7 +79,7 @@ void mdss_dsi_phy_sw_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 		udelay(100);
 		/* ensure phy lane and HW reset ends */
 		wmb();
-	} else {
+		} else {
 		/* start phy sw reset */
 		MIPI_OUTP(ctrl->ctrl_base + 0x12c, 0x0001);
 		udelay(1000);
@@ -375,7 +374,7 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 	mutex_lock(&sdata->phy_reg_lock);
 	if (enable) {
 		if (ctrl->shared_data->hw_rev == MDSS_DSI_HW_REV_103) {
-			mdss_dsi_20nm_phy_regulator_enable(ctrl);
+			mdss_dsi_20nm_phy_regulator_enable(ctrl);			
 		} else {
 			/*
 			 * For dsi configurations other than single mode,

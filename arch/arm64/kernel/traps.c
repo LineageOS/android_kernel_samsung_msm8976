@@ -41,6 +41,10 @@
 #include <asm/esr.h>
 #include <asm/edac.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
+
 #include <trace/events/exception.h>
 
 static const char *handler[]= {
@@ -211,6 +215,16 @@ static int __die(const char *str, int err, struct thread_info *thread,
 		 TASK_COMM_LEN, tsk->comm, task_pid_nr(tsk), thread + 1);
 
 	if (!user_mode(regs) || in_interrupt()) {
+#ifdef CONFIG_SEC_DEBUG
+		if (THREAD_SIZE + (unsigned long)task_stack_page(tsk) - regs->sp
+			> THREAD_SIZE) {
+			dump_mem(KERN_EMERG, "Stack: ", regs->sp,
+					THREAD_SIZE/4 + regs->sp);
+		} else {
+			dump_mem(KERN_EMERG, "Stack: ", regs->sp,
+					THREAD_SIZE + (unsigned long)task_stack_page(tsk));
+		}
+#endif
 		dump_backtrace(regs, tsk);
 		dump_instr(KERN_EMERG, regs);
 	}
@@ -228,6 +242,10 @@ static unsigned long oops_begin(void)
 	unsigned long flags;
 
 	oops_enter();
+
+#ifdef CONFIG_SEC_DEBUG
+	secdbg_sched_msg("!!die!!");
+#endif
 
 	/* racy, but better than risking deadlock. */
 	raw_local_irq_save(flags);
@@ -282,6 +300,10 @@ void die(const char *str, struct pt_regs *regs, int err)
 		bug_type = report_bug(regs->pc, regs);
 	if (bug_type != BUG_TRAP_TYPE_NONE)
 		str = "Oops - BUG";
+
+#ifdef CONFIG_SEC_DEBUG_SUMMARY
+	sec_debug_save_die_info(str, regs);
+#endif
 
 	ret = __die(str, err, thread, regs);
 

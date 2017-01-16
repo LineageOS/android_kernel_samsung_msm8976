@@ -16,6 +16,9 @@
 #include <linux/blktrace_api.h>
 #include "blk.h"
 #include "blk-cgroup.h"
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+#include <linux/sched/sysctl.h>
+#endif /*CONFIG_SCHED_TASK_BEHAVIOR*/
 
 /*
  * tunables
@@ -30,7 +33,9 @@ static const int cfq_back_penalty = 2;
 static const int cfq_slice_sync = HZ / 10;
 static int cfq_slice_async = HZ / 25;
 static const int cfq_slice_async_rq = 2;
-static int cfq_slice_idle = HZ / 125;
+/* Explicitly set cfq_slice_idle to 0 */
+static int cfq_slice_idle = 0;
+/*static int cfq_slice_idle = HZ / 125;*/
 static int cfq_group_idle = HZ / 125;
 static const int cfq_target_latency = HZ * 3/10; /* 300 ms */
 static const int cfq_hist_divisor = 4;
@@ -66,6 +71,16 @@ static struct kmem_cache *cfq_pool;
 
 #define sample_valid(samples)	((samples) > 80)
 #define rb_entry_cfqg(node)	rb_entry((node), struct cfq_group, rb_node)
+
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+/*
+ * The time for which the accounting of the IO turn-around-time for a particular
+ * task is to be done. This is also the time for which the sum_exec_runtime is
+ * accounted and hence the io_exec_ratio calculated. An initial value of 100ms
+ * is used since it gives proper granularity while not being too heavy.
+ */
+u32 __read_mostly sysctl_time_slice_value = 100;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 
 struct cfq_ttime {
 	unsigned long last_end_request;
@@ -4023,6 +4038,11 @@ static void cfq_completed_request(struct request_queue *q, struct request *rq)
 	struct cfq_data *cfqd = cfqq->cfqd;
 	const int sync = rq_is_sync(rq);
 	unsigned long now;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	u64 io_time;
+	u64 temp_ms;
+	u64 now_ns;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 
 	now = jiffies;
 	cfq_log_cfqq(cfqd, cfqq, "complete rqnoidle %d",
@@ -4103,6 +4123,40 @@ static void cfq_completed_request(struct request_queue *q, struct request *rq)
 
 	if (!cfqd->rq_in_driver)
 		cfq_schedule_dispatch(cfqd);
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	/*
+	 * The total time spent in block IO is accounted per sysctl_time_slice_value.
+	 * The sum_exec_runtime when the last sysctl_time_slice_value started is also
+	 * accounted such that the sum_exec_runtime might be used to calculate the
+	 * io_exec_ratio in the Scheduler to prefer a certain cluster based on the
+	 * value.
+	 */
+
+	if(is_boot_complete()){
+		preempt_disable();
+		if(rq->owner_id == rq->owner->pid) {
+			now_ns = sched_clock();
+
+			/* 
+		 	* A right-shift by 20 is used to convert ns to ms efficiently, to make the
+		 	* calculations simpler.
+		 	*/
+			temp_ms = now_ns >> 20;
+			io_time = (now_ns - rq->req_start_time_ns) >> 20;
+
+			if((temp_ms - rq->owner->se.last_io_time) >= sysctl_time_slice_value) {
+				rq->owner->se.last_io_time = temp_ms;
+				rq->owner->se.io_request_tat = io_time;
+				rq->owner->se.last_io_sum_exec_runtime =
+					rq->owner->se.sum_exec_runtime;
+			}
+			else {
+				rq->owner->se.io_request_tat += io_time;
+			}
+		}
+		preempt_enable();
+	}
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 }
 
 static inline int __cfq_may_queue(struct cfq_queue *cfqq)
@@ -4608,8 +4662,11 @@ static int __init cfq_init(void)
 	 */
 	if (!cfq_slice_async)
 		cfq_slice_async = 1;
+	/* Do not touch cfq_slice_idle if it is zero */
+	/*
 	if (!cfq_slice_idle)
 		cfq_slice_idle = 1;
+	 */
 
 #ifdef CONFIG_CFQ_GROUP_IOSCHED
 	if (!cfq_group_idle)

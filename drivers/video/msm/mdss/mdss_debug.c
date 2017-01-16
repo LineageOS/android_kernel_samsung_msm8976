@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -109,7 +109,7 @@ static ssize_t panel_debug_base_offset_read(struct file *file,
 	if (*ppos)
 		return 0;	/* the end */
 
-	len = snprintf(buf, sizeof(buf), "0x%02zx %zx\n", dbg->off, dbg->cnt);
+	len = snprintf(buf, sizeof(buf), "0x%02zx %zd\n", dbg->off, dbg->cnt);
 	if (len < 0 || len >= sizeof(buf))
 		return 0;
 
@@ -179,7 +179,8 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 		mdata->debug_inf.debug_enable_clock(1);
 
 	dsi_write_cmd.dchdr.dlen = len;
-	mdss_dsi_cmdlist_put(ctrl_pdata, &cmdreq);
+	if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT)
+		mdss_dsi_cmdlist_put(ctrl_pdata, &cmdreq);
 
 	if (mdata->debug_inf.debug_enable_clock)
 		mdata->debug_inf.debug_enable_clock(0);
@@ -227,7 +228,7 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 				NULL, rx_buf, dbg->cnt);
 
 	len = snprintf(panel_reg_buf, reg_buf_len, "0x%02zx: ", dbg->off);
-	if (len < 0 || len >= sizeof(panel_reg_buf))
+	if (len < 0)
 		goto read_reg_fail;
 
 	for (i = 0; (len < reg_buf_len) && (i < ctrl_pdata->rx_len); i++)
@@ -239,8 +240,7 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 	if (mdata->debug_inf.debug_enable_clock)
 		mdata->debug_inf.debug_enable_clock(0);
 
-	if ((count < sizeof(panel_reg_buf))
-				|| copy_to_user(user_buf, panel_reg_buf, len))
+	if (copy_to_user(user_buf, panel_reg_buf, len))
 		goto read_reg_fail;
 
 	kfree(rx_buf);
@@ -761,7 +761,7 @@ static ssize_t mdss_debug_perf_mode_write(struct file *file,
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
 
-	buf[count] = 0;	/* end of string */
+	buf[count] = 0;		/* end of string */
 
 	if (sscanf(buf, "%d", &perf_mode) != 1)
 		return -EFAULT;
@@ -898,7 +898,7 @@ static ssize_t mdss_debug_perf_panic_write(struct file *file,
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
 
-	buf[count] = 0;	/* end of string */
+	buf[count] = 0; 	/* end of string */
 
 	if (sscanf(buf, "%d", &disable_panic) != 1)
 		return -EFAULT;
@@ -1220,7 +1220,7 @@ static inline struct mdss_mdp_misr_map *mdss_misr_get_map(u32 block_id,
 	char *ctrl_reg = NULL, *value_reg = NULL;
 	char *intf_base = NULL;
 
-	if (block_id > DISPLAY_MISR_MDP) {
+	if (block_id > DISPLAY_MISR_HDMI && block_id != DISPLAY_MISR_MDP) {
 		pr_err("MISR Block id (%d) out of range\n", block_id);
 		return NULL;
 	}
@@ -1320,6 +1320,11 @@ int mdss_misr_set(struct mdss_data_type *mdata,
 	bool is_valid_wb_mixer = true;
 	bool use_mdp_up_misr = false;
 
+	if (!mdata || !req || !ctl) {
+		pr_err("Invalid input params: mdata = %p req = %p ctl = %p",
+			mdata, req, ctl);
+		return -EINVAL;
+	}
 	map = mdss_misr_get_map(req->block_id, ctl, mdata);
 
 	if (!map) {

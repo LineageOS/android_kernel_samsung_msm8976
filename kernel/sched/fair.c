@@ -30,6 +30,9 @@
 #include <linux/migrate.h>
 #include <linux/task_work.h>
 #include <linux/ratelimit.h>
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+#include <linux/oom.h>
+#endif /*CONFIG_SCHED_TASK_BEHAVIOR */
 
 #include <trace/events/sched.h>
 
@@ -1479,6 +1482,17 @@ unsigned int up_down_migrate_scale_factor = 1024;
  */
 unsigned int sysctl_sched_boost;
 
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+/*
+ * The ratio that the time the task spent in doing io in the last
+ * sysctl_time_slice_value to the time the sum_exec_runtime the task spent
+ * in the sysctl_time_slive_value.
+ */
+u32 __read_mostly sysctl_io_exec_ratio = 10;
+
+extern unsigned int sysctl_sched_boot_complete_pct;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
+
 void update_up_down_migrate(void)
 {
 	unsigned int up_migrate = pct_to_real(sysctl_sched_upmigrate_pct);
@@ -2240,6 +2254,13 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 	struct related_thread_group *grp;
 	struct sched_cluster *pref_cluster = NULL;
 
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	unsigned long power_cluster_cpu_mask = 0x0F;
+	unsigned long full_cpu_mask = 0xFF;
+	s32 oom_score;
+	u64 exec_slice;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
+
 	rcu_read_lock();	/* Protected access to p->grp */
 
 	grp = p->grp;
@@ -2269,6 +2290,43 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		 */
 		sync = 0;
 	}
+
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	if(sched_feat(FG_BG_CLUSTER_SELECTION) && is_boot_complete()) {
+
+		/*
+		 * This equation is used to translate the Kernel OOM values to the
+		 * values assigned by Android and hence use them to characterize a task
+		 * as a background task
+		 */
+		oom_score = oom_adj_convert(p);
+
+		/* 
+		 * A right-shift by 20 is used to convert ns to ms efficiently, to make the
+		 * calculations simpler.
+		 */
+		exec_slice = (p->se.sum_exec_runtime -
+			      p->se.last_io_sum_exec_runtime) >> 20;
+
+		if(((p->se.io_request_tat > 0) && (exec_slice > 0) &&
+		   ((exec_slice * sysctl_io_exec_ratio) <
+		    (p->se.io_request_tat))) ||
+		   (oom_score == OOM_PERSISTENT_TASK ||
+		    oom_score == OOM_ADJUST_MIN)) {
+			if((cpumask_equal(tsk_cpus_allowed(p),
+					 to_cpumask(&full_cpu_mask))) )
+				do_set_cpus_allowed
+					(p,
+					 to_cpumask(&power_cluster_cpu_mask));
+		}
+		else {
+			if(cpumask_equal(tsk_cpus_allowed(p),
+					 to_cpumask(&power_cluster_cpu_mask)))
+				do_set_cpus_allowed(p,
+						    to_cpumask(&full_cpu_mask));
+		}
+	}
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 
 	if (small_task && !boost) {
 		best_cpu = best_small_task_cpu(p, sync);
@@ -3234,6 +3292,11 @@ void init_new_task_load(struct task_struct *p)
 		init_load_pelt ? LOAD_AVG_MAX : 0;
 	p->se.avg.runnable_avg_sum = init_load_pelt;
 	p->se.avg.runnable_avg_sum_scaled = init_load_pelt;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	p->se.io_request_tat = 0;
+	p->se.last_io_time = 0;
+	p->se.last_io_sum_exec_runtime = 0;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 }
 
 #else /* CONFIG_SCHED_HMP */

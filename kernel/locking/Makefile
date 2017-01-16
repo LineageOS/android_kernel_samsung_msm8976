@@ -1,5 +1,9 @@
 
-obj-y += mutex.o semaphore.o rwsem.o lglock.o
+# BluesMan: although mcs_spinlock.o is built but only stub will be there
+# if the required config flags are not in place.
+#
+
+obj-y += mutex.o semaphore.o rwsem.o lglock.o mcs_spinlock.o
 
 ifdef CONFIG_FUNCTION_TRACER
 CFLAGS_REMOVE_lockdep.o = -pg
@@ -23,3 +27,4 @@ obj-$(CONFIG_DEBUG_SPINLOCK) += spinlock_debug.o
 obj-$(CONFIG_RWSEM_GENERIC_SPINLOCK) += rwsem-spinlock.o
 obj-$(CONFIG_RWSEM_XCHGADD_ALGORITHM) += rwsem-xadd.o
 obj-$(CONFIG_PERCPU_RWSEM) += percpu-rwsem.o
+obj-$(CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK) += qspinlock.o

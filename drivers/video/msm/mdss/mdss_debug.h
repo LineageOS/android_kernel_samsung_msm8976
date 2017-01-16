@@ -32,8 +32,8 @@
 #define MDSS_REG_BLOCK_NAME_LEN (5)
 
 enum mdss_dbg_reg_dump_flag {
-	MDSS_DBG_DUMP_IN_LOG = BIT(0),
-	MDSS_DBG_DUMP_IN_MEM = BIT(1),
+	MDSS_REG_DUMP_IN_LOG = BIT(0),
+	MDSS_REG_DUMP_IN_MEM = BIT(1),
 };
 
 enum mdss_dbg_xlog_flag {
@@ -59,7 +59,7 @@ struct debug_bus {
  * This cannot be called from interrupt context.
  */
 #define MDSS_XLOG_TOUT_HANDLER(...)	\
-	mdss_xlog_tout_handler_default(false, false, __func__, ##__VA_ARGS__, \
+	mdss_xlog_tout_handler_default(true, false, __func__, ##__VA_ARGS__, \
 		XLOG_TOUT_DATA_LIMITER)
 
 /*
@@ -125,11 +125,19 @@ struct mdss_debug_base {
 	u32 *reg_dump; /* address for the mem dump if no ranges used */
 };
 
+struct debug_log {
+	struct dentry *xlog;
+	u32 xlog_enable;
+	u32 panic_on_err;
+	u32 enable_reg_dump;
+};
+
 struct mdss_debug_data {
 	struct dentry *root;
 	struct dentry *perf;
 	struct dentry *bordercolor;
 	struct list_head base_list;
+	struct debug_log logd;
 };
 
 struct dump_offset {

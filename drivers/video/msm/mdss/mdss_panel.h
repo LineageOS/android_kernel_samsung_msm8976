@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -101,6 +101,9 @@ enum {
 	MDSS_PANEL_BLANK_BLANK = 0,
 	MDSS_PANEL_BLANK_UNBLANK,
 	MDSS_PANEL_BLANK_LOW_POWER,
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	MDSS_PANEL_BLANK_READY_TO_UNBLANK,
+#endif
 };
 
 enum {
@@ -134,6 +137,10 @@ struct mdss_panel_cfg {
 
 #define MDP_INTF_DSI_CMD_FIFO_UNDERFLOW		0x0001
 #define MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW	0x0002
+
+enum {
+	MDP_INTF_CALLBACK_DSI_WAIT,
+};
 
 struct mdss_intf_recovery {
 	void (*fxn)(void *ctx, int event);
@@ -186,6 +193,7 @@ struct mdss_intf_recovery {
  *				- 1: update to command mode
  * @MDSS_EVENT_REGISTER_RECOVERY_HANDLER: Event to recover the interface in
  *					case there was any errors detected.
+ * @MDSS_EVENT_REGISTER_MDP_CALLBACK: Event to callback to the MDP driver.
  * @ MDSS_EVENT_DSI_PANEL_STATUS:Event to check the panel status
  *				<= 0: panel check fail
  *				>  0: panel check success
@@ -221,10 +229,19 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_STREAM_SIZE,
 	MDSS_EVENT_DSI_UPDATE_PANEL_DATA,
 	MDSS_EVENT_REGISTER_RECOVERY_HANDLER,
+	MDSS_EVENT_REGISTER_MDP_CALLBACK,
 	MDSS_EVENT_DSI_PANEL_STATUS,
 	MDSS_EVENT_DSI_DYNAMIC_SWITCH,
 	MDSS_EVENT_DSI_RECONFIG_CMD,
 	MDSS_EVENT_DSI_RESET_WRITE_PTR,
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	MDSS_SAMSUNG_EVENT_START,
+	MDSS_SAMSUNG_EVENT_FRAME_UPDATE,
+	MDSS_SAMSUNG_EVENT_FB_EVENT_CALLBACK,
+	MDSS_SAMSUNG_EVENT_PANEL_ESD_RECOVERY,
+	MDSS_SAMSUNG_EVENT_MULTI_RESOLUTION,
+	MDSS_SAMSUNG_EVENT_MAX,
+#endif
 };
 
 struct lcd_panel_info {
@@ -507,6 +524,7 @@ struct mdss_panel_info {
 	u32 partial_update_roi_merge;
 	struct ion_handle *splash_ihdl;
 	int panel_power_state;
+	int blank_state;
 	int compression_mode;
 
 	uint32_t panel_dead;
@@ -537,6 +555,9 @@ struct mdss_panel_info {
 	bool is_dba_panel;
 	/* debugfs structure for the panel */
 	struct mdss_panel_debugfs_info *debugfs_info;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	int panel_state;
+#endif
 };
 
 struct mdss_panel_data {
@@ -559,6 +580,9 @@ struct mdss_panel_data {
 	int (*event_handler) (struct mdss_panel_data *pdata, int e, void *arg);
 
 	struct mdss_panel_data *next;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	void *panel_private;
+#endif
 };
 
 struct mdss_panel_debugfs_info {

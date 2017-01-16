@@ -1961,6 +1961,11 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 			disable_irq_wake(mdwc->hs_phy_irq);
 			mdwc->lpm_flags &= ~MDWC3_ASYNC_IRQ_WAKE_CAPABILITY;
 	}
+	/* it must DCP disconnect, re-enable HS_PHY wakeup IRQ */
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	if ((mdwc->hs_phy_irq && dcp) || !mdwc->vbus_active) // add SAMSUNG
+		enable_irq_wake(mdwc->hs_phy_irq);
+#endif
 
 	dev_info(mdwc->dev, "DWC3 exited from low power mode\n");
 
@@ -2884,6 +2889,9 @@ unreg_chrdev:
 	return ret;
 }
 
+#ifdef CONFIG_USB_NOTIFIER
+#include "dwc3-sec.c"
+#endif
 static int dwc3_msm_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node, *dwc3_node;
@@ -3255,8 +3263,8 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 
 	/* usb_psy required only for vbus_notifications */
 	if (!host_mode) {
-		mdwc->usb_psy.name = "usb";
-		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_USB;
+		mdwc->usb_psy.name = "dwc-usb";
+		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_UNKNOWN;
 		mdwc->usb_psy.supplied_to = dwc3_msm_pm_power_supplied_to;
 		mdwc->usb_psy.num_supplicants = ARRAY_SIZE(
 						dwc3_msm_pm_power_supplied_to);
@@ -3339,6 +3347,10 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		mdwc->otg_xceiv = dwc->dotg->otg.phy;
 	/* Register with OTG if present */
 	if (mdwc->otg_xceiv) {
+#ifdef CONFIG_USB_NOTIFIER
+		pr_info("dwc3-msm: sec_otg_init is called.\n");
+		sec_otg_init(mdwc, mdwc->otg_xceiv);
+#endif
 		/* Skip charger detection for simulator targets */
 		if (!mdwc->charger.skip_chg_detect) {
 			mdwc->charger.start_detection = dwc3_start_chg_det;
@@ -3397,6 +3409,10 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 				PWR_EVNT_POWERDOWN_IN_P3_MASK, 1);
 
 	enable_irq(mdwc->hs_phy_irq);
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+		if (dcp || !mdwc->vbus_active) // add SAMSUNG
+			disable_irq_wake(mdwc->hs_phy_irq);
+#endif
 
 	/* Update initial ID state */
 	if (mdwc->pmic_id_irq) {

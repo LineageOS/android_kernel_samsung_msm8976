@@ -1246,7 +1246,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 	payload = data->payload;
 
 	if (data->opcode == RESET_EVENTS) {
-		pr_debug("%s: Reset event is received: %d %d apr[%p]\n",
+		pr_debug("%s: Reset event is received: %d %d apr[%pK]\n",
 			__func__,
 			data->reset_event, data->reset_proc, this_adm.apr);
 		if (this_adm.apr) {
@@ -1739,7 +1739,7 @@ static void remap_cal_data(struct cal_block_data *cal_block, int cal_index)
 			pr_err("%s: ADM mmap did not work! size = %zd ret %d\n",
 				__func__,
 				cal_block->map_data.map_size, ret);
-			pr_debug("%s: ADM mmap did not work! addr = 0x%pa, size = %zd ret %d\n",
+			pr_debug("%s: ADM mmap did not work! addr = 0x%pK, size = %zd ret %d\n",
 				__func__,
 				&cal_block->cal_data.paddr,
 				cal_block->map_data.map_size, ret);
@@ -1911,7 +1911,7 @@ static int send_adm_cal_block(int port_id, int copp_idx,
 	if (!result) {
 		pr_err("%s: Set params timed out port = 0x%x\n",
 				__func__, port_id);
-		pr_debug("%s: Set params timed out port = 0x%x, payload = 0x%pa\n",
+		pr_debug("%s: Set params timed out port = 0x%x, payload = 0x%pK\n",
 			__func__, port_id, &cal_block->cal_data.paddr);
 		result = -EINVAL;
 		goto done;
@@ -2300,7 +2300,13 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 
 	if ((topology == VPM_TX_SM_ECNS_COPP_TOPOLOGY) ||
 	    (topology == VPM_TX_DM_FLUENCE_COPP_TOPOLOGY) ||
-	    (topology == VPM_TX_DM_RFECNS_COPP_TOPOLOGY))
+	    (topology == VPM_TX_DM_RFECNS_COPP_TOPOLOGY)
+#ifdef CONFIG_SEC_VOC_SOLUTION
+	    || (topology == VPM_TX_SM_LVVEFQ_COPP_TOPOLOGY)
+	    || (topology == VPM_TX_DM_LVVEFQ_COPP_TOPOLOGY)
+	    || (topology == VPM_TX_SM_LVSAFQ_COPP_TOPOLOGY)
+#endif /* CONFIG_SEC_VOC_SOLUTION */
+	    )
 		rate = 16000;
 
 	copp_idx = adm_get_idx_if_copp_exists(port_idx, topology, perf_mode,
@@ -2781,7 +2787,7 @@ int adm_map_rtac_block(struct rtac_cal_block_data *cal_block)
 		pr_err("%s: RTAC mmap did not work! size = %d result %d\n",
 			__func__,
 			cal_block->map_data.map_size, result);
-		pr_debug("%s: RTAC mmap did not work! addr = 0x%pa, size = %d\n",
+		pr_debug("%s: RTAC mmap did not work! addr = 0x%pK, size = %d\n",
 			__func__,
 			&cal_block->cal_data.paddr,
 			cal_block->map_data.map_size);
@@ -3963,7 +3969,7 @@ static int adm_source_tracking_alloc_map_memory(void)
 			(uint32_t *)&this_adm.sourceTrackingData.memmap.size,
 			1);
 	if (ret < 0) {
-		pr_err("%s: failed to map memory, paddr = 0x%p, size = %d\n",
+		pr_err("%s: failed to map memory, paddr = 0x%pK, size = %d\n",
 			__func__,
 			(void *)this_adm.sourceTrackingData.memmap.paddr,
 			(uint32_t)this_adm.sourceTrackingData.memmap.size);
@@ -3983,7 +3989,7 @@ static int adm_source_tracking_alloc_map_memory(void)
 		goto done;
 	}
 	ret = 0;
-	pr_debug("%s: paddr = 0x%p, size = %d, mem_map_handle = 0x%x\n",
+	pr_debug("%s: paddr = 0x%pK, size = %d, mem_map_handle = 0x%x\n",
 		  __func__, (void *)this_adm.sourceTrackingData.memmap.paddr,
 		  (uint32_t)this_adm.sourceTrackingData.memmap.size,
 		  atomic_read(&this_adm.mem_map_handles

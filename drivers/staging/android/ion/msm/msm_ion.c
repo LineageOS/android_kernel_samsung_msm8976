@@ -113,8 +113,13 @@ static struct ion_heap_desc ion_heap_meta[] = {
 #endif
 
 static int msm_ion_lowmem_notifier(struct notifier_block *nb,
-					unsigned long action, void *data)
+					unsigned long is_simple, void *data)
 {
+	if (is_simple) {
+		show_ion_usage_simple(idev, is_simple, (struct seq_file *)data);
+		return 0;
+	}
+
 	show_ion_usage(idev);
 	return 0;
 }
@@ -1069,6 +1074,7 @@ static int msm_ion_remove(struct platform_device *pdev)
 
 	ion_device_destroy(idev);
 	kfree(heaps);
+	show_mem_notifier_unregister(&msm_ion_nb);
 	return 0;
 }
 

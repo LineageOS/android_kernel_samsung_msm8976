@@ -454,7 +454,6 @@ static void msm_vfe40_process_input_irq(struct vfe_device *vfe_dev,
 
 	if (irq_status0 & (1 << 0)) {
 		ISP_DBG("%s: SOF IRQ\n", __func__);
-		msm_isp_increment_frame_id(vfe_dev, VFE_PIX_0, ts);
 	}
 
 	if (irq_status0 & (1 << 24)) {
@@ -791,6 +790,7 @@ static void msm_vfe40_process_epoch_irq(struct vfe_device *vfe_dev,
 		return;
 
 	if (irq_status0 & BIT(2)) {
+		msm_isp_increment_frame_id(vfe_dev, VFE_PIX_0, ts);
 		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		ISP_DBG("%s: EPOCH0 IRQ\n", __func__);
 		msm_isp_update_framedrop_reg(vfe_dev, VFE_PIX_0);

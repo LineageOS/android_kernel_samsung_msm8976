@@ -308,7 +308,6 @@ static int hf_pll_clk_enable(struct clk *c)
 	struct pll_clk *pll = to_pll_clk(c);
 	int ret = 0, count;
 	u32 mode;
-	u64 time;
 	u32 lockmask = pll->masks.lock_mask ?: PLL_LOCKED_BIT;
 	u32 status_reg, user_reg, l_reg, m_reg, n_reg, config_reg;
 
@@ -341,8 +340,6 @@ static int hf_pll_clk_enable(struct clk *c)
 	/* A 50us delay required before locking the PLL. */
 	mb();
 	udelay(50);
-
-	time = sched_clock();
 	/* Wait for pll to lock. */
 	for (count = ENABLE_WAIT_MAX_LOOPS; count > 0; count--) {
 		if (readl_relaxed(PLL_STATUS_REG(pll)) & lockmask) {
@@ -357,10 +354,8 @@ static int hf_pll_clk_enable(struct clk *c)
 		}
 		udelay(1);
 	}
-	time = sched_clock() - time;
 
 	if (!(readl_relaxed(PLL_STATUS_REG(pll)) & lockmask)) {
-		pr_err("PLL lock bit detection total wait time: %lld ns", time);
 		mode = readl_relaxed(PLL_MODE_REG(pll));
 		status_reg = readl_relaxed(PLL_STATUS_REG(pll));
 		user_reg = readl_relaxed(PLL_CONFIG_REG(pll));
@@ -844,7 +839,6 @@ int sr_pll_clk_enable(struct clk *c)
 	u32 mode;
 	int count;
 	unsigned long flags;
-	u64 time;
 	struct pll_clk *pll = to_pll_clk(c);
 	u32 lockmask = pll->masks.lock_mask ?: PLL_LOCKED_BIT;
 	u32 status_reg, user_reg, l_reg, m_reg, n_reg, config_reg;
@@ -868,7 +862,6 @@ int sr_pll_clk_enable(struct clk *c)
 	mb();
 	udelay(100);
 
-	time = sched_clock();
 	/* Wait for the PLL to lock */
 	for (count = ENABLE_WAIT_MAX_LOOPS; count > 0; count--) {
 		if (readl_relaxed(PLL_STATUS_REG(pll)) & lockmask)
@@ -876,10 +869,8 @@ int sr_pll_clk_enable(struct clk *c)
 		udelay(1);
 	}
 
-	time = sched_clock() - time;
 
 	if (!(readl_relaxed(PLL_STATUS_REG(pll)) & lockmask)) {
-		pr_err("PLL lock bit detection total wait time: %lld ns", time);
 		mode = readl_relaxed(PLL_MODE_REG(pll));
 		status_reg = readl_relaxed(PLL_STATUS_REG(pll));
 		user_reg = readl_relaxed(PLL_CONFIG_REG(pll));

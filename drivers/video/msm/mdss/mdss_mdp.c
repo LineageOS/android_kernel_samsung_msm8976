@@ -102,7 +102,7 @@ static struct mdss_panel_intf pan_types[] = {
 	{"edp", MDSS_PANEL_INTF_EDP},
 	{"hdmi", MDSS_PANEL_INTF_HDMI},
 };
-static char mdss_mdp_panel[MDSS_MAX_PANEL_LEN];
+char mdss_mdp_panel[MDSS_MAX_PANEL_LEN];
 
 struct mdss_iommu_map_type mdss_iommu_map[MDSS_IOMMU_MAX_DOMAIN] = {
 	[MDSS_IOMMU_DOMAIN_UNSECURE] = {
@@ -837,6 +837,8 @@ static int mdss_mdp_idle_pc_restore(void)
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	int rc = 0;
 
+	MDSS_XLOG(0x111);
+
 	mutex_lock(&mdp_fs_idle_pc_lock);
 	if (!mdata->idle_pc) {
 		pr_debug("no idle pc, no need to restore\n");
@@ -856,6 +858,9 @@ static int mdss_mdp_idle_pc_restore(void)
 
 end:
 	mutex_unlock(&mdp_fs_idle_pc_lock);
+
+	MDSS_XLOG(0x222);
+
 	return rc;
 }
 
@@ -3785,6 +3790,8 @@ static void mdss_mdp_footswitch_ctrl(struct mdss_data_type *mdata, int on)
 	int active_cnt = 0;
 	bool disable_cx = false;
 
+	MDSS_XLOG(on, 0x111);
+
 	if (!mdata->fs)
 		return;
 
@@ -3831,6 +3838,7 @@ static void mdss_mdp_footswitch_ctrl(struct mdss_data_type *mdata, int on)
 		}
 		mdata->fs_ena = false;
 	}
+	MDSS_XLOG(on, 0x222);
 }
 
 int mdss_mdp_secure_display_ctrl(unsigned int enable)

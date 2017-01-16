@@ -245,10 +245,167 @@ config ARCH_MSM8992
 	  Enable kernel support for the MSM8992 chipset. If you don't
 	  know what this is, you can safely say 'N' here.
 
+config ARCH_MSM8976
+	bool "MSM8976"
+        depends on ARCH_MSM8916
+	help
+	  The SAMSUNG intend to divide MSM8916 & MSM8976 KERNEL feature to cover many
+          products using these ARCH_8916/8976 series chipset unlike QC SRC government.
+
 config ARCH_XGENE
 	bool "AppliedMicro X-Gene SOC Family"
 	help
 	  This enables support for AppliedMicro X-Gene SOC Family
+
+config SEC_FACTORY
+	bool "when it comes to sec factory mode"
+	default n
+	help
+	  It will support a sec factory mode.
+
+config SEC_MSM8976LTE_PROJECT
+	bool "Samsung MSM8976 Project"
+	depends on ARCH_MSM8916
+	default n
+	help
+	  Support for Samsung MSM8976 Project
+
+config MACH_MSM8976LTE_EUR_OPEN
+	bool "Samsung MSM8976LTE EUR OPEN"
+	depends on SEC_MSM8976LTE_PROJECT
+	default n
+	help
+	  Support for Samsung MSM8976LTE EUR OPEN device.
+
+config SEC_MSM8976FHDLTE_PROJECT
+	bool "Samsung MSM8976 FHDLTE Project"
+	depends on ARCH_MSM8916
+	default n
+	help
+	  Support for Samsung MSM8976 FHDLTE Project
+
+config MACH_MSM8976FHDLTE_EUR_OPEN
+	bool "Samsung MSM8976FHDLTE EUR OPEN"
+	depends on SEC_MSM8976FHDLTE_PROJECT
+	default n
+	help
+	  Support for Samsung MSM8976FHDLTE EUR OPEN device.
+
+config SEC_A9XLTE_PROJECT
+        bool "Samsung A9XLTE Project"
+        depends on ARCH_MSM8976
+        default n
+        help
+          Support for Samsung A9XLTE Project
+
+config MACH_A9XLTE_CHN_OPEN
+        bool "Samsung A9XLTE CHN OPEN"
+        depends on SEC_A9XLTE_PROJECT
+        default n
+        help
+          Support for Samsung A9XLTE CHN OPEN device.
+
+config SEC_A9XPROLTE_PROJECT
+        bool "Samsung A9XPROLTE Project"
+        depends on ARCH_MSM8976
+        default n
+        help
+          Support for Samsung A9XPROLTE Project
+
+config MACH_A9XPROLTE_CHN_OPEN
+        bool "Samsung A9XPROLTE CHN OPEN"
+        depends on SEC_A9XPROLTE_PROJECT
+        default n
+        help
+          Support for Samsung A9XPROLTE CHN OPEN device.
+
+config PROJECT_GTS28VE
+        bool "Samsung GTS28VE Project"
+        depends on ARCH_MSM8976
+        default n
+        help
+          Support for Samsung GTS28VE Project
+
+config SEC_GTS28VELTE_PROJECT
+        bool "Samsung GTS28VELTE Project"
+        depends on PROJECT_GTS28VE
+        default n
+        help
+          Support for Samsung GTS28VELTE Project
+
+config MACH_GTS28VELTE_EUR_OPEN
+        bool "Samsung GTS28VELTE EUR OPEN"
+        depends on SEC_GTS28VELTE_PROJECT
+        default n
+        help
+          Support for Samsung GTS28VELTE EUR OPEN device.
+		  
+config MACH_GTS28VELTE_CHN_OPEN
+        bool "Samsung GTS28VELTE CHN OPEN"
+        depends on SEC_GTS28VELTE_PROJECT
+        default n
+        help
+          Support for Samsung GTS28VELTE CHN OPEN device.
+
+config PROJECT_GTS210VE
+        bool "Samsung GTS210VE Project"
+        depends on ARCH_MSM8976
+        default n
+        help
+          Support for Samsung GTS210VE Project
+
+config SEC_GTS210VELTE_PROJECT
+        bool "Samsung GTS210VELTE Project"
+        depends on PROJECT_GTS210VE
+        default n
+        help
+          Support for Samsung GTS210VELTE Project
+
+config MACH_GTS210VELTE_EUR_OPEN
+        bool "Samsung GTS210VELTE EUR OPEN"
+        depends on SEC_GTS210VELTE_PROJECT
+        default n
+        help
+          Support for Samsung GTS210VELTE EUR OPEN device.
+
+config MACH_GTS210VELTE_SEA_OPEN
+        bool "Samsung GTS210VELTE SEA OPEN"
+        depends on SEC_GTS210VELTE_PROJECT
+        default n
+        help
+          Support for Samsung GTS210VELTE SEA OPEN device.
+
+config SEC_GTS28VEWIFI_PROJECT
+        bool "Samsung GTS28VEWIFI Project"
+        depends on PROJECT_GTS28VE
+        default n
+        help
+          Support for Samsung GTS28VEWIFI Project
+
+config MACH_GTS28VEWIFI_EUR_OPEN
+        bool "Samsung GTS28VEWIFI EUR OPEN"
+        depends on SEC_GTS28VEWIFI_PROJECT
+        default n
+        help
+          Support for Samsung GTS28VEWIFI EUR OPEN device.
+
+config SEC_GTS210VEWIFI_PROJECT
+        bool "Samsung GTS210VEWIFI Project"
+        depends on PROJECT_GTS210VE
+        default n
+        help
+          Support for Samsung GTS210VEWIFI Project
+
+config MACH_GTS210VEWIFI_EUR_OPEN
+        bool "Samsung GTS210VEWIFI EUR OPEN"
+        depends on SEC_GTS210VEWIFI_PROJECT
+        default n
+        help
+          Support for Samsung GTS210VEWIFI EUR OPEN device
+
+config SAMSUNG_PRODUCT_SHIP
+        bool "set up for product shipping"
+        default n
 
 endmenu
 
@@ -673,6 +830,62 @@ endif
 source "drivers/cpuidle/Kconfig"
 
 endmenu
+
+config TIMA_GET_QSEE_LOGS_USING_RDX
+	bool "Enable QSEE Log Extraction using RDX tool"
+	default n
+
+config TIMA_LKMAUTH
+       bool "Enable LKM authentication TIMA feature"
+       default n
+       help
+         TIMA authenticates loaded kernel modules. Disable it if you don't
+         want TIMA enabled.
+
+config TIMA_LKMAUTH_CODE_PROT
+       bool "Support kernel Module"
+       depends on MODULES
+       default n
+       help
+         When enabled, this feature will mark all Executable sections in an
+         LKM as RO
+
+config TIMA_TEST_INFRA
+       tristate "Testing infrastructure for TIMA"
+       default n
+       help
+         Kernel bits of the TIMA test infrastructure
+
+config TIMA_UEVENT
+       bool "Uevent message propagation for TIMA"
+       default n
+       help
+         Uevent messages for TIMA PKM/LKM
+
+config DRV_SAMSUNG
+    bool "samsung device dedicated drivers option"
+    default y
+    help
+      This is driver option for samsung sec_class
+      Say y here to enable samsung classes for drivers
+      Provide option of enabling sec class
+      Supports sec drivers key, touch, sec_debug etc
+
+config RTC_AUTO_PWRON
+        bool "RTC Auto Power on PM8x16 PMICs"
+        depends on ARCH_MSM8976
+        default n
+        help
+          Support for the auto power on alarm on the PM8X16 PMIC.
+          Say Y if you want to enable this feature.
+
+config RTC_AUTO_PWRON_PARAM
+        bool "RTC Auto Power on with param PM8x16 PMICs"
+        depends on RTC_AUTO_PWRON
+        default n
+        help
+          This option is used to prevent invalid RTC alarm power on.
+          Say Y if you want to enable this feature.
 
 source "net/Kconfig"
 

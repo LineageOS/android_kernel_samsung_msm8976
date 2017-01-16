@@ -49,6 +49,7 @@
 #include <asm/irq.h>
 #include <asm/exception.h>
 #include <asm/smp_plat.h>
+#include <linux/wakeup_reason.h>
 
 #include "irqchip.h"
 
@@ -323,6 +324,10 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 	i = find_next_bit((unsigned long *)pending, gic->gic_irqs, i+1)) {
 		struct irq_desc *desc = irq_to_desc(i + gic->irq_offset);
 		const char *name = "null";
+#ifdef CONFIG_SEC_PM_DEBUG
+		log_wakeup_reason(i + gic->irq_offset);
+                update_wakeup_reason_stats(i + gic->irq_offset);
+#endif
 
 		if (desc == NULL)
 			name = "stray irq";

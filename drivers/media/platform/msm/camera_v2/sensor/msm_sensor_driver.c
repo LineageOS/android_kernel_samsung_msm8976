@@ -24,6 +24,11 @@
 
 #define SENSOR_MAX_MOUNTANGLE (360)
 
+#if defined (CONFIG_CAMERA_SYSFS_V2)
+extern char rear_cam_info[100];		//camera_info
+extern char front_cam_info[100];	//camera_info
+#endif
+
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 
 /* Static declaration */
@@ -299,8 +304,11 @@ static int32_t msm_sensor_fill_ois_subdevid_by_name(
 	 */
 	*ois_subdev_id = -1;
 
+        //ois name isn't given in mm-camera, so commented below code
+#if 0
 	if (0 == ois_name_len)
 		return 0;
+#endif
 
 	src_node = of_parse_phandle(of_node, "qcom,ois-src", 0);
 	if (!src_node) {
@@ -506,7 +514,7 @@ static int32_t msm_sensor_get_power_down_settings(void *setting,
 
 	/* Print power setting */
 	for (i = 0; i < size_down; i++) {
-		CDBG("DOWN seq_type %d seq_val %d config_val %ld delay %d",
+		CDBG("DOWN seq_type %d seq_val %d config_val %ld delay %d \n",
 			pd[i].seq_type, pd[i].seq_val,
 			pd[i].config_val, pd[i].delay);
 	}
@@ -561,7 +569,7 @@ static int32_t msm_sensor_get_power_up_settings(void *setting,
 
 	/* Print power setting */
 	for (i = 0; i < size; i++) {
-		CDBG("UP seq_type %d seq_val %d config_val %ld delay %d",
+		CDBG("UP seq_type %d seq_val %d config_val %ld delay %d \n",
 			pu[i].seq_type, pu[i].seq_val,
 			pu[i].config_val, pu[i].delay);
 	}
@@ -1202,6 +1210,22 @@ static int32_t msm_sensor_driver_get_dt_data(struct msm_sensor_ctrl_t *s_ctrl)
 	CDBG("%s qcom,mclk-23880000 = %d\n", __func__,
 		s_ctrl->set_mclk_23880000);
 
+#if defined (CONFIG_CAMERA_SYSFS_V2)
+	/* camera information */
+	if (cell_id == 0) {
+		rc = msm_camera_get_dt_camera_info(of_node, rear_cam_info);
+		if (rc < 0) {
+			pr_err("failed: msm_camera_get_dt_camera_info rc %d", rc);
+			goto FREE_VREG_DATA;
+		}
+	} else {
+		rc = msm_camera_get_dt_camera_info(of_node, front_cam_info);
+		if (rc < 0) {
+			pr_err("failed: msm_camera_get_dt_camera_info rc %d", rc);
+			goto FREE_VREG_DATA;
+		}
+	}
+#endif
 	return rc;
 
 FREE_VREG_DATA:

@@ -10,6 +10,58 @@ config MFD_CORE
 	select IRQ_DOMAIN
 	default n
 
+config MFD_SM5701
+	tristate "Support for SiliconMitus SM5701 I/F PMIC"
+	depends on I2C
+	select MFD_CORE
+	default n
+	help
+	  If you say yes to this option, support will be included for the
+	  SM5701 I/F PMIC chip.
+
+config MFD_RT5033
+	tristate "Support for Richtek RT5033 I/F PMIC"
+	depends on I2C
+	select MFD_CORE
+	default n
+	help
+	  If you say yes to this option, support will be included for the
+	  RT5033 I/F PMIC chip.
+
+config MFD_SM5703
+	tristate "Support for Siliconmitus SM5703 I/F PMIC"
+	depends on I2C
+	select MFD_CORE
+	default n
+	help
+	  If you say yes to this option, support will be included for the
+	  SM5703 I/F PMIC chip.
+
+config MFD_RT5033_RESET_WA
+	bool "Enable RT5033 reset workaround"
+	depends on MFD_RT5033
+	default y
+	help
+	  If you enable this function, it will reset when RT5033 is invalid.
+
+config MFD_RT5033_RESET_GPIO
+	bool "Enable RT5033 GPIO reset"
+	depends on MFD_RT5033_RESET_WA
+	default n
+
+config MFD_RT5033_SLDO_VBUSDET
+	bool "SLDO uses for VBUS detection"
+	depends on MFD_RT5033
+	default n
+
+config MFD_SM5703_EN_MRSTB
+	bool "Enable MRSTB function"
+	depends on MFD_SM5703
+	default n
+	help
+	  If you enable this function, you need to connect MRSTB to AP's GPIO,
+	  and then assign GPIO number in DTSI or board file
+
 config MFD_CS5535
 	tristate "AMD CS5535 and CS5536 southbridge core functions"
 	select MFD_CORE
@@ -302,6 +354,30 @@ config MFD_MAX77693
 	  additional drivers must be enabled in order to use the functionality
 	  of the device.
 
+config MFD_MAX77843
+	bool "Maxim Semiconductor MAX77843 PMIC Support"
+	depends on I2C=y
+	select MFD_CORE
+	select REGMAP_I2C
+	help
+	  Say yes here to support for Maxim Semiconductor MAX77843.
+	  This is a companion Power Management IC with Flash, Haptic, Charger,
+	  and MUIC(Micro USB Interface Controller) controls on chip.
+	  This driver provides common support for accessing the device;
+	  additional drivers must be enabled in order to use the functionality
+	  of the device.
+
+config MFD_SM5705
+        bool "Siliconmitus SM5705 IFPM Support"
+        depends on I2C=y
+        select MFD_CORE
+        help
+          Say yes here to support for Siliconmitus SM5705.
+          This is a Power Management IC with USBLDO, RGB(SVC led), Dual Flash, Charger 
+          controls on chip.
+          This driver provides common support for accessing the device;
+          additional drivers
+	  
 config MFD_MAX8907
 	tristate "Maxim Semiconductor MAX8907 PMIC Support"
 	select MFD_CORE
@@ -1129,6 +1205,25 @@ config WCD9310_CODEC
           Enables the WCD9310 core driver. The core driver provides
           read/write capability to registers which are part of the
           WCD9310 core and gives the ability to use the WCD9310 codec.
+
+config MFD_S2MU005
+	bool "MFD_S2MU005"
+        default n
+	help
+	 Support for the Samsung Electronics MFD series.
+	 This driver provides common support for accessing the device,
+	 additional drivers must be enabled in order to use the functionality
+	 of the device
+
+config MFD_S2MPB02
+	bool "Samsung Semiconductor S2MPB02 PMIC Support"
+	depends on I2C=y
+	select MFD_CORE
+	help
+	  Say yes here to support for Samsung Semiconductor S2MPB02.
+	  This is a Power Management IC with Flash on chip.
+	  This driver provides common support for accessing the device
+	  additional drivers.
 
 config WCD9320_CODEC
 	tristate "WCD9320 Codec"

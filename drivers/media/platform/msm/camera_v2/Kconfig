@@ -293,3 +293,36 @@ config MSM_FD
 	 depends on MSMB_CAMERA
 	 ---help---
 	    Enables support for the MSM FD face detection engine.
+
+config CAMERA_SYSFS_V2
+	bool "CAMERA SYS"
+	depends on MSMB_CAMERA
+	---help---
+		CAMERA SYS.
+
+config MSM_FRONT_EEPROM
+	bool "Qualcomm MSM Camera ROM Interface for Calibration support"
+	depends on MSMB_CAMERA
+	---help---
+		Enable support for ROM Interface for Calibration
+		Provides interface for reading the Claibration data.
+		and also provides support for writing data in case of FLASH ROM.
+		Currently supports I2C, CCI and SPI protocol
+
+config MSM_OIS
+	bool "MSM OIS support"
+	depends on MSMB_CAMERA
+	---help---
+		Enables support for msm ois module
+
+config CAM_EXTERNAL
+	bool "External device support"
+	depends on MSM_OIS
+	---help---
+		Enables support for external ois module
+
+config BU24219_OIS
+	bool "BU24219 OIS support"
+	depends on CAM_EXTERNAL
+	---help---
+		Enables support for external ois module
