@@ -138,6 +138,7 @@ struct mdss_panel_cfg {
 #define MDP_INTF_DSI_CMD_FIFO_UNDERFLOW		0x0001
 #define MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW	0x0002
 
+
 enum {
 	MDP_INTF_CALLBACK_DSI_WAIT,
 };

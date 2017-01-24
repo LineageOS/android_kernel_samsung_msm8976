@@ -44,7 +44,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0x0 0x86800000 0x0 0x06a00000>;
+			reg = <0x0 0x86800000 0x0 0x4a00000>;
 			label = "modem_mem";
 		};
 
@@ -52,7 +52,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0x0 0x8d200000 0x0 0x1700000>;
+			reg = <0x0 0x8c600000 0x0 0x1700000>;
 			label = "reloc_mem";
 		};
 
@@ -1851,6 +1851,8 @@
 		qcom,proxy-clock-names = "xo";
 		qcom,active-clock-names = "iface_clk", "bus_clk", "mem_clk";
 
+		qcom,pas-id = <5>;
+		qcom,pil-mss-memsetup;
 		qcom,firmware-name = "modem";
 		qcom,pil-self-auth;
 		qcom,sysmon-id = <0>;
@@ -2067,7 +2069,6 @@
 	voice: qcom,msm-pcm-voice {
 		compatible = "qcom,msm-pcm-voice";
 		qcom,destroy-cvd;
-		qcom,vote-bms;
 	};
 
 	stub_codec: qcom,msm-stub-codec {

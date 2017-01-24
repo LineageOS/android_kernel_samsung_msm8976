@@ -1004,6 +1004,12 @@ static int32_t msm_actuator_init_step_table(struct msm_actuator_ctrl_t *a_ctrl,
 		return -EINVAL;
 	}
 
+	/* validate the actuator state */
+	if (a_ctrl->actuator_state != ACT_OPS_ACTIVE) {
+		pr_err("%s:%d invalid actuator_state %d\n"
+			, __func__, __LINE__, a_ctrl->actuator_state);
+		return -EINVAL;
+	}
 	for (; data_size > 0; data_size--)
 		max_code_size *= 2;
 
@@ -1611,11 +1617,13 @@ static long msm_actuator_subdev_ioctl(struct v4l2_subdev *sd,
 			pr_err("a_ctrl->i2c_client.i2c_func_tbl NULL\n");
 			return -EINVAL;
 		} else {
+			mutex_lock(a_ctrl->actuator_mutex);
 			rc = msm_actuator_power_down(a_ctrl);
 			if (rc < 0) {
 				pr_err("%s:%d Actuator Power down failed\n",
 					__func__, __LINE__);
 			}
+			mutex_unlock(a_ctrl->actuator_mutex);
 			return msm_actuator_close(sd, NULL);
 		}
 	default:

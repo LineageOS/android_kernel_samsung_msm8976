@@ -377,7 +377,7 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 		}
 		wake_up_all(&ctx->rdptr_waitq);
 	}
-	
+
 	if (ctx->autorefresh_off_pending)
 		ctx->autorefresh_off_pending = false;
 
@@ -927,10 +927,14 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		if (sctx)
 			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
 
-		mdss_mdp_ctl_intf_event(ctl,			
-			MDSS_EVENT_REGISTER_MDP_CALLBACK,		
+		mdss_mdp_ctl_intf_event(ctl,
+			MDSS_EVENT_REGISTER_RECOVERY_HANDLER,
+			(void *)&ctx->intf_recovery);
+
+		mdss_mdp_ctl_intf_event(ctl,
+			MDSS_EVENT_REGISTER_MDP_CALLBACK,
 			(void *)&ctx->intf_mdp_callback);
-		
+
 		ctx->intf_stopped = 0;
 		
 		/*Following change was suggested via QC Case #02445981 for proper sync between first frame tx and TE.
@@ -1217,8 +1221,8 @@ int mdss_mdp_cmd_ctx_stop(struct mdss_mdp_ctl *ctl,
 			MDSS_EVENT_REGISTER_RECOVERY_HANDLER,
 			NULL);
 
-		mdss_mdp_ctl_intf_event(ctl,			
-			MDSS_EVENT_REGISTER_MDP_CALLBACK,			
+		mdss_mdp_ctl_intf_event(ctl,
+			MDSS_EVENT_REGISTER_MDP_CALLBACK,
 			NULL);
 	}
 
@@ -1368,8 +1372,8 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 			 * get turned on when the first update comes.
 			 */
 			pr_debug("%s: reset intf_stopped flag.\n", __func__);
-			mdss_mdp_ctl_intf_event(ctl,				
-				MDSS_EVENT_REGISTER_MDP_CALLBACK,				
+			mdss_mdp_ctl_intf_event(ctl,
+				MDSS_EVENT_REGISTER_MDP_CALLBACK,
 				(void *)&ctx->intf_mdp_callback);
 			ctx->intf_stopped = 0;
 			goto end;
@@ -1469,9 +1473,9 @@ static int mdss_mdp_cmd_ctx_setup(struct mdss_mdp_ctl *ctl,
 	ctx->intf_recovery.fxn = mdss_mdp_cmd_intf_recovery;
 	ctx->intf_recovery.data = ctx;
 
-	ctx->intf_mdp_callback.fxn = mdss_mdp_cmd_intf_callback;	
+	ctx->intf_mdp_callback.fxn = mdss_mdp_cmd_intf_callback;
 	ctx->intf_mdp_callback.data = ctx;
-	
+
 	ctx->intf_stopped = 0;
 
 	pr_debug("%s: ctx=%p num=%d\n", __func__, ctx, ctx->pp_num);

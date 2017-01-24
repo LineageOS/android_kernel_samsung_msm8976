@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -773,7 +773,7 @@ static struct rcg_clk camss_gp1_clk_src = {
 };
 
 static struct clk_freq_tbl ftbl_jpeg0_clk_src[] = {
-	F( 133333333,          gpll0,    6,    0,     0),
+	F( 133330000,          gpll0,    6,    0,     0),
 	F( 200000000,          gpll0,    4,    0,     0),
 	F( 266666667,          gpll0,    3,    0,     0),
 	F( 300000000,      gpll4_out,    4,    0,     0),
@@ -1505,7 +1505,7 @@ static struct rcg_clk usb_fs_system_clk_src = {
 static struct clk_freq_tbl ftbl_usb_hs_system_clk_src[] = {
 	F(  57140000,          gpll0,   14,    0,     0),
 	F( 100000000,          gpll0,    8,    0,     0),
-	F( 133333333,          gpll0,    6,    0,     0),
+	F( 133330000,          gpll0,    6,    0,     0),
 	F( 177780000,          gpll0,  4.5,    0,     0),
 	F_END
 };
@@ -2759,6 +2759,7 @@ static struct branch_clk gcc_usb_fs_ic_clk = {
 
 static struct branch_clk gcc_usb_fs_system_clk = {
 	.cbcr_reg = USB_FS_SYSTEM_CBCR,
+	.bcr_reg  = USB_FS_BCR,
 	.has_sibling = 0,
 	.base = &virt_bases[GCC_BASE],
 	.c = {

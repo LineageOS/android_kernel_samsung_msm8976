@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -583,7 +583,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_add_rt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_add_rt_rule *)param)->num_rules,
+				((struct ipa_ioc_add_rt_rule *)param)->
+				num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -622,7 +623,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_mdfy_rt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_mdfy_rt_rule *)param)->num_rules,
+				((struct ipa_ioc_mdfy_rt_rule *)param)->
+				num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -700,7 +702,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_add_flt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_add_flt_rule *)param)->num_rules,
+				((struct ipa_ioc_add_flt_rule *)param)->
+				num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -739,7 +742,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_del_flt_rule *)param)->num_hdls
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_del_flt_rule *)param)->num_hdls,
+				((struct ipa_ioc_del_flt_rule *)param)->
+				num_hdls,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -778,7 +782,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_mdfy_flt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_mdfy_flt_rule *)param)->num_rules,
+				((struct ipa_ioc_mdfy_flt_rule *)param)->
+				num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -1219,7 +1224,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_del_hdr_proc_ctx *)
 			param)->num_hdls != pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_del_hdr_proc_ctx *)param)->num_hdls,
+				((struct ipa_ioc_del_hdr_proc_ctx *)param)->
+				num_hdls,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -1516,6 +1522,7 @@ int ipa_q6_monitor_holb_mitigation(bool enable)
 	int ep_idx;
 	int client_idx;
 
+	ipa_inc_client_enable_clks();
 	for (client_idx = 0; client_idx < IPA_CLIENT_MAX; client_idx++) {
 		if (IPA_CLIENT_IS_Q6_NON_ZIP_CONS(client_idx)) {
 			ep_idx = ipa_get_ep_mapping(client_idx);
@@ -1527,6 +1534,7 @@ int ipa_q6_monitor_holb_mitigation(bool enable)
 			ipa_uc_monitor_holb(client_idx, enable);
 		}
 	}
+	ipa_dec_client_disable_clks();
 
 	return 0;
 }
@@ -1887,7 +1895,10 @@ int ipa_q6_pre_shutdown_cleanup(void)
 		IPAERR("Failed to disable aggregation on Q6 pipes\n");
 		BUG();
 	}
-	ipa_ctx->q6_proxy_clk_vote_valid = true;
+
+	/* set proxy vote before decrement */
+	ipa_proxy_clk_vote();
+	ipa_dec_client_disable_clks();
 	return 0;
 }
 

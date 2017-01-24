@@ -2850,11 +2850,34 @@ static int fg_get_cc_soc(struct fg_chip *chip, int *cc_soc)
 	return 0;
 }
 
+#define BATT_MISSING_STS BIT(6)
+static bool is_battery_missing(struct fg_chip *chip)
+{
+	int rc;
+	u8 fg_batt_sts;
+
+	rc = fg_read(chip, &fg_batt_sts,
+				 INT_RT_STS(chip->batt_base), 1);
+	if (rc) {
+		pr_err("spmi read failed: addr=%03X, rc=%d\n",
+				INT_RT_STS(chip->batt_base), rc);
+		return false;
+	}
+
+	return (fg_batt_sts & BATT_MISSING_STS) ? true : false;
+}
+
 static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 {
 	int cc_pc_val, rc = -EINVAL;
 	unsigned int cc_soc_delta_pc;
 	int64_t delta_cc_uah;
+	bool batt_missing = is_battery_missing(chip);
+
+	if (batt_missing) {
+		pr_err("Battery is missing!\n");
+		goto fail;
+	}
 
 	if (!chip->learning_data.active)
 		goto fail;
@@ -2917,6 +2940,41 @@ static enum alarmtimer_restart fg_cap_learning_alarm_cb(struct alarm *alarm,
 #define CC_SOC_COEFF_OFFSET		0
 #define ACTUAL_CAPACITY_OFFSET		2
 #define MAH_TO_SOC_CONV_CS_OFFSET	0
+static int fg_calc_and_store_cc_soc_coeff(struct fg_chip *chip, int16_t cc_mah)
+{
+	int rc;
+	int64_t cc_to_soc_coeff, mah_to_soc;
+	u8 data[2];
+
+	rc = fg_mem_write(chip, (u8 *)&cc_mah, ACTUAL_CAPACITY_REG, 2,
+			ACTUAL_CAPACITY_OFFSET, 0);
+	if (rc) {
+		pr_err("Failed to store actual capacity: %d\n", rc);
+		return rc;
+	}
+
+	rc = fg_mem_read(chip, (u8 *)&data, MAH_TO_SOC_CONV_REG, 2,
+			MAH_TO_SOC_CONV_CS_OFFSET, 0);
+	if (rc) {
+		pr_err("Failed to read mah_to_soc_conv_cs: %d\n", rc);
+	} else {
+		mah_to_soc = data[1] << 8 | data[0];
+		mah_to_soc *= MICRO_UNIT;
+		cc_to_soc_coeff = div64_s64(mah_to_soc, cc_mah);
+		half_float_to_buffer(cc_to_soc_coeff, data);
+		rc = fg_mem_write(chip, (u8 *)data,
+				ACTUAL_CAPACITY_REG, 2,
+				CC_SOC_COEFF_OFFSET, 0);
+		if (rc)
+			pr_err("Failed to write cc_soc_coeff_offset: %d\n",
+				rc);
+		else if (fg_debug_mask & FG_AGING)
+			pr_info("new cc_soc_coeff %lld [%x %x] saved to sram\n",
+				cc_to_soc_coeff, data[0], data[1]);
+	}
+	return rc;
+}
+
 static void fg_cap_learning_load_data(struct fg_chip *chip)
 {
 	int16_t cc_mah;
@@ -2939,9 +2997,13 @@ static void fg_cap_learning_load_data(struct fg_chip *chip)
 static void fg_cap_learning_save_data(struct fg_chip *chip)
 {
 	int16_t cc_mah;
-	int64_t cc_to_soc_coeff, mah_to_soc;
 	int rc;
-	u8 data[2];
+	bool batt_missing = is_battery_missing(chip);
+
+	if (batt_missing) {
+		pr_err("Battery is missing!\n");
+		return;
+	}
 
 	cc_mah = div64_s64(chip->learning_data.learned_cc_uah, 1000);
 
@@ -2954,36 +3016,21 @@ static void fg_cap_learning_save_data(struct fg_chip *chip)
 				cc_mah, cc_mah);
 
 	if (chip->learning_data.feedback_on) {
-		rc = fg_mem_write(chip, (u8 *)&cc_mah, ACTUAL_CAPACITY_REG, 2,
-				ACTUAL_CAPACITY_OFFSET, 0);
+		rc = fg_calc_and_store_cc_soc_coeff(chip, cc_mah);
 		if (rc)
-			pr_err("Failed to store actual capacity: %d\n", rc);
-
-		rc = fg_mem_read(chip, (u8 *)&data, MAH_TO_SOC_CONV_REG, 2,
-				MAH_TO_SOC_CONV_CS_OFFSET, 0);
-		if (rc) {
-			pr_err("Failed to read mah_to_soc_conv_cs: %d\n", rc);
-		} else {
-			mah_to_soc = data[1] << 8 | data[0];
-			mah_to_soc *= MICRO_UNIT;
-			cc_to_soc_coeff = div64_s64(mah_to_soc, cc_mah);
-			half_float_to_buffer(cc_to_soc_coeff, data);
-			rc = fg_mem_write(chip, (u8 *)data,
-					ACTUAL_CAPACITY_REG, 2,
-					CC_SOC_COEFF_OFFSET, 0);
-			if (rc)
-				pr_err("Failed to write cc_soc_coeff_offset: %d\n",
-					rc);
-			else if (fg_debug_mask & FG_AGING)
-				pr_info("new cc_soc_coeff %lld [%x %x] saved to sram\n",
-					cc_to_soc_coeff, data[0], data[1]);
-		}
+			pr_err("Error in storing cc_soc_coeff, rc:%d\n", rc);
 	}
 }
 
 static void fg_cap_learning_post_process(struct fg_chip *chip)
 {
 	int64_t max_inc_val, min_dec_val, old_cap;
+	bool batt_missing = is_battery_missing(chip);
+
+	if (batt_missing) {
+		pr_err("Battery is missing!\n");
+		return;
+	}
 
 	max_inc_val = chip->learning_data.learned_cc_uah
 			* (1000 + chip->learning_data.max_increment);
@@ -3061,7 +3108,7 @@ static int fg_cap_learning_check(struct fg_chip *chip)
 		if (battery_soc * 100 / FULL_PERCENT_3B
 				> chip->learning_data.max_start_soc) {
 			if (fg_debug_mask & FG_AGING)
-				pr_info("battery soc too low (%d < %d), aborting\n",
+				pr_info("battery soc too high (%d > %d), aborting\n",
 					battery_soc * 100 / FULL_PERCENT_3B,
 					chip->learning_data.max_start_soc);
 			fg_mem_release(chip);
@@ -3226,6 +3273,13 @@ static void status_change_work(struct work_struct *work)
 				status_change_work);
 	unsigned long current_time = 0;
 	int cc_soc, rc, capacity = get_prop_capacity(chip);
+	bool batt_missing = is_battery_missing(chip);
+
+	if (batt_missing) {
+		if (fg_debug_mask & FG_STATUS)
+			pr_info("Battery is missing\n");
+		return;
+	}
 
 	if (chip->status == POWER_SUPPLY_STATUS_FULL) {
 		if (capacity >= 99 && chip->hold_soc_while_full) {
@@ -3702,23 +3756,6 @@ done:
 	fg_relax(&chip->gain_comp_wakeup_source);
 }
 
-#define BATT_MISSING_STS BIT(6)
-static bool is_battery_missing(struct fg_chip *chip)
-{
-	int rc;
-	u8 fg_batt_sts;
-
-	rc = fg_read(chip, &fg_batt_sts,
-				 INT_RT_STS(chip->batt_base), 1);
-	if (rc) {
-		pr_err("spmi read failed: addr=%03X, rc=%d\n",
-				INT_RT_STS(chip->batt_base), rc);
-		return false;
-	}
-
-	return (fg_batt_sts & BATT_MISSING_STS) ? true : false;
-}
-
 static irqreturn_t fg_vbatt_low_handler(int irq, void *_chip)
 {
 	struct fg_chip *chip = _chip;
@@ -3754,6 +3791,7 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *_chip)
 	bool batt_missing = is_battery_missing(chip);
 
 	if (batt_missing) {
+		fg_cap_learning_stop(chip);
 		chip->battery_missing = true;
 		chip->profile_loaded = false;
 		chip->batt_type = missing_batt_type;
@@ -3982,10 +4020,13 @@ done:
 #define RSLOW_COMP_REG			0x528
 #define RSLOW_COMP_C1_OFFSET		0
 #define RSLOW_COMP_C2_OFFSET		2
+#define CAPACITY_DELTA_DECIPCT		500
 static int populate_system_data(struct fg_chip *chip)
 {
 	u8 buffer[24];
 	int rc, i;
+	int16_t cc_mah;
+	int64_t delta_cc_uah, pct_nom_cap_uah;
 
 	fg_mem_lock(chip);
 	rc = fg_mem_read(chip, buffer, OCV_COEFFS_START_REG, 24, 0, 0);
@@ -4024,6 +4065,33 @@ static int populate_system_data(struct fg_chip *chip)
 	if (chip->learning_data.learned_cc_uah == 0) {
 		chip->learning_data.learned_cc_uah = chip->nom_cap_uah;
 		fg_cap_learning_save_data(chip);
+	} else if (chip->learning_data.feedback_on) {
+		delta_cc_uah = abs(chip->learning_data.learned_cc_uah -
+					chip->nom_cap_uah);
+		pct_nom_cap_uah = div64_s64((int64_t)chip->nom_cap_uah *
+				CAPACITY_DELTA_DECIPCT, 1000);
+		/*
+		 * If the learned capacity is out of range, say by 50%
+		 * from the nominal capacity, then overwrite the learned
+		 * capacity with the nominal capacity.
+		 */
+		if (chip->nom_cap_uah && delta_cc_uah > pct_nom_cap_uah) {
+			if (fg_debug_mask & FG_AGING) {
+				pr_info("learned_cc_uah: %lld is higher than expected\n",
+					chip->learning_data.learned_cc_uah);
+				pr_info("Capping it to nominal:%d\n",
+					chip->nom_cap_uah);
+			}
+			chip->learning_data.learned_cc_uah = chip->nom_cap_uah;
+			fg_cap_learning_save_data(chip);
+		} else {
+			cc_mah = div64_s64(chip->learning_data.learned_cc_uah,
+					1000);
+			rc = fg_calc_and_store_cc_soc_coeff(chip, cc_mah);
+			if (rc)
+				pr_err("Error in restoring cc_soc_coeff, rc:%d\n",
+					rc);
+		}
 	}
 	rc = fg_mem_read(chip, buffer, CUTOFF_VOLTAGE_REG, 2, 0, 0);
 	if (rc) {
@@ -4560,8 +4628,9 @@ wait:
 			goto done;
 		}
 	} else {
-		pr_info("Battery profile not same, clearing cycle counters\n");
+		pr_info("Battery profile not same, clearing data\n");
 		clear_cycle_counter(chip);
+		chip->learning_data.learned_cc_uah = 0;
 	}
 	if (fg_est_dump)
 		dump_sram(&chip->dump_sram);
@@ -5752,6 +5821,10 @@ static int fg_common_hw_init(struct fg_chip *chip)
 		}
 	}
 
+	/* Read the cycle counter back from FG SRAM */
+	if (chip->cyc_ctr.en)
+		restore_cycle_counter(chip);
+
 	return 0;
 }
 
@@ -5799,9 +5872,6 @@ static int fg_8994_hw_init(struct fg_chip *chip)
 	data[0] = KI_COEFF_PRED_FULL_4_0_LSB;
 	data[1] = KI_COEFF_PRED_FULL_4_0_MSB;
 	fg_mem_write(chip, data, KI_COEFF_PRED_FULL_ADDR, 2, 2, 0);
-	/* Read the cycle counter back from FG SRAM */
-	if (chip->cyc_ctr.en)
-		restore_cycle_counter(chip);
 
 	esr_value = ESR_DEFAULT_VALUE;
 	rc = fg_mem_write(chip, (u8 *)&esr_value, MAXRSCHANGE_REG, 8,

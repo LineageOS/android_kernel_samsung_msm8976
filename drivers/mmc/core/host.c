@@ -191,7 +191,8 @@ static int mmc_host_suspend(struct device *dev)
 			err = mmc_cmdq_halt(host, false);
 			if (err) {
 				mmc_release_host(host);
-				pr_err("%s: halt: failed: %d\n", __func__, err);
+				pr_err("%s: halt: failed: %d\n",
+						__func__, err);
 				goto out;
 			}
 		}
@@ -211,7 +212,6 @@ static int mmc_host_suspend(struct device *dev)
 		spin_unlock_irqrestore(&host->clk_lock, flags);
 		mmc_set_ios(host);
 	}
-
 out:
 	spin_lock_irqsave(&host->clk_lock, flags);
 	if (ret)
@@ -219,7 +219,6 @@ out:
 	else
 		host->dev_status = DEV_SUSPENDED;
 	spin_unlock_irqrestore(&host->clk_lock, flags);
-
 	return ret;
 }
 

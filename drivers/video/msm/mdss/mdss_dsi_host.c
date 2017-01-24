@@ -41,7 +41,6 @@
 
 #define FIFO_STATUS	0x0C
 #define LANE_STATUS	0xA8
-static int fifo_error_dsi_dumpreg_done = 0;	//take selective dsi dump during fifo error -- QC case 02370966
 static int clk_error_dsi_dumpreg_done = 0;	//take selective dsi dump during clk error -- QC case 02378877
 
 struct mdss_dsi_ctrl_pdata *ctrl_list[DSI_CTRL_MAX];
@@ -445,6 +444,10 @@ void mdss_dsi_host_init(struct mdss_panel_data *pdata)
 	if (!IS_ERR_OR_NULL(vdd) && vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init)
 		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac,0);/* LP11 */
 #endif
+
+	/* Reset DSI_LANE_CTRL */
+	if (!ctrl_pdata->mmss_clamp)
+		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x00ac, 0x0);
 
 	dsi_ctrl |= BIT(0);	/* enable dsi */
 	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x0004, dsi_ctrl);
@@ -1979,7 +1982,8 @@ void mdss_dma_tx_packet_print(struct mdss_dsi_ctrl_pdata *ctrl,
 }
 #endif
 
-static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl)
+static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
+	bool from_mdp)
 {
 	unsigned long flags;
 	bool mdp_busy = false;
@@ -1995,8 +1999,7 @@ static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl)
 		goto exit;
 
 	/* delay only if cmd is not from mdp and panel has been initialized */
-	if (ctrl->is_cmdlist_from_mdp ||
-		!(ctrl->ctrl_state & CTRL_STATE_PANEL_INIT))
+	if (from_mdp || !(ctrl->ctrl_state & CTRL_STATE_PANEL_INIT))
 		goto exit;
 
 	/* if broadcast enabled, apply delay only if this is the ctrl trigger */
@@ -2018,7 +2021,7 @@ static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl)
 		need_wait = true;
 
 exit:
-	MDSS_XLOG(need_wait, ctrl->is_cmdlist_from_mdp, mdp_busy);
+	MDSS_XLOG(need_wait, from_mdp, mdp_busy);
 	return need_wait;
 }
 
@@ -2042,7 +2045,7 @@ static int mdss_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 	 * mdp path
 	 */
 	mutex_lock(&ctrl->mutex);
-	if (mdss_dsi_delay_cmd(ctrl))
+	if (mdss_dsi_delay_cmd(ctrl, ctrl->is_cmdlist_from_mdp))
 		ctrl->mdp_callback->fxn(ctrl->mdp_callback->data,
 			MDP_INTF_CALLBACK_DSI_WAIT);
 	mutex_unlock(&ctrl->mutex);
@@ -2480,6 +2483,7 @@ int mdss_dsi_cmdlist_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 	return len;
 }
 
+
 int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 {
 	struct dcs_cmd_req *req;
@@ -2521,7 +2525,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	if (req && (req->flags & CMD_REQ_HS_MODE))
 		hs_req = true;
 
- 	if ((!ctrl->burst_mode_enabled) || from_mdp){
+	if ((!ctrl->burst_mode_enabled) || from_mdp) {
 		/* make sure dsi_cmd_mdp is idle */
 		rc = mdss_dsi_cmd_mdp_busy(ctrl);
 		if (rc) {
@@ -2585,7 +2589,18 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	}
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
-	
+
+	/*
+	 * In ping pong split cases, check if we need to apply a
+	 * delay for any commands that are not coming from
+	 * mdp path
+	 */
+	mutex_lock(&ctrl->mutex);
+	if (mdss_dsi_delay_cmd(ctrl, from_mdp))
+		ctrl->mdp_callback->fxn(ctrl->mdp_callback->data,
+			MDP_INTF_CALLBACK_DSI_WAIT);
+	mutex_unlock(&ctrl->mutex);
+
 	if (req->flags & CMD_REQ_HS_MODE)
 		mdss_dsi_set_tx_power_mode(0, &ctrl->panel_data);
 
@@ -2895,13 +2910,13 @@ void mdss_dsi_fifo_status(struct mdss_dsi_ctrl_pdata *ctrl)
 			pr_err("%s: ctrl ndx=%d status=%x\n", __func__,
 					ctrl->ndx, status);
 
-		if(fifo_error_dsi_dumpreg_done == 0) {
-			mdss_dsi_reg_dump(ctrl, 0, 256); 
-			mdss_dsi_reg_dump(ctrl, 256, 256); 
+		/*
+		 * if DSI FIFO overflow is masked,
+		 * do not report overflow error
+		 */
+		if (MIPI_INP(base + 0x10c) & 0xf0000)
+			status = status & 0xaaaaffff;
 
-			fifo_error_dsi_dumpreg_done = 1;
-		}
-		
 		if (status & 0x44440000) {/* DLNx_HS_FIFO_OVERFLOW */
 #if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
 			MDSS_XLOG(DSI_EV_DLNx_FIFO_OVERFLOW);

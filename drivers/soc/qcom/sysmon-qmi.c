@@ -486,14 +486,12 @@ int sysmon_send_shutdown(struct subsys_desc *dest_desc)
 		goto out;
 	}
 
-	pr_err("check point wait indi\n");
 	if (!wait_for_completion_timeout(&data->ind_recv,
 					msecs_to_jiffies(SHUTDOWN_TIMEOUT))) {
 		pr_err("Timed out waiting for shutdown indication from %s\n",
 							data->name);
 		ret = -ETIMEDOUT;
 	}
-	pr_err("check point got indi\n");
 out:
 	mutex_unlock(&sysmon_lock);
 	pr_err("check point ret = %d\n", ret);

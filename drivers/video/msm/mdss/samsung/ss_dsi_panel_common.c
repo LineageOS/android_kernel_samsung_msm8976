@@ -6139,7 +6139,7 @@ static void dump_reg(char *addr, int len)
 	if (IS_ERR_OR_NULL(addr))
 		return;
 #if defined(CONFIG_ARCH_MSM8976) || defined(CONFIG_ARCH_MSM8952)
-	mdss_dump_reg(MDSS_REG_DUMP_IN_LOG, addr, len, NULL);
+	mdss_dump_reg(MDSS_REG_DUMP_IN_LOG, addr, len, NULL, false);
 #else
 	mdss_dump_reg(addr, len);
 #endif
