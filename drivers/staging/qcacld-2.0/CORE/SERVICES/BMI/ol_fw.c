@@ -103,6 +103,11 @@ static struct ol_fw_files FW_FILES_QCA6174_FW_3_0 = {
 	PREFIX "otp30.bin", PREFIX "utf30.bin",
 	PREFIX "utfbd30.bin", PREFIX "qsetup30.bin",
 	PREFIX "epping30.bin"};
+static struct ol_fw_files FW_FILES_QCA6174_FW_3_0_R01 = {
+	PREFIX "qwlan30.bin", PREFIX "qwlan30i.bin", PREFIX "bdwlan30_R01.bin",
+	PREFIX "otp30.bin", PREFIX "utf30.bin",
+	PREFIX "utfbd30_R01.bin", PREFIX "qsetup30.bin",
+	PREFIX "epping30.bin"};
 static struct ol_fw_files FW_FILES_DEFAULT = {
 	PREFIX "qwlan.bin", "", PREFIX "bdwlan.bin",
 	PREFIX "otp.bin", PREFIX "utf.bin",
@@ -136,7 +141,7 @@ static int ol_get_fw_files_for_target(struct ol_fw_files *pfw_files,
             break;
     case AR6320_REV3_VERSION:
     case AR6320_REV3_2_VERSION:
-            memcpy(pfw_files, &FW_FILES_QCA6174_FW_3_0, sizeof(*pfw_files));
+            memcpy(pfw_files, &FW_FILES_QCA6174_FW_3_0_R01, sizeof(*pfw_files));
             break;
     case QCA9377_REV1_1_VERSION:
 #ifdef CONFIG_TUFELLO_DUAL_FW_SUPPORT
