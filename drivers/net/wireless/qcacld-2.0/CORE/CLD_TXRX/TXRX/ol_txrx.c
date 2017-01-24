@@ -1962,7 +1962,8 @@ ol_txrx_fw_stats_cfg(
 A_STATUS
 ol_txrx_fw_stats_get(
     ol_txrx_vdev_handle vdev,
-    struct ol_txrx_stats_req *req)
+    struct ol_txrx_stats_req *req,
+    bool response_expected)
 {
     struct ol_txrx_pdev_t *pdev = vdev->pdev;
     u_int64_t cookie;
@@ -2011,6 +2012,9 @@ ol_txrx_fw_stats_get(
         adf_os_mem_free(non_volatile_req);
         return A_ERROR;
     }
+
+    if (response_expected == false)
+        adf_os_mem_free(non_volatile_req);
 
     return A_OK;
 }
