@@ -1705,6 +1705,7 @@ struct hdd_context_s
     unsigned long tdls_source_bitmap;
     /* tdls source timer to enable/disable TDLS on p2p listen */
     vos_timer_t tdls_source_timer;
+    bool driver_being_stopped; /* Track if DRIVER STOP cmd is sent */
 };
 
 /*---------------------------------------------------------------------------
