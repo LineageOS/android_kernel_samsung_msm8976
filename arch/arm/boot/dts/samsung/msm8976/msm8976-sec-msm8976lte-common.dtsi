@@ -496,6 +496,9 @@
 	};
 
 	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+
 		lk_mem: lk_region@0 {
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
