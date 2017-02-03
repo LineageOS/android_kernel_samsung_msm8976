@@ -2723,7 +2723,6 @@ static int tc300k_resume(struct device *dev)
 	dev_notice(&data->client->dev, "[TK] %s: users=%d\n", __func__, data->input_dev->users);
 
 	data->power(data, true);
-	msleep(200);
 	enable_irq(client->irq);
 
 	data->enabled = true;
