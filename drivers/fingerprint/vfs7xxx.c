@@ -72,6 +72,12 @@
 #include <linux/cpufreq.h>
 #endif
 
+#if defined(CONFIG_FB)
+#include <linux/notifier.h>
+#include <linux/fb.h>
+
+struct notifier_block fb_notif;
+#endif
 
 #define VALIDITY_PART_NAME "validity_fingerprint"
 static LIST_HEAD(device_list);
@@ -1525,6 +1531,11 @@ static int vfsspi_wakeup_daemon(struct vfsspi_device_data *vfsspi_device)
 }
 #endif
 
+#if defined(CONFIG_FB)
+static int fb_notifier_callback(struct notifier_block *self,
+	unsigned long event, void *data);
+#endif
+
 static int vfsspi_probe(struct spi_device *spi)
 {
 	int status = 0;
@@ -1673,6 +1684,12 @@ static int vfsspi_probe(struct spi_device *spi)
 	vfsspi_enable_debug_timer();
 	pr_info("%s successful\n", __func__);
 
+#if defined(CONFIG_FB)
+	fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
+
 	return 0;
 
 vfsspi_sysfs_failed:
@@ -1745,6 +1762,10 @@ static int vfsspi_remove(struct spi_device *spi)
 		mutex_unlock(&device_list_mutex);
 	}
 
+#if defined(CONFIG_FB)
+	fb_unregister_client(&fb_notif);
+#endif
+
 	return status;
 }
 
@@ -1781,10 +1802,40 @@ static int vfsspi_pm_resume(struct device *dev)
 	return 0;
 }
 
+#if defined(CONFIG_FB)
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+			vfsspi_pm_resume(NULL);
+			break;
+		default:
+		case FB_BLANK_POWERDOWN:
+			vfsspi_pm_suspend(NULL);
+		}
+	}
+
+	return 0;
+}
+#endif
+
+#if !defined(CONFIG_FB)
 static const struct dev_pm_ops vfsspi_pm_ops = {
 	.suspend = vfsspi_pm_suspend,
 	.resume = vfsspi_pm_resume
 };
+#else
+static const struct dev_pm_ops vfsspi_pm_ops = {
+};
+#endif
 
 struct spi_driver vfsspi_spi = {
 	.driver = {
