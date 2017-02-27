@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa5d592f_da6e51c9",
+        "filename": "drivers/input/keyboard/tc350k.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2851,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-02-27T12:15:17Z",
+      "side": 1,
+      "message": "Clean the flags",
+      "range": {
+        "startLine": 2849,
+        "startChar": 0,
+        "endLine": 2851,
+        "endChar": 23
+      },
+      "revId": "4ac7d884d1b1b6ee4c6a6d67d1f35122b8808dde",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_1a750998",
+        "filename": "drivers/input/keyboard/tc350k.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2891,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-02-27T12:15:17Z",
+      "side": 1,
+      "message": "Clean the flags",
+      "range": {
+        "startLine": 2888,
+        "startChar": 0,
+        "endLine": 2891,
+        "endChar": 6
+      },
+      "revId": "4ac7d884d1b1b6ee4c6a6d67d1f35122b8808dde",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
