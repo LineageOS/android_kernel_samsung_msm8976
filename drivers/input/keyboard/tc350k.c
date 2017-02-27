@@ -43,6 +43,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/sec_sysfs.h>
 //#include <linux/sec_batt.h>
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
 
 /* TSK IC */
 #define TC300K_TSK_IC	0x00
@@ -285,6 +289,10 @@ struct tc300k_data {
 	struct pinctrl *pinctrl_i2c;
 	struct pinctrl *pinctrl_irq;
 	struct pinctrl_state *pin_state[4];
+
+#ifdef CONFIG_FB
+	struct notifier_block fb_notif;
+#endif
 };
 
 extern struct class *sec_class;
@@ -2404,6 +2412,11 @@ static void tc300_config_gpio_i2c(struct tc300k_data *data, int onoff)
 }
 #endif
 
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+	unsigned long event, void *data);
+#endif
+
 static int tc300k_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
@@ -2599,6 +2612,12 @@ static int tc300k_probe(struct i2c_client *client,
 	}
 #endif
 
+#ifdef CONFIG_FB
+	data->fb_notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&data->fb_notif))
+		pr_err("%s: could not create fb notifier\n", __func__);
+#endif
+
 	dev_info(&client->dev, "[TK] %s done\n", __func__);
 	return 0;
 
@@ -2664,6 +2683,9 @@ static int tc300k_remove(struct i2c_client *client)
 	gpio_free(data->pdata->gpio_int);
 	gpio_free(data->pdata->gpio_sda);
 	gpio_free(data->pdata->gpio_scl);
+#ifdef CONFIG_FB
+	fb_unregister_client(&data->fb_notif);
+#endif
 	kfree(data);
 
 	return 0;
@@ -2798,13 +2820,42 @@ static int tc300k_input_open(struct input_dev *dev)
 }
 #endif /* CONFIG_PM */
 
-#if 0
-#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	struct tc300k_data *tc_data = container_of(self, struct tc300k_data, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		int *blank = evdata->data;
+		switch (*blank) {
+		case FB_BLANK_UNBLANK:
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+			tc300k_resume(&tc_data->client->dev);
+			break;
+		case FB_BLANK_POWERDOWN:
+			tc300k_suspend(&tc_data->client->dev);
+			break;
+		default:
+			/* Don't handle what we don't understand */
+			break;
+		}
+	}
+
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_PM
 static const struct dev_pm_ops tc300k_pm_ops = {
+#if (!defined(CONFIG_FB) && !defined(CONFIG_HAS_EARLYSUSPEND))
 	.suspend = tc300k_suspend,
 	.resume = tc300k_resume,
-};
 #endif
+};
 #endif
 
 static const struct i2c_device_id tc300k_id[] = {
@@ -2832,10 +2883,8 @@ static struct i2c_driver tc300k_driver = {
 #ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(coreriver_match_table),
 #endif
-#if 0
-#if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_PM
 		.pm	= &tc370_pm_ops,
-#endif
 #endif
 	},
 	.id_table = tc300k_id,
