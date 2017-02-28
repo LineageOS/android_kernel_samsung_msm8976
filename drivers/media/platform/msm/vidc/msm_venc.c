@@ -2010,6 +2010,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	int max_hierp_layers;
 	struct hal_video_signal_info signal_info = {0};
 	enum hal_iframesize_type iframesize_type = HAL_IFRAMESIZE_TYPE_DEFAULT;
+
 	if (!inst || !inst->core || !inst->core->device) {
 		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
 		return -EINVAL;

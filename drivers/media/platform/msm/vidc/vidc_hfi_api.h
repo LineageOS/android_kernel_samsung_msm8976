@@ -966,18 +966,18 @@ struct hal_vpe_color_space_conversion {
 	u32 csc_limit[HAL_MAX_LIMIT_COEFFS];
 };
 
-enum hal_iframesize_type {
-	HAL_IFRAMESIZE_TYPE_DEFAULT,
-	HAL_IFRAMESIZE_TYPE_MEDIUM,
-	HAL_IFRAMESIZE_TYPE_HUGE,
-	HAL_IFRAMESIZE_TYPE_UNLIMITED,
-};
-
 struct hal_video_signal_info {
 	u32 color_space;
 	u32 transfer_chars;
 	u32 matrix_coeffs;
 	bool full_range;
+};
+
+enum hal_iframesize_type {
+	HAL_IFRAMESIZE_TYPE_DEFAULT,
+	HAL_IFRAMESIZE_TYPE_MEDIUM,
+	HAL_IFRAMESIZE_TYPE_HUGE,
+	HAL_IFRAMESIZE_TYPE_UNLIMITED,
 };
 
 enum vidc_resource_id {
