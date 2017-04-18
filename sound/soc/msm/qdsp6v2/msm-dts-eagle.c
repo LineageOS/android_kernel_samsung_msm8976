@@ -238,7 +238,6 @@ static s32 _volume_cmds_alloc1(s32 size)
 					GFP_KERNEL);
 	} else
 		_vol_cmd_cnt = 0;
-
 	if (_vol_cmds_d)
 		return 0;
 	_volume_cmds_free();

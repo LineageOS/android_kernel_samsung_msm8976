@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -47,9 +47,6 @@
 #define NUM_TIMES_RESET_RETRY 5
 
 #define KGSL_LOG_LEVEL_DEFAULT 3
-
-/* QFPROM_CORR_PTE2 register offset*/
-#define QFPROM_CORR_PTE2_OFFSET 0xC
 
 #define SECVID_PROGRAM_PATH_UNKNOWN	0x0
 #define SECVID_PROGRAM_PATH_GPU		0x1
@@ -1021,6 +1018,79 @@ err:
 }
 
 /*
+ * Read the Speed fuse data and return device node.
+ */
+static struct device_node *get_gpu_speed_fuse_data(struct platform_device
+		*pdev)
+{
+	struct resource *res;
+	void __iomem *base;
+	u32 pte_reg_val;
+	uint32_t speed_bin = 0, speed_bits, speed_level = 0;
+	char prop_name[32];
+	int i, len, num_config;
+	const uint32_t *vec_arr = NULL;
+
+	/* Load default configuration, if speed fuse is not defined */
+	if (of_property_read_u32(pdev->dev.of_node,
+				"qcom,gpu-fuse-numconfigs", &num_config))
+		return pdev->dev.of_node;
+
+	vec_arr = of_get_property(pdev->dev.of_node,
+			"qcom,gpu-fuse-config", &len);
+	if (vec_arr == NULL)
+		return NULL;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+			"qfprom_memory");
+	if (!res)
+		return NULL;
+
+	base = ioremap(res->start, resource_size(res));
+	if (!base)
+		return NULL;
+
+	for (i = 0; i < num_config; i++) {
+		int mask;
+
+		pte_reg_val = __raw_readl(base + be32_to_cpu(vec_arr[i*3]));
+		mask = be32_to_cpu(vec_arr[(i*3)+2]);
+		speed_bits = (pte_reg_val >> be32_to_cpu(vec_arr[(i*3)+1])) &
+				mask;
+		speed_bin = (speed_bin << ilog2(mask+1)) | speed_bits;
+	}
+
+	if (of_property_read_u32(pdev->dev.of_node,
+				"qcom,gpu-speed-numplans", &num_config))
+		goto err;
+
+	vec_arr = of_get_property(pdev->dev.of_node,
+			"qcom,gpu-speed-plan", &len);
+	if (vec_arr == NULL)
+		goto err;
+
+	for (i = 0; i < num_config; i++) {
+		int value, plan;
+
+		value = be32_to_cpu(vec_arr[i*2]);
+		plan = be32_to_cpu(vec_arr[(i*2)+1]);
+		if (speed_bin == value) {
+			speed_level = plan;
+			break;
+		}
+	}
+
+	iounmap(base);
+
+	snprintf(prop_name, ARRAY_SIZE(prop_name), "%s%d",
+			"gpu-speed-config@", speed_level);
+	return adreno_of_find_subnode(pdev->dev.of_node, prop_name);
+
+err:
+	iounmap(base);
+	return NULL;
+}
+/*
  * Read the Speed bin data and return device node.
  */
 static struct device_node *get_gpu_speed_config_data(struct platform_device
@@ -1029,12 +1099,12 @@ static struct device_node *get_gpu_speed_config_data(struct platform_device
 	struct resource *res;
 	void __iomem *base;
 	u32 pte_reg_val;
-	int speed_bin, speed_config;
+	int speed_bin, speed_config[4];
 	char prop_name[32];
 
 	/* Load default configuration, if speed config is not required */
-	if (of_property_read_u32(pdev->dev.of_node,
-			"qcom,gpu-speed-config", &speed_config))
+	if (of_property_read_u32_array(pdev->dev.of_node,
+			"qcom,gpu-speed-config", speed_config, 4))
 		return pdev->dev.of_node;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
@@ -1047,14 +1117,14 @@ static struct device_node *get_gpu_speed_config_data(struct platform_device
 	if (!base)
 		return NULL;
 
-	pte_reg_val = __raw_readl(base + QFPROM_CORR_PTE2_OFFSET);
+	pte_reg_val = __raw_readl(base + speed_config[0]);
+	speed_bin = (pte_reg_val >> speed_config[1]) & speed_config[2];
 
 	iounmap(base);
 
-	speed_bin = (pte_reg_val >> 0x2) & 0x7;
-	if (speed_bin == speed_config) {
+	if (speed_bin == speed_config[3]) {
 		snprintf(prop_name, ARRAY_SIZE(prop_name), "%s%d",
-				"gpu-speed-config@", speed_config);
+				"gpu-speed-config@", speed_bin);
 		return adreno_of_find_subnode(pdev->dev.of_node, prop_name);
 	}
 
@@ -1085,6 +1155,13 @@ static int adreno_of_get_pdata(struct platform_device *pdev)
 	node = get_gpu_speed_config_data(pdev);
 	if (node == NULL)
 		goto err;
+
+	/* Get Speed fuse Data */
+	if (node == pdev->dev.of_node) {
+		node = get_gpu_speed_fuse_data(pdev);
+		if (node == NULL)
+			goto err;
+	}
 
 	/* pwrlevel Data */
 	ret = adreno_of_get_pwrlevels(node, pdata);

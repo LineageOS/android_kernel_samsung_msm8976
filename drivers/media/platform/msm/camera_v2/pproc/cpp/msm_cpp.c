@@ -1966,6 +1966,8 @@ static int msm_cpp_check_buf_type(struct msm_buf_mngr_info *buff_mgr_info,
 			/* More or equal bufs as Input buffer */
 			num_output_bufs = new_frame->batch_info.batch_size;
 		}
+		if (num_output_bufs > MSM_OUTPUT_BUF_CNT)
+			return 0;
 		for (i = 0; i < num_output_bufs; i++) {
 			new_frame->output_buffer_info[i].index =
 				buff_mgr_info->user_buf.buf_idx[i];
@@ -2361,6 +2363,13 @@ static int msm_cpp_cfg_frame(struct cpp_device *cpp_dev,
 		pr_err("Invalid frame message\n");
 		return -EINVAL;
 	}
+	if (stripe_base == UINT_MAX || new_frame->num_strips >
+		(UINT_MAX - 1 - stripe_base) / stripe_size) {
+		pr_err("Invalid frame message,num_strips %d is large\n",
+			new_frame->num_strips);
+		return -EINVAL;
+	}
+
 	if (stripe_base == UINT_MAX || new_frame->num_strips >
 		(UINT_MAX - 1 - stripe_base) / stripe_size) {
 		pr_err("Invalid frame message,num_strips %d is large\n",
@@ -3521,6 +3530,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	struct msm_cpp_frame_info32_t k32_frame_info;
 	struct msm_cpp_frame_info_t k64_frame_info;
 	void __user *up = (void __user *)arg;
+	bool is_copytouser_req = true;
 
 	if (sd == NULL) {
 		pr_err("%s: Subdevice is NULL\n", __func__);
@@ -3689,6 +3699,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		k64_cpp_buff_info.buffer_info =
 			compat_ptr(k32_cpp_buff_info.buffer_info);
 		kp_ioctl.ioctl_ptr = (void *)&k64_cpp_buff_info;
+		is_copytouser_req = false;
 		if (cmd == VIDIOC_MSM_CPP_ENQUEUE_STREAM_BUFF_INFO32)
 			cmd = VIDIOC_MSM_CPP_ENQUEUE_STREAM_BUFF_INFO;
 		else if (cmd == VIDIOC_MSM_CPP_DELETE_STREAM_BUFF32)
@@ -3754,6 +3765,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 				kp_ioctl.len =
 					sizeof(struct msm_cpp_clock_settings_t);
 		}
+		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_SET_CLOCK;
 		break;
 	}
@@ -3784,6 +3796,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 
 		kp_ioctl.ioctl_ptr = (void *)&k_queue_buf;
 		kp_ioctl.len = sizeof(struct msm_pproc_queue_buf_info);
+		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_QUEUE_BUF;
 		break;
 	}
@@ -3806,6 +3819,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		k64_frame_info.frame_id = k32_frame_info.frame_id;
 
 		kp_ioctl.ioctl_ptr = (void *)&k64_frame_info;
+		is_copytouser_req = false;
 		cmd = VIDIOC_MSM_CPP_POP_STREAM_BUFFER;
 		break;
 	}
@@ -3855,14 +3869,15 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		break;
 	}
 
-	up32_ioctl.id = kp_ioctl.id;
-	up32_ioctl.len = kp_ioctl.len;
-	up32_ioctl.trans_code = kp_ioctl.trans_code;
-	up32_ioctl.ioctl_ptr = ptr_to_compat(kp_ioctl.ioctl_ptr);
+	if (is_copytouser_req) {
+		up32_ioctl.id = kp_ioctl.id;
+		up32_ioctl.len = kp_ioctl.len;
+		up32_ioctl.trans_code = kp_ioctl.trans_code;
+		up32_ioctl.ioctl_ptr = ptr_to_compat(kp_ioctl.ioctl_ptr);
 
-	if (copy_to_user((void __user *)up, &up32_ioctl, sizeof(up32_ioctl)))
-		return -EFAULT;
-
+		if (copy_to_user((void __user *)up, &up32_ioctl, sizeof(up32_ioctl)))
+			return -EFAULT;
+	}
 	return rc;
 }
 #endif

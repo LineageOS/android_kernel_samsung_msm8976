@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -732,7 +732,6 @@ static int audio_effects_release(struct inode *inode, struct file *file)
 	q6asm_audio_client_free(effects->ac);
 
 	mutex_destroy(&effects->lock);
-
 	kfree(effects);
 
 	pr_debug("%s: close session success\n", __func__);
@@ -763,6 +762,7 @@ static int audio_effects_open(struct inode *inode, struct file *file)
 
 	init_waitqueue_head(&effects->read_wait);
 	init_waitqueue_head(&effects->write_wait);
+	mutex_init(&effects->lock);
 
 	mutex_init(&effects->lock);
 
