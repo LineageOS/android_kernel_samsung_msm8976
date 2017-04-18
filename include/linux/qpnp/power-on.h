@@ -52,6 +52,9 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_RECOVERY	= 0x01,
 	PON_RESTART_REASON_BOOTLOADER	= 0x02,
 	PON_RESTART_REASON_RTC		= 0x03,
+#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK	
+	PON_RESTART_REASON_SECURE_CHECK_FAIL = 0x1A,
+#endif
 };
 
 #ifdef CONFIG_QPNP_POWER_ON
@@ -61,6 +64,10 @@ int qpnp_pon_trigger_config(enum pon_trigger_source pon_src, bool enable);
 int qpnp_pon_wd_config(bool enable);
 int qpnp_pon_set_restart_reason(enum pon_restart_reason reason);
 bool qpnp_pon_check_hard_reset_stored(void);
+int get_pkey_press(void);
+#if defined(CONFIG_QPNP_RESIN)
+int qpnp_resin_state(void);
+#endif
 
 #else
 static int qpnp_pon_system_pwr_off(enum pon_power_off_type type)
@@ -85,6 +92,10 @@ static inline bool qpnp_pon_check_hard_reset_stored(void)
 {
 	return false;
 }
+static int get_pkey_press(void) { return -ENODEV; };
+#if defined(CONFIG_QPNP_RESIN)
+static int qpnp_resin_state(void) { return -ENODEV; };
+#endif
 #endif
 
 #endif

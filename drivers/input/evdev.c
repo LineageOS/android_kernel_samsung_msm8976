@@ -111,6 +111,11 @@ static void evdev_pass_values(struct evdev_client *client,
 		__pass_event(client, &event);
 		if (v->type == EV_SYN && v->code == SYN_REPORT)
 			wakeup = true;
+#ifdef CONFIG_USB_HMT_SAMSUNG_INPUT
+		if (v->type== EV_KEY && v->code >= KEY_HMT_CMD_START)
+			pr_info("%s type:KEY code:0x%x value:%x\n", __func__,
+					v->code, v->value);
+#endif
 	}
 
 	spin_unlock(&client->buffer_lock);
@@ -355,7 +360,7 @@ static int evdev_open(struct inode *inode, struct file *file)
 
  err_free_client:
 	evdev_detach_client(evdev, client);
-	kfree(client);
+	kvfree(client);
 	return error;
 }
 

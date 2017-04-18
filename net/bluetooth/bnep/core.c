@@ -352,8 +352,8 @@ static int bnep_rx_frame(struct bnep_session *s, struct sk_buff *skb)
 	case BNEP_COMPRESSED_DST_ONLY:
 		memcpy(__skb_put(nskb, ETH_ALEN), skb_mac_header(skb),
 								ETH_ALEN);
-		memcpy(__skb_put(nskb, ETH_ALEN + 2), s->eh.h_source,
-								ETH_ALEN + 2);
+		memcpy(__skb_put(nskb, ETH_ALEN), s->eh.h_source,
+								ETH_ALEN);
 		break;
 
 	case BNEP_GENERAL:

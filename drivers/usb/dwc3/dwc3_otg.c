@@ -389,6 +389,9 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	enum power_supply_property power_supply_type;
 	struct dwc3_otg *dotg = container_of(phy->otg, struct dwc3_otg, otg);
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	return 0;
+#endif
 
 	if (!dotg->psy || !dotg->charger) {
 		dev_err(phy->dev, "no usb power supply/charger registered\n");
@@ -498,14 +501,15 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	int ret = 0;
 	unsigned long delay = 0;
 
-	dev_dbg(phy->dev, "%s state\n", usb_otg_state_string(phy->state));
+	dev_info(phy->dev, "%s : %s state\n", __func__,
+			usb_otg_state_string(phy->state));
 
 	/* Check OTG state */
 	switch (phy->state) {
 	case OTG_STATE_UNDEFINED:
 		dwc3_otg_init_sm(dotg);
 		if (!dotg->psy) {
-			dotg->psy = power_supply_get_by_name("usb");
+			dotg->psy = power_supply_get_by_name("dwc-usb");
 
 			if (!dotg->psy)
 				dev_err(phy->dev,
@@ -751,6 +755,10 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		dev_err(phy->dev, "%s: invalid otg-state\n", __func__);
 
 	}
+#ifdef CONFIG_USB_NOTIFY_LAYER
+	dev_info(phy->dev, "%s : --> %s state\n", __func__,
+			usb_otg_state_string(phy->state));
+#endif
 
 	if (work)
 		queue_delayed_work(system_nrt_wq, &dotg->sm_work, delay);

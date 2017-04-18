@@ -700,6 +700,8 @@ static void populate_opp_table(struct platform_device *pdev)
 	apc0_fmax = a53_clk.c.fmax[a53_clk.c.num_fmax - 1];
 	apc1_fmax = a72_clk.c.fmax[a72_clk.c.num_fmax - 1];
 
+	a53_cpu = a72_cpu = 0;
+
 	for_each_possible_cpu(cpu) {
 		if (logical_cpu_to_clk(cpu) == &a53_clk.c) {
 			a53_cpu = cpu;

@@ -24,6 +24,29 @@
 #include "internal.h"
 
 #ifdef CONFIG_VM_EVENT_COUNTERS
+
+#ifdef CONFIG_SEC_VM_EVENT_STATE_TRACER
+#define VT_TRIGGER_JIFFIES	round_jiffies_up(sysctl_stat_interval * 120)
+#define VT_INTERVAL_JIFFIES	round_jiffies_up(sysctl_stat_interval * 10)
+#define VT_INTERVAL_SEC		(sysctl_stat_interval * 10 / HZ)
+#define SEC_PER_MIN		60
+
+#ifndef CONFIG_SEC_VM_EVENT_STATE_TRACER_DURATION
+#define VT_DURATION		10
+#else
+#define VT_DURATION 		CONFIG_SEC_VM_EVENT_STATE_TRACER_DURATION
+#endif
+
+#define VT_TOTAL_EVENT_COUNT	(VT_DURATION * SEC_PER_MIN / VT_INTERVAL_SEC)
+
+struct vm_event_state_tracer {
+	int tracer_last_idx;
+	struct mutex tracer_mutex;
+	unsigned long * tracer_buf;
+	struct delayed_work work;
+};
+#endif	/* CONFIG_SEC_VM_EVENT_STATE_TRACER */
+
 DEFINE_PER_CPU(struct vm_event_state, vm_event_states) = {{0}};
 EXPORT_PER_CPU_SYMBOL(vm_event_states);
 
@@ -1269,6 +1292,87 @@ static const struct file_operations proc_vmstat_file_operations = {
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
+
+#ifdef CONFIG_SEC_VM_EVENT_STATE_TRACER
+static int vmstat_tracer_show(struct seq_file *s, void *unused)
+{
+	int cur_vm_event, j, cur_idx;
+	unsigned long cur = 0;
+	struct vm_event_state_tracer *vt;
+	struct vm_event_state *vs;
+	int vm_event_start = NR_VM_ZONE_STAT_ITEMS + NR_VM_WRITEBACK_STAT_ITEMS;
+
+	vt = s->private;
+	vs = (struct vm_event_state *)vt->tracer_buf;
+	mutex_lock(&vt->tracer_mutex);
+
+	for (cur_vm_event = 0; cur_vm_event < NR_VM_EVENT_ITEMS; cur_vm_event++) {
+		seq_printf(s, "%-30s ", vmstat_text[vm_event_start + cur_vm_event]);
+		cur_idx = (vt->tracer_last_idx + 1) % VT_TOTAL_EVENT_COUNT;
+		cur = vs[cur_idx].event[cur_vm_event];
+
+		for (j = 0 ; j < VT_TOTAL_EVENT_COUNT; j++) {
+			seq_printf(s, "%ld ", cur);
+			cur_idx = (cur_idx + 1) % VT_TOTAL_EVENT_COUNT;
+			cur = vs[cur_idx].event[cur_vm_event];
+		}
+		seq_printf(s, "\n");
+	}
+	mutex_unlock(&vt->tracer_mutex);
+	return 0;
+}
+
+static int vmstat_tracer_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, &vmstat_tracer_show,
+				PDE_DATA(file_inode(file)));
+}
+
+static const struct file_operations proc_vmstat_tracer_file_operations = {
+	.open		= vmstat_tracer_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static struct vm_event_state_tracer * vm_event_state_tracer_alloc(void)
+{
+	int stat_items_size;
+	struct vm_event_state_tracer *vt = kzalloc(sizeof(*vt), GFP_KERNEL);
+
+	if (!vt)
+		return NULL;
+
+	stat_items_size = sizeof(struct vm_event_state) * VT_TOTAL_EVENT_COUNT;
+	vt->tracer_buf = kzalloc(stat_items_size, GFP_KERNEL);
+
+	if (!vt->tracer_buf) {
+		pr_err("Failed to allocate tracer buffer!!\n");
+		kfree(vt);
+		return NULL;
+	}
+
+	vt->tracer_last_idx = -1;
+	return vt;
+}
+
+static void vm_event_state_tracer(struct work_struct *w)
+{
+	struct vm_event_state_tracer * vt =
+		container_of(w, struct vm_event_state_tracer, work.work);
+	struct vm_event_state *vs;
+
+	mutex_lock(&vt->tracer_mutex);
+	vs = (struct vm_event_state *)vt->tracer_buf;
+	vt->tracer_last_idx = (vt->tracer_last_idx + 1) % VT_TOTAL_EVENT_COUNT;
+	all_vm_events((unsigned long *)&vs[vt->tracer_last_idx]);
+	vs[vt->tracer_last_idx].event[PGPGIN]  /= 2;		/* sectors -> kbytes */
+	vs[vt->tracer_last_idx].event[PGPGOUT] /= 2;
+	mutex_unlock(&vt->tracer_mutex);
+
+	schedule_delayed_work(&vt->work, VT_INTERVAL_JIFFIES);
+}
+#endif /* CONFIG_SEC_VM_EVENT_STATE_TRACER */
 #endif /* CONFIG_PROC_FS */
 
 #ifdef CONFIG_SMP
@@ -1333,6 +1437,12 @@ static struct notifier_block __cpuinitdata vmstat_notifier =
 
 static int __init setup_vmstat(void)
 {
+#ifdef CONFIG_PROC_FS
+#ifdef CONFIG_SEC_VM_EVENT_STATE_TRACER
+	struct vm_event_state_tracer *vt;
+#endif /* CONFIG_SEC_VM_EVENT_STATE_TRACER */
+#endif
+
 #ifdef CONFIG_SMP
 	int cpu;
 
@@ -1344,6 +1454,18 @@ static int __init setup_vmstat(void)
 	cpu_notifier_register_done();
 #endif
 #ifdef CONFIG_PROC_FS
+#ifdef CONFIG_SEC_VM_EVENT_STATE_TRACER
+	vt = vm_event_state_tracer_alloc();
+	if (vt) {
+		proc_create_data("vmstat_tracer", S_IRUGO, NULL,
+				&proc_vmstat_tracer_file_operations, vt);
+		mutex_init(&vt->tracer_mutex);
+		INIT_DELAYED_WORK(&vt->work, vm_event_state_tracer);
+		schedule_delayed_work(&vt->work, VT_TRIGGER_JIFFIES);
+	} else {
+		pr_err("Failed to start vmevent tracer!\n");
+	}
+#endif /* CONFIG_SEC_VM_EVENT_STATE_TRACER */
 	proc_create("buddyinfo", S_IRUGO, NULL, &fragmentation_file_operations);
 	proc_create("pagetypeinfo", S_IRUGO, NULL, &pagetypeinfo_file_ops);
 	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);

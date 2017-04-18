@@ -273,6 +273,5 @@ static struct mdss_mdp_format_params mdss_mdp_format_map[] = {
 	FMT_RGB_1555(MDP_ARGB_1555, 1, C1_B_Cb, C0_G_Y, C2_R_Cr, C3_ALPHA),
 	FMT_RGB_4444(MDP_RGBA_4444, 1, C3_ALPHA, C1_B_Cb, C0_G_Y, C2_R_Cr),
 	FMT_RGB_4444(MDP_ARGB_4444, 1, C1_B_Cb, C0_G_Y, C2_R_Cr, C3_ALPHA),
-
 };
 #endif

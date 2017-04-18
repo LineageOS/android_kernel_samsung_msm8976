@@ -27,7 +27,7 @@
 
 #define SPLIT_MIXER_OFFSET 0x800
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
-#define KOFF_TIMEOUT msecs_to_jiffies(84)
+#define KOFF_TIMEOUT msecs_to_jiffies(100)
 
 #define STOP_TIMEOUT(hz) msecs_to_jiffies((1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
 #define POWER_COLLAPSE_TIME msecs_to_jiffies(100)
@@ -415,9 +415,12 @@ static int mdss_mdp_cmd_wait4readptr(struct mdss_mdp_cmd_ctx *ctx)
 {
 	int rc = 0;
 
+	MDSS_XLOG(0xeeee, rc, atomic_read(&ctx->readptr_cnt), ctx->ctl->intf_num,sched_clock(),jiffies);
 	rc = wait_event_timeout(ctx->rdptr_waitq,
 		atomic_read(&ctx->readptr_cnt) == 0,
 		KOFF_TIMEOUT);
+	MDSS_XLOG(0xffff, rc, atomic_read(&ctx->readptr_cnt), ctx->ctl->intf_num,sched_clock(),jiffies);
+	
 	if (rc <= 0) {
 		if (atomic_read(&ctx->readptr_cnt))
 			pr_err("timed out waiting for rdptr irq\n");
@@ -473,6 +476,8 @@ static void mdss_mdp_cmd_intf_callback(void *data, int event)
 				(val & 0xffff) > (te->start_pos +
 				te->sync_threshold_start), 10, timeout_us);
 
+		MDSS_XLOG(val,te->start_pos,te->sync_threshold_start,timeout_us);
+
 		/*
 		 * rdptr interrupt will be disabled from command mode
 		 * clock work queue
@@ -524,7 +529,6 @@ static void mdss_mdp_cmd_intf_recovery(void *data, int event)
 			notify_frame_timeout = true;
 	}
 	spin_unlock_irqrestore(&ctx->koff_lock, flags);
-
 	if (notify_frame_timeout)
 		mdss_mdp_ctl_notify(ctx->ctl, MDP_NOTIFY_FRAME_TIMEOUT);
 
@@ -727,6 +731,12 @@ int mdss_mdp_cmd_reconfigure_splash_done(struct mdss_mdp_ctl *ctl, bool handoff)
 
 	pdata = ctl->panel_data;
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	/* Turning off panel - mdp to initialize panel init-seq at kick-off*/
+	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_BLANK, NULL);
+	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_OFF, NULL);
+#endif
+
 	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_CLK_CTRL, (void *)0);
 
 	pdata->panel_info.cont_splash_enabled = 0;
@@ -774,7 +784,7 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 		status = mask & readl_relaxed(ctl->mdata->mdp_base +
 				MDSS_MDP_REG_INTR_STATUS);
 		if (status) {
-			WARN(1, "pp done but irq not triggered\n");
+			pr_warn_once("pp done but irq not triggered\n");
 			mdss_mdp_irq_clear(ctl->mdata,
 					MDSS_MDP_IRQ_PING_PONG_COMP,
 					ctx->pp_num);
@@ -789,11 +799,12 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 
 	if (rc <= 0) {
 		if (ctx->pp_timeout_report_cnt == 0) {
+			pr_warn_once("cmd kickoff timed out (%d) ctl=%d\n", rc, ctl->num);
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
-				"dsi1_ctrl", "dsi1_phy");
+				"dsi1_ctrl", "dsi1_phy", "panic");
+			mdss_fb_report_panel_dead(ctl->mfd);
 		} else if (ctx->pp_timeout_report_cnt == MAX_RECOVERY_TRIALS) {
-			WARN(1, "cmd kickoff timed out (%d) ctl=%d\n",
-					rc, ctl->num);
+			pr_warn_once("cmd kickoff timed out (%d) ctl=%d\n", rc, ctl->num);
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
 				"dsi1_ctrl", "dsi1_phy", "panic");
 			mdss_fb_report_panel_dead(ctl->mfd);
@@ -923,10 +934,15 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		mdss_mdp_ctl_intf_event(ctl,
 			MDSS_EVENT_REGISTER_MDP_CALLBACK,
 			(void *)&ctx->intf_mdp_callback);
-
+		
 		ctx->intf_stopped = 0;
 		if (sctx)
 			sctx->intf_stopped = 0;
+		
+		/*Following change was suggested via QC Case #02445981 for proper sync between first frame tx and TE.
+		"kick off an image after getting the first TE signal to get a proper timing"*/
+		pr_debug("%s: add delay to wait 1st TE to come!", __func__); 
+		mdelay(20); // delay 16ms for TE signal to come, it will reset MDP te logic rdptr, added 4ms for margin
 	} else {
 		pr_err("%s: Panel already on\n", __func__);
 	}
@@ -1481,6 +1497,10 @@ static int mdss_mdp_cmd_ctx_setup(struct mdss_mdp_ctl *ctl,
 	pr_debug("%s: ctx=%pK num=%d\n", __func__, ctx, ctx->pp_num);
 	MDSS_XLOG(ctl->num, atomic_read(&ctx->koff_cnt), ctx->clk_enabled,
 					ctx->rdptr_enabled);
+
+	mdss_mdp_ctl_intf_event(ctl, 
+		MDSS_EVENT_REGISTER_RECOVERY_HANDLER, 
+		(void *)&ctx->intf_recovery);
 
 	mdss_mdp_set_intr_callback(MDSS_MDP_IRQ_PING_PONG_RD_PTR,
 		ctx->pp_num, mdss_mdp_cmd_readptr_done, ctl);

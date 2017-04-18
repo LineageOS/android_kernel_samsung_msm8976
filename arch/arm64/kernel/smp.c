@@ -51,6 +51,10 @@
 #include <asm/ptrace.h>
 #include <asm/edac.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
+
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -143,7 +147,7 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	cpumask_set_cpu(cpu, mm_cpumask(mm));
 
 	set_my_cpu_offset(per_cpu_offset(smp_processor_id()));
-	pr_debug("CPU%u: Booted secondary processor\n", cpu);
+	printk("CPU%u: Booted secondary processor\n", cpu);
 
 	/*
 	 * TTBR0 is only used for the identity mapping at this stage. Make it
@@ -259,7 +263,7 @@ void __cpu_die(unsigned int cpu)
 		pr_crit("CPU%u: cpu didn't die\n", cpu);
 		return;
 	}
-	pr_debug("CPU%u: shutdown\n", cpu);
+	pr_notice("CPU%u: shutdown\n", cpu);
 
 	/*
 	 * Now that the dying CPU is beyond the point of no return w.r.t.
@@ -570,6 +574,9 @@ static void ipi_cpu_stop(unsigned int cpu, struct pt_regs *regs)
 		show_regs(regs);
 		dump_stack();
 		arm64_check_cache_ecc(NULL);
+#ifdef CONFIG_SEC_DEBUG
+		sec_debug_save_context();
+#endif
 		raw_spin_unlock(&stop_lock);
 	}
 

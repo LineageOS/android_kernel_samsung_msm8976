@@ -213,6 +213,7 @@ static int modem_notifier_cb(struct notifier_block *this, unsigned long code,
 					memblock[i].client_id);
 			}
 
+		
 			if (memblock[i].free_memory == 0) {
 				if (memblock[i].peripheral ==
 					DHMS_MEM_PROC_MPSS_V01 &&
@@ -322,6 +323,7 @@ static int handle_alloc_generic_req(void *req_h, void *req, void *conn_h)
 	pr_debug("memshare: In %s, free memory count for client id: %d = %d",
 		__func__, memblock[client_id].client_id,
 			memblock[client_id].free_memory);
+
 	if (!memblock[client_id].alloted) {
 		rc = memshare_alloc(memsh_drv->dev, alloc_req->num_bytes,
 					&memblock[client_id]);
@@ -349,6 +351,8 @@ static int handle_alloc_generic_req(void *req_h, void *req, void *conn_h)
 	rc = qmi_send_resp_from_cb(mem_share_svc_handle, conn_h, req_h,
 			&mem_share_svc_alloc_generic_resp_desc, alloc_resp,
 			sizeof(alloc_resp));
+
+	kfree(alloc_resp);
 
 	if (rc < 0)
 		pr_err("In %s, Error sending the alloc request: %d\n",

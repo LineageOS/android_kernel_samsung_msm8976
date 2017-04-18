@@ -32,6 +32,10 @@
 #include "mdss_debug.h"
 #include "mdss_dba_utils.h"
 #include "mdss_dsi_phy.h"
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+#include "samsung/ss_dsi_panel_common.h"
+#endif
+
 
 #define XO_CLK_RATE	19200000
 
@@ -95,7 +99,11 @@ static void mdss_dsi_pm_qos_update_request(int val)
 static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+struct mdss_dsi_ctrl_pdata *mdss_dsi_get_ctrl(u32 ctrl_id)
+#else
 static struct mdss_dsi_ctrl_pdata *mdss_dsi_get_ctrl(u32 ctrl_id)
+#endif
 {
 	if (ctrl_id >= DSI_CTRL_MAX || !mdss_dsi_res)
 		return NULL;
@@ -265,6 +273,11 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
+	struct dsi_shared_data *sdata  = NULL;
+	struct mdss_dsi_ctrl_pdata *other_ctrl  = NULL;
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -291,6 +304,24 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		pr_err("%s: failed to disable vregs for %s\n",
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+
+	sdata = ctrl_pdata->shared_data;
+	other_ctrl = mdss_dsi_get_other_ctrl(ctrl_pdata);
+
+	if(mdss_dsi_is_hw_config_split(sdata) && mdss_dsi_is_right_ctrl(ctrl_pdata)) {
+		if (!IS_ERR_OR_NULL(other_ctrl))
+			pdata = &(other_ctrl->panel_data);
+
+		if(mdss_samsung_panel_extra_power(pdata, 0))
+			pr_err("%s : failed to enable extra power\n", __func__);
+	} else if (!mdss_dsi_is_hw_config_split(sdata) && mdss_samsung_panel_extra_power(pdata, 0))
+		pr_err("%s : failed to enable extra power\n", __func__);
+
+	if(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_off_delay)
+		usleep(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_off_delay);
+
+#endif
 end:
 	return ret;
 }
@@ -299,12 +330,14 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -317,6 +350,13 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 		return ret;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if (mdss_samsung_panel_extra_power(pdata, 1))
+		pr_err("%s : failed to enable extra power\n", __func__);
+
+	if(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_on_delay)
+		usleep(vdd->dtsi_data[ctrl_pdata->ndx].samsung_power_on_delay);
+#endif
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the
@@ -355,7 +395,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 	}
 
 	pinfo = &pdata->panel_info;
-	pr_debug("%s: cur_power_state=%d req_power_state=%d\n", __func__,
+	pr_info("%s: cur_power_state=%d req_power_state=%d\n", __func__,
 		pinfo->panel_power_state, power_state);
 
 	if (pinfo->panel_power_state == power_state) {
@@ -556,7 +596,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].post_off_sleep = tmp;
 		}
 
-		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
+		pr_err("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
 			__func__,
 			mp->vreg_config[i].vreg_name,
 			mp->vreg_config[i].min_voltage,
@@ -1079,6 +1119,9 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *panel_info = NULL;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = NULL;
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1104,7 +1147,13 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		goto panel_power_ctrl;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	vdd = check_valid_ctrl(ctrl_pdata);
+	if (pdata->panel_info.type == MIPI_CMD_PANEL &&
+		!vdd->dtsi_data[ctrl_pdata->ndx].samsung_tcon_clk_on_support)
+#else
 	if (pdata->panel_info.type == MIPI_CMD_PANEL)
+#endif
 		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 
 	if (!pdata->panel_info.ulps_suspend_enabled) {
@@ -1115,7 +1164,6 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		mdss_dsi_phy_disable(ctrl_pdata);
 	}
 	ctrl_pdata->ctrl_state &= ~CTRL_STATE_DSI_ACTIVE;
-
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 
 panel_power_ctrl:
@@ -1235,6 +1283,11 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int cur_power_state;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = NULL;
+	struct dsi_shared_data *sdata  = NULL;
+	struct mdss_dsi_ctrl_pdata *other_ctrl  = NULL;
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1253,6 +1306,20 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 	pinfo = &pdata->panel_info;
 	mipi = &pdata->panel_info.mipi;
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	vdd = check_valid_ctrl(ctrl_pdata);
+	if (IS_ERR_OR_NULL(vdd)) {
+		pr_err("%s: Invalid data ctrl : 0x%zx\n", __func__, (size_t)vdd);
+		return -EINVAL;
+	}
+
+	sdata = ctrl_pdata->shared_data;
+	other_ctrl = mdss_dsi_get_other_ctrl(ctrl_pdata);
+
+	if (vdd->esd_recovery.esd_irq_enable)
+		vdd->esd_recovery.esd_irq_enable(true, false, (void *)vdd);
+#endif
 
 	if (mdss_dsi_is_panel_on_interactive(pdata)) {
 		/*
@@ -1315,6 +1382,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	if (mipi->lp11_init) {
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
+
 		mdss_dsi_panel_reset(pdata, 1);
 	}
 
@@ -1323,15 +1391,68 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 	if (mipi->force_clk_lane_hs) {
 		u32 tmp;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if(mdss_dsi_is_hw_config_split(sdata) && vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init
+			&& mdss_dsi_is_right_ctrl(ctrl_pdata)) {
 
-		tmp = MIPI_INP((ctrl_pdata->ctrl_base) + 0xac);
-		tmp |= (1<<28);
-		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, tmp);
-		wmb();
+			/* Force HS for DSI 0 */
+			if (!IS_ERR_OR_NULL(other_ctrl)) {
+				tmp = MIPI_INP((other_ctrl->ctrl_base) + 0xac);
+				tmp |= (1<<28);
+				MIPI_OUTP((other_ctrl->ctrl_base) + 0xac, tmp);
+				wmb();
+			}
+
+			/* Force HS for DSI 1 */
+			tmp = MIPI_INP((ctrl_pdata->ctrl_base) + 0xac);
+			tmp |= (1<<28);
+			MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, tmp);
+			wmb();
+
+			if (!IS_ERR_OR_NULL(vdd->dtsi_data[DISPLAY_1].upi_clk_change_tx_cmds[vdd->panel_revision].cmds)) {
+
+				struct dsi_panel_cmds *pcmds = NULL;
+
+				mutex_lock(&vdd->vdd_lock);
+				if (!IS_ERR_OR_NULL(other_ctrl)) {
+					pcmds = mdss_samsung_cmds_select(other_ctrl, PANEL_UPI_CLK_CHANGE, NULL);
+					if (!IS_ERR_OR_NULL(pcmds) && !IS_ERR_OR_NULL(pcmds->cmds))
+						mdss_dsi_panel_cmds_send(other_ctrl, pcmds);
+					else
+						pr_info("Fail to tx cmds(line : %d)\n", __LINE__);
+				}
+
+				mutex_unlock(&vdd->vdd_lock);
+			}
+
+		} else if(!mdss_dsi_is_hw_config_split(sdata) ) {
+#endif
+			tmp = MIPI_INP((ctrl_pdata->ctrl_base) + 0xac);
+			tmp |= (1<<28);
+			MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, tmp);
+			wmb();
+		}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
 	}
+#endif
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	 if(pdata->panel_info.type == MIPI_CMD_PANEL && mdss_dsi_is_hw_config_split(sdata)
+		&& vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init && mdss_dsi_is_right_ctrl(ctrl_pdata) &&
+		!vdd->dtsi_data[ctrl_pdata->ndx].samsung_tcon_clk_on_support) {
+
+		if (!IS_ERR_OR_NULL(other_ctrl))
+			mdss_dsi_clk_ctrl(other_ctrl, DSI_ALL_CLKS, 0);
+
+		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+	} else if (pdata->panel_info.type == MIPI_CMD_PANEL &&
+			!vdd->dtsi_data[ctrl_pdata->ndx].samsung_tcon_clk_on_support &&
+			!(mdss_dsi_is_hw_config_split(sdata) && vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init))
+		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+#else
 	if (pdata->panel_info.type == MIPI_CMD_PANEL)
 		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+#endif
 
 end:
 	pr_debug("%s-:\n", __func__);
@@ -1345,12 +1466,23 @@ static int mdss_dsi_pinctrl_set_state(
 	struct pinctrl_state *pin_state;
 	struct mdss_panel_info *pinfo = NULL;
 	int rc = -EFAULT;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = check_valid_ctrl(ctrl_pdata);
+	if (IS_ERR_OR_NULL(vdd)) {
+		pr_err("%s: Invalid data ctrl : 0x%zx\n", __func__, (size_t)vdd);
+		return -EINVAL;
+	};
+#endif
 
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.pinctrl))
 		return PTR_ERR(ctrl_pdata->pin_res.pinctrl);
 
 	pinfo = &ctrl_pdata->panel_data.panel_info;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if ((mdss_dsi_is_right_ctrl(ctrl_pdata) && !vdd->dtsi_data[ctrl_pdata->ndx].samsung_lp11_init &&
+#else
 	if ((mdss_dsi_is_right_ctrl(ctrl_pdata) &&
+#endif
 		mdss_dsi_is_hw_config_split(ctrl_pdata->shared_data)) ||
 			pinfo->is_dba_panel) {
 		pr_debug("%s:%d, pinctrl config not needed\n",
@@ -1375,6 +1507,42 @@ static int mdss_dsi_pinctrl_set_state(
 	return rc;
 }
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+int mdss_samsung_dsi_pinctrl_set_state(
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata, int control_number, bool active)
+{
+	/* Prevent : "add NULL initialize code "Using uninitialized value pin_state when calling IS_ERR_OR_NULL */
+	struct pinctrl_state *pin_state = NULL;
+	int rc = -EFAULT;
+
+	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.pinctrl))
+		return PTR_ERR(ctrl_pdata->pin_res.pinctrl);
+
+	if (control_number == 0) {
+		if (active)
+			pin_state = ctrl_pdata->pin_res.samsung_gpio_control0_state_active;
+		else
+			pin_state = ctrl_pdata->pin_res.samsung_gpio_control0_state_suspend;
+	} else if (control_number == 1) {
+		if (active)
+			pin_state = ctrl_pdata->pin_res.samsung_gpio_control1_state_active;
+		else
+			pin_state = ctrl_pdata->pin_res.samsung_gpio_control1_state_suspend;
+	}
+
+	if (!IS_ERR_OR_NULL(pin_state)) {
+		rc = pinctrl_select_state(ctrl_pdata->pin_res.pinctrl,
+				pin_state);
+		if (rc)
+ 			pr_err("%s %d: can not set pins\n", __func__, __LINE__);
+	} else {
+		pr_err("%s %d: can not set pins\n", __func__, __LINE__);
+	}
+
+	return rc;
+}
+#endif
+
 static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
@@ -1397,6 +1565,22 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 				MDSS_PINCTRL_STATE_SLEEP);
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.gpio_state_suspend))
 		pr_warn("%s: can not get sleep pinstate\n", __func__);
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+/*
+	ctrl_pdata->pin_res.samsung_gpio_control0_state_active
+		= pinctrl_lookup_state(ctrl_pdata->pin_res.pinctrl,
+				SAMSUNG_DISPLAY_PINCTRL0_STATE_DEFAULT);
+	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.samsung_gpio_control0_state_active))
+		pr_warn("%s: can not get default pinstate\n", __func__);
+
+	ctrl_pdata->pin_res.samsung_gpio_control0_state_suspend
+		= pinctrl_lookup_state(ctrl_pdata->pin_res.pinctrl,
+				SAMSUNG_DISPLAY_PINCTRL0_STATE_SLEEP);
+	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.samsung_gpio_control0_state_suspend))
+		pr_warn("%s: can not get sleep pinstate\n", __func__);
+*/
+#endif
 
 	return 0;
 }
@@ -1493,7 +1677,14 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		mdss_dsi_host_init(pdata);
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	if (pdata->panel_info.type == MIPI_CMD_PANEL)
+		mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
+	else
+		mdss_dsi_op_mode_config(DSI_VIDEO_MODE, pdata);
+#else
 	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
+#endif
 
 	if (pdata->panel_info.dynamic_switch_pending) {
 		pr_info("%s: switching to %s mode\n", __func__,
@@ -2304,8 +2495,16 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 				queue_delayed_work(ctrl_pdata->workq,
 					&ctrl_pdata->dba_work, HZ);
 		}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if (ctrl_pdata->registered)
+			rc = ctrl_pdata->registered(pdata);
+#endif
 		break;
 	default:
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		if(ctrl_pdata->event_handler)
+			rc = ctrl_pdata->event_handler(pdata, event, arg);
+#endif
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;
 	}
@@ -3322,7 +3521,12 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 
 	if (ctrl_pdata->status_mode == ESD_REG ||
+#if !defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
 			ctrl_pdata->status_mode == ESD_REG_NT35596)
+#else
+			ctrl_pdata->status_mode == ESD_REG_NT35596 ||
+			ctrl_pdata->status_mode == ESD_REG_IRQ)
+#endif
 		ctrl_pdata->check_status = mdss_dsi_reg_status_check;
 	else if (ctrl_pdata->status_mode == ESD_BTA)
 		ctrl_pdata->check_status = mdss_dsi_bta_status_check;
@@ -3451,7 +3655,17 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	panel_debug_register_base("panel",
 		ctrl_pdata->ctrl_base, ctrl_pdata->reg_size);
 
-	pr_debug("%s: Panel data initialized\n", __func__);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	/*
+	*	Below function shold be executed after mdss_dsi_ctrl_init().
+	*	mdss_dsi_ctrl_init() gets DSI ctrl handle number(DSI_CTRL_0, DSI_CTRL_1).
+	*/
+	mdss_samsung_panel_init(pan_node, ctrl_pdata);
+	mdss_samsung_panel_parse_dt(pan_node, ctrl_pdata);
+	pinfo->panel_state = false;
+#endif
+
+	pr_info("%s: Panel data initialized\n", __func__);
 	return 0;
 }
 

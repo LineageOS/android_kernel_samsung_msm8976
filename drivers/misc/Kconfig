@@ -323,6 +323,17 @@ config APDS9930
 	  To compile this driver as a module, choose M here: the
 	  module will be called apds9950. If unsure, say N here.
 
+config SAMSUNG_JACK
+	bool "3.5 PI Jack driver for Samsung devices"
+	depends on INPUT
+	default n
+	help
+	 This is 3.5 PI JACK driver for Samsung devies.
+	 sec_jack from samsung driver used for samsung devices.
+
+	 To samsung jack is reviewed and supported in all the
+	 samsung devices.
+
 config ISL29003
 	tristate "Intersil ISL29003 ambient light sensor"
 	depends on I2C && SYSFS
@@ -383,6 +394,18 @@ config SENSORS_APDS990X
 
 	   To compile this driver as a module, choose M here: the
 	   module will be called apds990x. If unsure, say N here.
+
+config TIMA_LOG
+	tristate "Support for dumping TIMA log"
+	default y
+	help
+	  This option enables support for dumping TIMA log
+
+config TIMA_TEST
+	tristate "Tima Test Suite"
+	default n
+	help
+	  This option enables kernel component of tima test suite
 
 config HMC6352
 	tristate "Honeywell HMC6352 compass"
@@ -645,6 +668,26 @@ config UID_CPUTIME
 	help
 	  Per UID based cpu time statistics exported to /proc/uid_cputime
 
+config SEC_MISC
+	bool "Samsung P series miscellaneous driver"
+	default n
+	help
+	  Samsung P series miscellaneous driver.
+	  This creates sys fs entries for changing debug levels.
+	  The debug level is stored in Param partition.
+
+config SEC_MPP_SHARE
+	bool "Samsung MPP share"
+	help
+	  Say Y to include support for mpp share
+
+config SEC_MPP_SHARE_LOW_TEMP_WA
+	bool "Samsung MPP share Low Temp WA"
+	help
+	  Say Y to include support for MUX share WA.
+	  When EAR_ADC_3.5 and BAT_THM use same MUX Switch IC,
+	  connect some non-official earphone, will cause BAT_THM Low Temp.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -655,4 +698,5 @@ source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/mei/Kconfig"
 source "drivers/misc/vmw_vmci/Kconfig"
 source "drivers/misc/qcom/Kconfig"
+source "drivers/misc/bhy/Kconfig"
 endmenu

@@ -109,6 +109,23 @@ do {									\
 	___p1;								\
 })
 
+#define smp_load_acquire_exclusive(p)					\
+({									\
+	typeof(*p) ___p1;						\
+	compiletime_assert_atomic_type(*p);				\
+	switch (sizeof(*p)) {						\
+	case 4:								\
+		asm volatile ("ldaxr %w0, %1"				\
+			: "=r" (___p1) : "Q" (*p) : "memory");		\
+		break;							\
+	case 8:								\
+		asm volatile ("ldaxr %0, %1"				\
+			: "=r" (___p1) : "Q" (*p) : "memory");		\
+		break;							\
+	}								\
+	___p1;								\
+})
+
 #endif
 
 #define read_barrier_depends()		do { } while(0)

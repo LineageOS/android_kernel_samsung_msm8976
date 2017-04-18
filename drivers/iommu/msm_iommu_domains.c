@@ -871,6 +871,8 @@ static int iommu_domain_probe(struct platform_device *pdev)
 		}
 
 		l.partitions = part;
+		l.client_name = NULL;
+		l.is_secure = 0;
 
 		msm_register_domain(&l);
 

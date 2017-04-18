@@ -74,3 +74,8 @@ obj-$(CONFIG_MSM_SMCMOD) += smcmod.o
 obj-$(CONFIG_ARCH_MSM8974) += msm_mpmctr.o
 
 obj-$(CONFIG_PERFMAP) += perfmap.o
+
+##for MSM8952_j7xlte SEC_DEBUG
+#ifeq ($(CONFIG_SEC_J7XLTE_PROJECT),y)
+#obj-$(CONFIG_SEC_DEBUG) += sec_getlog.o sec_gaf.o
+#endif

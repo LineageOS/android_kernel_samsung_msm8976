@@ -299,11 +299,25 @@ void sel_netnode_flush(void)
 	spin_unlock_bh(&sel_netnode_lock);
 }
 
+static int sel_netnode_avc_callback(u32 event)
+{
+	if (event == AVC_CALLBACK_RESET) {
+		sel_netnode_flush();
+		synchronize_net();
+	}
+	return 0;
+}
+
 static __init int sel_netnode_init(void)
 {
 	int iter;
 	int ret;
 
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+	selinux_enabled = 1;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	if (!selinux_enabled)
 		return 0;
 
@@ -311,6 +325,10 @@ static __init int sel_netnode_init(void)
 		INIT_LIST_HEAD(&sel_netnode_hash[iter].list);
 		sel_netnode_hash[iter].size = 0;
 	}
+
+	ret = avc_add_callback(sel_netnode_avc_callback, AVC_CALLBACK_RESET);
+	if (ret != 0)
+		panic("avc_add_callback() failed, error %d\n", ret);
 
 	return ret;
 }

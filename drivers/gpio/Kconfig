@@ -522,6 +522,12 @@ config GPIO_ADNP
 	  enough to represent all pins, but the driver will assume a
 	  register layout for 64 pins (8 registers).
 
+config GPIO_PCAL6416A
+	bool "PCAL6416A GPIO expander"
+	depends on I2C
+	help
+	  GPIO driver for PCAL6416A I2C-based GPIO expander.
+
 comment "PCI GPIO expanders:"
 
 config GPIO_CS5535
@@ -730,4 +736,6 @@ config GPIO_VIPERBOARD
           River Tech's viperboard.h for detailed meaning
           of the module parameters.
 
+config SEC_GPIO_DVS
+	tristate "setting Samsung GPIO debugging and verification system"
 endif

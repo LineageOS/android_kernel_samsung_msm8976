@@ -22,6 +22,9 @@
 
 #define TICKET_SHIFT	16
 
+#ifdef CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK
+#include <asm-generic/qspinlock_types.h>
+#else
 typedef struct {
 #ifdef __AARCH64EB__
 	u16 next;
@@ -33,6 +36,8 @@ typedef struct {
 } __aligned(4) arch_spinlock_t;
 
 #define __ARCH_SPIN_LOCK_UNLOCKED	{ 0 , 0 }
+
+#endif /* CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK */
 
 typedef struct {
 	volatile unsigned int lock;

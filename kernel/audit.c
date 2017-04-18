@@ -67,6 +67,12 @@
 
 #include "audit.h"
 
+// [ SEC_SELINUX_PORTING_QUALCOMM
+#ifdef CONFIG_PROC_AVC 
+#include <linux/proc_avc.h>
+#endif
+// ] SEC_SELINUX_PORTING_QUALCOMM
+
 /* No auditing will take place until audit_initialized == AUDIT_INITIALIZED.
  * (Initialization happens after skb_init is called.) */
 #define AUDIT_DISABLED		-1
@@ -83,7 +89,7 @@ int		audit_ever_enabled;
 EXPORT_SYMBOL_GPL(audit_enabled);
 
 /* Default state when kernel boots without any parameters. */
-static int	audit_default;
+static int	audit_default = 1;
 
 /* If auditing cannot proceed, audit_failure selects what happens. */
 static int	audit_failure = AUDIT_FAIL_PRINTK;
@@ -185,8 +191,7 @@ void audit_panic(const char *message)
 	case AUDIT_FAIL_SILENT:
 		break;
 	case AUDIT_FAIL_PRINTK:
-		if (printk_ratelimit())
-			printk(KERN_ERR "audit: %s\n", message);
+		printk(KERN_ERR "audit: %s\n", message);
 		break;
 	case AUDIT_FAIL_PANIC:
 		/* test audit_pid since printk is always losey, why bother? */
@@ -256,13 +261,12 @@ void audit_log_lost(const char *message)
 	}
 
 	if (print) {
-		if (printk_ratelimit())
-			printk(KERN_WARNING
-				"audit: audit_lost=%d audit_rate_limit=%d "
-				"audit_backlog_limit=%d\n",
-				atomic_read(&audit_lost),
-				audit_rate_limit,
-				audit_backlog_limit);
+		printk(KERN_WARNING
+			"audit: audit_lost=%d audit_rate_limit=%d "
+			"audit_backlog_limit=%d\n",
+			atomic_read(&audit_lost),
+			audit_rate_limit,
+			audit_backlog_limit);
 		audit_panic(message);
 	}
 }
@@ -371,11 +375,18 @@ static void audit_printk_skb(struct sk_buff *skb)
 	struct nlmsghdr *nlh = nlmsg_hdr(skb);
 	char *data = nlmsg_data(nlh);
 
+// [ SEC_SELINUX_PORTING_QUALCOMM
+#ifdef CONFIG_PROC_AVC
+	if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
+		sec_avc_log("%s\n", data);
+#else
 	if (nlh->nlmsg_type != AUDIT_EOE) {
 		if (printk_ratelimit())
 			printk(KERN_NOTICE "type=%d %s\n", nlh->nlmsg_type, data);
 		else
 			audit_log_lost("printk limit exceeded\n");
+#endif
+// ] SEC_SELINUX_PORTING_QUALCOMM
 	}
 
 	audit_hold_skb(skb);
@@ -394,9 +405,24 @@ static void kauditd_send_skb(struct sk_buff *skb)
 		audit_pid = 0;
 		/* we might get lucky and get this in the next auditd */
 		audit_hold_skb(skb);
+// [ SEC_SELINUX_PORTING_QUALCOMM
+#ifdef CONFIG_PROC_AVC
+	} else {
+		struct nlmsghdr *nlh = nlmsg_hdr(skb);
+		char *data = nlmsg_data(nlh);
+
+		if (nlh->nlmsg_type != AUDIT_EOE && nlh->nlmsg_type != AUDIT_NETFILTER_CFG) {
+			sec_avc_log("%s\n", data);
+		}
+#else
 	} else
+#endif
+// ] SEC_SELINUX_PORTING_QUALCOMM
 		/* drop the extra reference if sent ok */
 		consume_skb(skb);
+#ifdef CONFIG_PROC_AVC
+}
+#endif
 }
 
 /*

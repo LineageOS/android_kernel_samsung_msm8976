@@ -26,6 +26,24 @@ extern int32_t msm_led_torch_create_classdev(
 
 static enum flash_type flashtype;
 static struct msm_led_flash_ctrl_t fctrl;
+#ifdef CONFIG_LEDS_SM5705
+extern int sm5705_fled_led_off(unsigned char index);
+extern int sm5705_fled_torch_on(unsigned char index);
+extern int sm5705_fled_flash_on(unsigned char index);
+#if defined(CONFIG_DUAL_LEDS_FLASH)
+extern int sm5705_fled_pre_flash_on(unsigned char index, int32_t pre_flash_current_mA);
+extern int sm5705_fled_flash_on_set_current(unsigned char index, int32_t flash_current_mA);
+#endif
+#endif
+
+#ifdef CONFIG_LEDS_S2MU005
+extern void ss_rear_flash_led_flash_on(void);
+extern void ss_rear_flash_led_torch_on(void);
+extern void ss_rear_flash_led_turn_off(void);
+extern void ss_rear_torch_set_flashlight(bool isFlashlight);
+extern void ss_front_flash_led_turn_on(void);
+extern void ss_front_flash_led_turn_off(void);
+#endif
 
 static int32_t msm_led_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
 	void *arg)
@@ -39,6 +57,157 @@ static int32_t msm_led_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
 	CDBG("%s:%d subdev_id %d\n", __func__, __LINE__, *subdev_id);
 	return 0;
 }
+
+int msm_led_release(struct msm_led_flash_ctrl_t *fctrl)
+{
+	//Added release function to resolve panic issue
+	return 0;
+}
+
+#ifdef CONFIG_LEDS_S2MU005
+static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
+	void *data)
+{
+	int rc = 0;
+	int flash_id = 0;
+	struct msm_camera_led_cfg_t *cfg = (struct msm_camera_led_cfg_t *)data;
+
+	if (!fctrl) {
+		pr_err("[%s:%d]failed\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+	pr_err("%s [CAM_LED]FLASH ID:%d\n", __func__, cfg->flash_front);
+	switch (cfg->flash_front) {
+		case 0:
+			flash_id = BACK_CAMERA_B;
+			break;
+
+		case 1:
+			flash_id = FRONT_CAMERA_B;
+			break;
+
+		case 3:
+			flash_id = 4;	//INIT&RELEASE
+			break;
+
+		default:
+			flash_id = 0;
+			pr_err("%s [CAM_LED]default is back\n", __func__);
+			break;
+	}
+	
+	CDBG("cfg->cfgtype = %d\n", cfg->cfgtype);
+	switch (cfg->cfgtype) {
+		case MSM_CAMERA_LED_OFF:
+			pr_err("MSM_CAMERA_LED_OFF");
+			if (BACK_CAMERA_B == flash_id)
+				ss_rear_flash_led_turn_off();
+			else if (FRONT_CAMERA_B == flash_id)
+				ss_front_flash_led_turn_off();
+		break;
+		case MSM_CAMERA_LED_LOW:
+			if (BACK_CAMERA_B == flash_id)	{
+				ss_rear_torch_set_flashlight(false);
+				ss_rear_flash_led_torch_on();
+			}
+			else if (FRONT_CAMERA_B == flash_id)
+				ss_front_flash_led_turn_on();
+
+		break;
+		case MSM_CAMERA_LED_TORCH:
+			ss_rear_torch_set_flashlight(true);
+			ss_rear_flash_led_torch_on();
+		break;
+		case MSM_CAMERA_LED_HIGH:
+			CDBG("MSM_CAMERA_LED_HIGH");
+			if (BACK_CAMERA_B == flash_id)
+				ss_rear_flash_led_flash_on();
+		break;
+		case MSM_CAMERA_LED_INIT:
+		case MSM_CAMERA_LED_RELEASE:
+		/*	if (BACK_CAMERA_B == flash_id) */
+				ss_rear_flash_led_turn_off();
+		/*	else if (FRONT_CAMERA_B == flash_id) */
+				ss_front_flash_led_turn_off();
+		break;
+		default:
+		break;
+	}
+	return rc;
+}
+
+#elif defined CONFIG_LEDS_SM5705
+static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
+	void *data)
+{
+	int rc = 0;
+	struct msm_camera_led_cfg_t *cfg = (struct msm_camera_led_cfg_t *)data;
+
+	if (!fctrl) {
+		pr_err("[%s:%d]failed\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+	switch (cfg->cfgtype) {
+		case MSM_CAMERA_LED_OFF:
+			sm5705_fled_led_off(0);
+#if defined(CONFIG_DUAL_LEDS_FLASH)
+			sm5705_fled_led_off(1);
+#endif
+		break;
+		case MSM_CAMERA_LED_LOW:
+#if defined(CONFIG_DUAL_LEDS_FLASH)
+			CDBG("[%s:%d]MSM_CAMERA_LED_LOW cfg->flash_current[0] = %d \n", __func__, __LINE__, cfg->flash_current[0]);
+			CDBG("[%s:%d]MSM_CAMERA_LED_LOW cfg->flash_current[1] = %d \n", __func__, __LINE__, cfg->flash_current[1]);
+			if(cfg->flash_current[0] > 0) {
+				sm5705_fled_pre_flash_on(0,cfg->flash_current[0]);
+			} else {
+			sm5705_fled_torch_on(0);
+			}
+
+			if(cfg->flash_current[1] > 0) {
+				sm5705_fled_pre_flash_on(1,cfg->flash_current[1]);
+			} else {
+			sm5705_fled_torch_on(1);
+			}
+#else
+			sm5705_fled_torch_on(0);
+#endif
+		break;
+		case MSM_CAMERA_LED_HIGH:
+			sm5705_fled_led_off(0);
+#if defined(CONFIG_DUAL_LEDS_FLASH)
+			sm5705_fled_led_off(1);
+			CDBG("[%s:%d]MSM_CAMERA_LED_HIGH cfg->flash_current[0] = %d \n", __func__, __LINE__, cfg->flash_current[0]);
+			CDBG("[%s:%d]MSM_CAMERA_LED_HIGH cfg->flash_current[1] = %d \n", __func__, __LINE__, cfg->flash_current[1]);
+			if(cfg->flash_current[0] > 0) {
+				sm5705_fled_flash_on_set_current(0, cfg->flash_current[0]);
+			} else {
+			sm5705_fled_flash_on(0);
+			}
+
+			if(cfg->flash_current[1] > 0) {
+				sm5705_fled_flash_on_set_current(1, cfg->flash_current[1]);
+			} else {
+			sm5705_fled_flash_on(1);
+			}
+#else
+			sm5705_fled_flash_on(0);
+#endif
+		break;
+		case MSM_CAMERA_LED_INIT:
+		case MSM_CAMERA_LED_RELEASE:
+			sm5705_fled_led_off(0);
+#if defined(CONFIG_DUAL_LEDS_FLASH)
+			sm5705_fled_led_off(1);
+#endif
+		break;
+		default:
+		break;
+	}
+	return rc;
+}
+#else
+
 
 static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 	void *data)
@@ -124,7 +293,7 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 	CDBG("flash_set_led_state: return %d\n", rc);
 	return rc;
 }
-
+#endif
 static const struct of_device_id msm_led_trigger_dt_match[] = {
 	{.compatible = "qcom,camera-led-flash"},
 	{}
@@ -319,6 +488,7 @@ static int __init msm_led_trigger_add_driver(void)
 static struct msm_flash_fn_t msm_led_trigger_func_tbl = {
 	.flash_get_subdev_id = msm_led_trigger_get_subdev_id,
 	.flash_led_config = msm_led_trigger_config,
+	.flash_led_release = msm_led_release,
 };
 
 static struct msm_led_flash_ctrl_t fctrl = {

@@ -160,3 +160,7 @@ static inline bool is_IPI_pending(const struct cpumask *mask)
 	return false;
 }
 #endif
+
+#ifdef CONFIG_SAMSUNG_LPM_MODE
+extern int poweroff_charging;
+#endif

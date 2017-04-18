@@ -337,9 +337,9 @@ int msm_isp_get_clk_info(struct vfe_device *vfe_dev,
 void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
 {
 	struct timespec ts;
-	get_monotonic_boottime(&ts);
-	time_stamp->buf_time.tv_sec    = ts.tv_sec;
-	time_stamp->buf_time.tv_usec   = ts.tv_nsec/1000;
+	ktime_get_ts(&ts);
+	time_stamp->buf_time.tv_sec = ts.tv_sec;
+	time_stamp->buf_time.tv_usec = ts.tv_nsec/1000;
 	do_gettimeofday(&(time_stamp->event_time));
 }
 
@@ -531,7 +531,7 @@ static int msm_isp_get_clk_rates(struct vfe_device *vfe_dev,
 {
 	struct device_node *of_node;
 	int32_t  rc = 0;
-	uint32_t svs = 0, nominal = 0, turbo = 0;
+	uint32_t nominal = 0, turbo = 0;
 	if (!vfe_dev || !rates) {
 		pr_err("%s:%d failed: vfe_dev %pK rates %pK\n", __func__,
 			__LINE__, vfe_dev, rates);
@@ -551,16 +551,6 @@ static int msm_isp_get_clk_rates(struct vfe_device *vfe_dev,
 		 __LINE__, of_node);
 		return -EINVAL;
 	}
-
-	/*
-	 * Many older targets dont define svs.
-	 * return svs=0 for older targets.
-	 */
-	rc = of_property_read_u32(of_node, "max-clk-svs",
-		&svs);
-	if (rc < 0)
-		svs = 0;
-
 	rc = of_property_read_u32(of_node, "max-clk-nominal",
 		&nominal);
 	if (rc < 0 || !nominal) {
@@ -574,7 +564,6 @@ static int msm_isp_get_clk_rates(struct vfe_device *vfe_dev,
 		pr_err("%s: turbo rate error\n", __func__);
 			return -EINVAL;
 	}
-	rates->svs_rate = svs;
 	rates->nominal_rate = nominal;
 	rates->high_rate = turbo;
 	return 0;
@@ -1267,7 +1256,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	case VFE_READ_DMI_32BIT:
 	case VFE_READ_DMI_64BIT: {
 		if (reg_cfg_cmd->cmd_type == VFE_WRITE_DMI_64BIT ||
-			reg_cfg_cmd->cmd_type == VFE_READ_DMI_64BIT) {
+	            reg_cfg_cmd->cmd_type == VFE_READ_DMI_64BIT) { 
 			if ((reg_cfg_cmd->u.dmi_info.hi_tbl_offset <=
 				reg_cfg_cmd->u.dmi_info.lo_tbl_offset) ||
 				(reg_cfg_cmd->u.dmi_info.hi_tbl_offset -
@@ -1511,7 +1500,6 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			pr_err("%s:%d failed: rc %d\n", __func__, __LINE__, rc);
 			return -EINVAL;
 		}
-		user_data->svs_rate = rates.svs_rate;
 		user_data->nominal_rate = rates.nominal_rate;
 		user_data->high_rate = rates.high_rate;
 		break;
@@ -1935,7 +1923,7 @@ static void msm_isp_process_overflow_irq(
 {
 	uint32_t overflow_mask, vfe_id;
 	struct dual_vfe_resource *dual_vfe_res = NULL;
-	enum msm_vfe_input_src input_src = 0;
+
 	/* if there are no active streams - do not start recovery */
 	if (!vfe_dev->axi_data.num_active_stream)
 		return;
@@ -1969,20 +1957,8 @@ static void msm_isp_process_overflow_irq(
 			return;
 		}
 
-		overflow_mask &= 0xFE00;
-		overflow_mask >>= 9;
-
-		if (overflow_mask & vfe_dev->axi_data.rdi_wm_mask)
-			input_src = VFE_RAW_0;
-		else if ((overflow_mask << 8) & vfe_dev->axi_data.rdi_wm_mask)
-			input_src = VFE_RAW_1;
-		else if ((overflow_mask << 16) & vfe_dev->axi_data.rdi_wm_mask)
-			input_src = VFE_RAW_2;
-		else
-			input_src = VFE_PIX_0;
-
-		ISP_DBG("%s: intf %d Bus overflow detected: 0x%x, start recovery!\n",
-				__func__, input_src, overflow_mask);
+		ISP_DBG("%s: Bus overflow detected: 0x%x, start recovery!\n",
+				__func__, overflow_mask);
 
 		halt_cmd.overflow_detected = 1;
 		halt_cmd.stop_camif = 1;
@@ -2000,11 +1976,9 @@ static void msm_isp_process_overflow_irq(
 		*irq_status0 = 0;
 		*irq_status1 = 0;
 
-		memset(&error_event, 0, sizeof(error_event));
 		error_event.frame_id =
-			vfe_dev->axi_data.src_info[input_src].frame_id;
+			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 		error_event.u.error_info.err_type = ISP_ERROR_BUS_OVERFLOW;
-		error_event.u.error_info.stream_id_mask= input_src;
 		msm_isp_send_event(vfe_dev, ISP_EVENT_ERROR, &error_event);
 	}
 }
@@ -2017,7 +1991,8 @@ void msm_isp_reset_burst_count_and_frame_drop(
 		stream_info->stream_type != BURST_STREAM) {
 		return;
 	}
-	if (stream_info->num_burst_capture != 0) {
+	if (stream_info->stream_type == BURST_STREAM &&
+		stream_info->num_burst_capture != 0) {
 		framedrop_period = msm_isp_get_framedrop_period(
 		   stream_info->frame_skip_pattern);
 		stream_info->burst_frame_count =

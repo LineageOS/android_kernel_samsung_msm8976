@@ -2434,7 +2434,7 @@ int mdss_mdp_ctl_reconfig(struct mdss_mdp_ctl *ctl,
 		struct mdss_panel_data *pdata)
 {
 	int (*stop_fnc)(struct mdss_mdp_ctl *ctl, int panel_power_state);
-	int ret;
+	int ret = 0;
 
 	/*
 	 * Switch first to prevent deleting important data in the case
@@ -4167,7 +4167,8 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
 	 * that are valid and driver needs to ensure it. This function
 	 * would set the mixer state to border when there is timeout.
 	 */
-	if (ret == NOTIFY_BAD) {
+	/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+	if (ret == NOTIFY_BAD||((ctl->mfd)&&ctl->mfd->sd_skiplayer)) {
 		mdss_mdp_force_border_color(ctl);
 		ctl_flush_bits |= (ctl->flush_bits | BIT(17));
 		if (sctl && (!ctl->split_flush_en))

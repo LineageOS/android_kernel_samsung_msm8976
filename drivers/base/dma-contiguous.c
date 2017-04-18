@@ -77,6 +77,20 @@ static struct cma_map {
 static unsigned cma_map_count __initdata;
 static bool allow_memblock_alloc __initdata;
 
+enum dma_cont_reason {
+        DMA_CONT_SUCCESS,
+        DMA_CONT_EBUSY,
+        DMA_CONT_ENOMEM,
+        DMA_CONT_EOTHER,
+};
+
+static const char *dma_cont_reason_str[] = {
+        "Success",
+        "EBUSY",
+        "ENOMEM",
+        "Other Error",
+};
+
 static struct cma *cma_get_area(phys_addr_t base)
 {
 	int i;
@@ -646,7 +660,7 @@ static void clear_cma_bitmap(struct cma *cma, unsigned long pfn, int count)
  * global one. Requires architecture specific get_dev_cma_area() helper
  * function.
  */
-unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
+unsigned long dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int align)
 {
 	unsigned long mask, pfn = 0, pageno, start = 0;
@@ -654,6 +668,8 @@ unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
 	int ret = 0;
 	int tries = 0;
 	int retry_after_sleep = 0;
+	enum dma_cont_reason fail_reason = DMA_CONT_SUCCESS;
+	unsigned int nr, nr_total = 0;
 
 	if (!cma || !cma->count)
 		return 0;
@@ -661,7 +677,7 @@ unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
 	if (align > CONFIG_CMA_ALIGNMENT)
 		align = CONFIG_CMA_ALIGNMENT;
 
-	pr_debug("%s(cma %pK, count %zu, align %d)\n", __func__, (void *)cma,
+	pr_debug("%s(cma %p, count %d, align %d)\n", __func__, (void *)cma,
 		 count, align);
 
 	if (!count)
@@ -694,6 +710,10 @@ unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
 			} else {
 				pfn = 0;
 				mutex_unlock(&cma->lock);
+				if (start == 0)
+					fail_reason = DMA_CONT_ENOMEM;
+				else
+					fail_reason = DMA_CONT_EBUSY;
 				break;
 			}
 		}
@@ -712,10 +732,12 @@ unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
 			mutex_unlock(&cma_mutex);
 		}
 		if (ret == 0) {
+			fail_reason = DMA_CONT_SUCCESS;
 			break;
 		} else if (ret != -EBUSY) {
 			clear_cma_bitmap(cma, pfn, count);
 			pfn = 0;
+			fail_reason = DMA_CONT_EOTHER;
 			break;
 		}
 		clear_cma_bitmap(cma, pfn, count);
@@ -734,6 +756,29 @@ unsigned long dma_alloc_from_contiguous(struct device *dev, size_t count,
 		cma->fixup = 0;
 	}
 	pr_debug("%s(): returned %lx\n", __func__, pfn);
+	if (fail_reason != DMA_CONT_SUCCESS)
+		pr_info("%s: alloc failed, in_system: %d, req-size: %u pages, reason %s (%d)\n",
+			__func__, cma->in_system, count,
+			dma_cont_reason_str[fail_reason], fail_reason);
+	if (fail_reason == DMA_CONT_ENOMEM) {
+		mutex_lock(&cma->lock);
+		printk("number of available pages: ");
+		start = 0;
+		for (;;) {
+			pageno = bitmap_find_next_zero_area_and_size(cma->bitmap,
+						cma->count, start, &nr);
+			if (pageno >= cma->count)
+				break;
+			if (nr_total == 0)
+				printk("%u", nr);
+			else
+				printk("+%u", nr);
+			nr_total += nr;
+			start = pageno + nr;
+		}
+		printk("=>%u pages, total: %lu pages\n", nr_total, cma->count);
+		mutex_unlock(&cma->lock);
+	}
 	return pfn;
 }
 

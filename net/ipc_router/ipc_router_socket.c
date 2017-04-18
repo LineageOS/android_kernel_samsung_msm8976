@@ -32,6 +32,8 @@
 
 #include <net/sock.h>
 
+#include <soc/qcom/subsystem_restart.h>
+
 #include "ipc_router_private.h"
 #include "ipc_router_security.h"
 
@@ -208,7 +210,7 @@ static int msm_ipc_router_create(struct net *net,
 	sock->ops = &msm_ipc_proto_ops;
 	sock_init_data(sock, sk);
 	sk->sk_data_ready = NULL;
-	sk->sk_write_space = NULL;
+	sk->sk_write_space = ipc_router_dummy_write_space;
 	sk->sk_rcvtimeo = DEFAULT_RCV_TIMEO;
 	sk->sk_sndtimeo = DEFAULT_SND_TIMEO;
 
@@ -422,6 +424,7 @@ static int msm_ipc_router_ioctl(struct socket *sock,
 	unsigned int n;
 	size_t srv_info_sz = 0;
 	int ret;
+	struct msm_ipc_subsys_request subsys_req;
 
 	if (!sk)
 		return -EINVAL;
@@ -516,6 +519,27 @@ static int msm_ipc_router_ioctl(struct socket *sock,
 		ret = msm_ipc_config_sec_rules((void *)arg);
 		if (ret != -EPERM)
 			port_ptr->type = IRSC_PORT;
+		break;
+
+	case IPC_SUB_IOCTL_SUBSYS_GET_RESTART:
+		if (!check_permissions()) {
+			IPC_RTR_ERR("%s: %s Do not have permissions\n",
+				__func__, current->comm);
+			ret = -EPERM;
+			break;
+		}
+		ret = copy_from_user(&subsys_req, (void *)arg, sizeof(subsys_req));
+		if (ret) {
+			ret = -EFAULT;
+			break;
+		}
+		
+		if (subsys_req.request_id == SUBSYS_RES_REQ)
+			subsys_force_stop((const char *)(subsys_req.name), true);
+		else if (subsys_req.request_id == SUBSYS_CR_REQ)
+			subsys_force_stop((const char *)(subsys_req.name), false);
+		else
+			ret = -EINVAL;
 		break;
 
 	default:

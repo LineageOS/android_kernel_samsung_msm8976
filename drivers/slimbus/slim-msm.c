@@ -194,8 +194,8 @@ void msm_hw_set_port(struct msm_slim_ctrl *dev, u8 pipenum, u8 portnum)
 	struct slim_controller *ctrl;
 	struct slim_ch *chan;
 	struct msm_slim_pshpull_parm *parm;
+	struct slim_port_cfg cfg;
 	u32 set_cfg = 0;
-	struct slim_port_cfg cfg = dev->ctrl.ports[portnum].cfg;
 
 	if (!dev) {
 		pr_err("%s:Dev node is null\n", __func__);
@@ -205,6 +205,7 @@ void msm_hw_set_port(struct msm_slim_ctrl *dev, u8 pipenum, u8 portnum)
 		pr_err("%s:Invalid port\n", __func__);
 		return;
 	}
+	cfg = dev->ctrl.ports[portnum].cfg;
 	ctrl = &dev->ctrl;
 	chan = ctrl->ports[portnum].ch;
 	parm = &dev->pipes[portnum].psh_pull;

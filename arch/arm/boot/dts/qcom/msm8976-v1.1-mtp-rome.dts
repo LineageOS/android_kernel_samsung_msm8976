@@ -51,3 +51,7 @@
 		qca,bt-vdd-io-voltage-level = <1800000 1800000>;
 	};
 };
+
+&pm8950_gpios {
+	status = "okay";
+};

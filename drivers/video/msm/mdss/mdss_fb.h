@@ -291,6 +291,9 @@ struct msm_fb_data_type {
 	u32 bl_scale;
 	u32 bl_min_lvl;
 	u32 unset_bl_level;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	u32 need_to_update_unset_bl_level;
+#endif
 	bool allow_bl_update;
 	u32 bl_level_scaled;
 	struct mutex bl_lock;
@@ -342,6 +345,9 @@ struct msm_fb_data_type {
 	struct work_struct mdss_fb_input_work;
 	enum mdp_fb_state fb_state;
 	struct input_handler *input_handler;
+	/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+	bool sd_skiplayer;
+	int sd_framecnt;
 };
 
 /* Function returns true for either any kind of dual display */

@@ -49,6 +49,10 @@
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
 #include <trace/trace_thermal.h>
@@ -379,6 +383,9 @@ static struct cluster_info *core_ptr;
 static struct msm_thermal_debugfs_entry *msm_therm_debugfs;
 static struct devmgr_devices *devices;
 static struct msm_thermal_debugfs_thresh_config *mit_config;
+#if defined(CONFIG_DEBUG_THERMAL)
+static struct delayed_work temp_log_work;
+#endif /* CONFIG_DEBUG_THERMAL */
 
 struct vdd_rstr_enable {
 	struct kobj_attribute ko_attr;
@@ -2608,21 +2615,13 @@ static void vdd_mx_notify(struct therm_threshold *trig_thresh)
 		trig_thresh->cur_state = trig_thresh->trip_triggered;
 	}
 }
-
-static void msm_thermal_bite(int zone_id, long temp)
+#ifdef CONFIG_SEC_DEBUG
+void simulate_msm_thermal_bite(void)
 {
 	struct scm_desc desc;
-	int tsens_id = 0;
-	int ret = 0;
-
-	ret = zone_id_to_tsen_id(zone_id, &tsens_id);
-	if (ret < 0) {
-		pr_err("Zone:%d reached temperature:%ld. Err = %d System reset\n",
-			zone_id, temp, ret);
-	} else {
-		pr_err("Tsens:%d reached temperature:%ld. System reset\n",
-			tsens_id, temp);
-	}
+#ifndef CONFIG_ARCH_MSM8952
+	sec_debug_prepare_for_thermal_reset();
+#endif
 	if (!is_scm_armv8()) {
 		scm_call(SCM_SVC_BOOT, THERM_SECURE_BITE_CMD,
 			NULL, 0, NULL, 0);
@@ -2633,6 +2632,45 @@ static void msm_thermal_bite(int zone_id, long temp)
 			 THERM_SECURE_BITE_CMD), &desc);
 	}
 }
+#endif
+static void msm_thermal_bite(int zone_id, long temp)
+{
+	struct scm_desc desc;
+	int tsens_id = 0;
+	int ret = 0;
+
+	sec_debug_set_thermal_upload();
+	ret = zone_id_to_tsen_id(zone_id, &tsens_id);
+	if (ret < 0) {
+		pr_err("Zone:%d reached temperature:%ld. Err = %d System reset\n",
+			zone_id, temp, ret);
+	} else {
+		pr_err("Tsens:%d reached temperature:%ld. System reset\n",
+			tsens_id, temp);
+	}
+#ifdef CONFIG_SEC_DEBUG
+#ifndef CONFIG_ARCH_MSM8952
+	sec_debug_prepare_for_thermal_reset();
+#endif
+#endif
+	if (!is_scm_armv8()) {
+		scm_call(SCM_SVC_BOOT, THERM_SECURE_BITE_CMD,
+			NULL, 0, NULL, 0);
+	} else {
+		desc.args[0] = 0;
+		desc.arginfo = SCM_ARGS(1);
+		scm_call2(SCM_SIP_FNID(SCM_SVC_BOOT,
+			 THERM_SECURE_BITE_CMD), &desc);
+	}
+}
+
+#ifdef CONFIG_USER_RESET_DEBUG_TEST
+void force_thermal_reset(void)
+{
+	msm_thermal_bite(0, msm_thermal_info.therm_reset_temp_degC);
+}
+EXPORT_SYMBOL(force_thermal_reset);
+#endif
 
 static int do_therm_reset(void)
 {
@@ -5265,6 +5303,33 @@ pre_init_exit:
 	return ret;
 }
 
+/* Method to log the tsens values for every 5secs. */
+#if defined(CONFIG_DEBUG_THERMAL)
+static void __ref msm_therm_temp_log(struct work_struct *work)
+{
+    struct tsens_device tsens_dev;
+    long temp = 0;
+    uint32_t max_sensors = 0;
+
+    if(!(tsens_get_max_sensor_num(&max_sensors)))
+    {
+          int i ,added = 0;
+          char buffer[500];
+          for (i = 0 ; i< max_sensors;i++)
+          {
+               int ret = 0;
+               tsens_dev.sensor_num = i;
+               tsens_get_temp(&tsens_dev,&temp);
+               ret = sprintf(buffer + added , "(%d --- %ld)", i ,temp );
+               added += ret;
+          }
+          pr_info("%s: Debug Temp for Sensors %s",KBUILD_MODNAME,buffer);
+
+    }
+    schedule_delayed_work(&temp_log_work, HZ*5);
+}
+#endif /* CONFIG_DEBUG_THERMAL */
+
 static int devmgr_devices_init(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -5390,6 +5455,11 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 	INIT_DELAYED_WORK(&retry_hotplug_work, retry_hotplug);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	schedule_delayed_work(&check_temp_work, 0);
+
+#if defined(CONFIG_DEBUG_THERMAL)
+	INIT_DELAYED_WORK(&temp_log_work,msm_therm_temp_log);
+        schedule_delayed_work(&temp_log_work,HZ*2);
+#endif /* CONFIG_DEBUG_THERMAL */
 
 	if (num_possible_cpus() > 1) {
 		cpus_previously_online_update();
@@ -7570,6 +7640,9 @@ static int msm_thermal_dev_exit(struct platform_device *inp_dev)
 {
 	int i = 0;
 	struct thermal_progressive_rule *prog = NULL, *next_prog = NULL;
+#if defined(CONFIG_DEBUG_THERMAL)
+	cancel_delayed_work_sync(&temp_log_work);
+#endif /* CONFIG_DEBUG_THERMAL */
 
 	unregister_reboot_notifier(&msm_thermal_reboot_notifier);
 	if (msm_therm_debugfs && msm_therm_debugfs->parent)

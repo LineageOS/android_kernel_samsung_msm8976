@@ -62,6 +62,10 @@
 #include <linux/string.h>
 #include <linux/bug.h>
 
+#ifdef CONFIG_CMA_PINPAGE_MIGRATION
+#include <linux/mm_inline.h>
+#endif
+
 #include <asm/io.h>
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>
@@ -1467,6 +1471,80 @@ int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 }
 EXPORT_SYMBOL_GPL(zap_vma_ptes);
 
+#ifdef CONFIG_CMA_PINPAGE_MIGRATION
+static struct page *__alloc_nonmovable_userpage(struct page *page,
+				unsigned long private, int **result)
+{
+	return alloc_page(GFP_HIGHUSER);
+}
+
+static inline int stack_guard_page(struct vm_area_struct *vma, unsigned long addr);
+
+static bool __need_migrate_cma_page(struct page *page,
+				struct vm_area_struct *vma,
+				unsigned long start, unsigned int flags)
+{
+	if (!(flags & FOLL_CMA))
+		return false;
+
+	if (!(flags & FOLL_GET))
+		return false;
+
+	if (!is_cma_pageblock(page))
+		return false;
+
+	if ((vma->vm_flags & VM_STACK_INCOMPLETE_SETUP) ==
+					VM_STACK_INCOMPLETE_SETUP)
+		return false;
+
+	migrate_prep_local();
+
+	if (!PageLRU(page))
+		return false;
+
+	return true;
+}
+
+static int __migrate_cma_pinpage(struct page *page, struct vm_area_struct *vma)
+{
+	struct zone *zone = page_zone(page);
+	struct list_head migratepages;
+	struct lruvec *lruvec;
+	int tries = 0;
+	int ret = 0;
+
+	spin_lock_irq(&zone->lru_lock);
+	ret = __isolate_lru_page(page, 0);
+	if (ret) {
+		spin_unlock_irq(&zone->lru_lock);
+		return ret;
+	}
+
+	INIT_LIST_HEAD(&migratepages);
+
+	lruvec = mem_cgroup_page_lruvec(page, page_zone(page));
+	del_page_from_lru_list(page, lruvec, page_lru(page));
+	spin_unlock_irq(&zone->lru_lock);
+
+	list_add(&page->lru, &migratepages);
+	inc_zone_page_state(page, NR_ISOLATED_ANON + page_is_file_cache(page));
+
+	while (!list_empty(&migratepages) && tries++ < 5) {
+		ret = migrate_pages(&migratepages,
+			__alloc_nonmovable_userpage, 0, MIGRATE_SYNC, MR_CMA);
+	}
+
+	if (ret < 0) {
+		putback_movable_pages(&migratepages);
+		pr_err("%s: migration failed %p[%#lx]\n", __func__,
+					page, page_to_pfn(page));
+		return -EFAULT;
+	}
+
+	return 0;
+}
+#endif
+
 /*
  * FOLL_FORCE can write to even unwritable pte's, but only
  * after we've gone through a COW cycle and they are dirty.
@@ -1501,6 +1579,11 @@ struct page *follow_page_mask(struct vm_area_struct *vma,
 	spinlock_t *ptl;
 	struct page *page;
 	struct mm_struct *mm = vma->vm_mm;
+#ifdef CONFIG_CMA_PINPAGE_MIGRATION
+	struct page *failed_page = NULL;
+	struct page *old_page = NULL;
+	int retry_cnt = 0;
+#endif
 
 	*page_mask = 0;
 
@@ -1595,6 +1678,50 @@ split_fallthrough:
 		page = pte_page(pte);
 	}
 
+#ifdef CONFIG_CMA_PINPAGE_MIGRATION
+	/* if still the isolation failed page, then retry */
+	if (failed_page && (page == failed_page)) {
+		pte_unmap_unlock(ptep, ptl);
+		retry_cnt++;
+		msleep_interruptible(20);
+		goto split_fallthrough;
+	}
+	if (__need_migrate_cma_page(page, vma, address, flags) == false)
+		goto skip_pinpage;
+
+	pte_unmap_unlock(ptep, ptl);
+	switch (__migrate_cma_pinpage(page, vma)) {
+		case -EINVAL:
+		case -EBUSY:
+			pr_warn("%s: failed to isolate lru page\n", __func__);
+			dump_page(page);
+			failed_page = page;
+			retry_cnt++;
+			goto split_fallthrough;
+		case -EFAULT:
+			ptep = pte_offset_map_lock(mm, pmd, address, &ptl);
+			break;
+		default:
+			old_page = page;
+			migration_entry_wait(mm, pmd, address);
+			ptep = pte_offset_map_lock(mm, pmd, address, &ptl);
+			update_mmu_cache(vma, address, ptep);
+			pte = *ptep;
+			set_pte_at_notify(mm, address, ptep, pte);
+			page = vm_normal_page(vma, address, pte);
+			BUG_ON(!page);
+
+			pr_debug("cma: cma page %p[%#lx] migrated to new "
+					"page %p[%#lx]\n", old_page,
+					page_to_pfn(old_page),
+					page, page_to_pfn(page));
+	}
+	if (failed_page)
+		pr_warn("cma: isolation failed page %p[%#lx] , fixed to page %p[%#lx] (retry %d)\n",
+			failed_page, page_to_pfn(failed_page),
+			page, page_to_pfn(page), retry_cnt);
+skip_pinpage:
+#endif
 	if (flags & FOLL_GET)
 		get_page_foll(page);
 	if (flags & FOLL_TOUCH) {
@@ -1641,6 +1768,11 @@ bad_page:
 
 no_page:
 	pte_unmap_unlock(ptep, ptl);
+#ifdef CONFIG_CMA_PINPAGE_MIGRATION
+	if (failed_page)
+		pr_warn("cma: isolation failed page %p[%#lx] , it was reclaimed (retry %d)\n",
+			failed_page, page_to_pfn(failed_page), retry_cnt);
+#endif
 	if (!pte_none(pte))
 		return page;
 
@@ -3269,6 +3401,10 @@ static int do_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
 
 	pte_unmap(page_table);
 
+	/* File mapping without ->vm_ops ? */
+	if (vma->vm_flags & VM_SHARED)
+		return VM_FAULT_SIGBUS;
+
 	/* Check if we need to add a guard page to the stack */
 	if (check_stack_guard_page(vma, address) < 0)
 		return VM_FAULT_SIGSEGV;
@@ -3534,6 +3670,9 @@ static int do_linear_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 			- vma->vm_start) >> PAGE_SHIFT) + vma->vm_pgoff;
 
 	pte_unmap(page_table);
+	/* The VMA was not fully populated on mmap() or missing VM_DONTEXPAND */
+	if (!vma->vm_ops->fault)
+		return VM_FAULT_SIGBUS;
 	return __do_fault(mm, vma, address, pmd, pgoff, flags, orig_pte);
 }
 
@@ -3745,13 +3884,12 @@ int handle_pte_fault(struct mm_struct *mm,
 	entry = *pte;
 	if (!pte_present(entry)) {
 		if (pte_none(entry)) {
-			if (vma->vm_ops) {
-				if (likely(vma->vm_ops->fault))
-					return do_linear_fault(mm, vma, address,
-						pte, pmd, flags, entry);
-			}
-			return do_anonymous_page(mm, vma, address,
-						 pte, pmd, flags);
+			if (vma->vm_ops)
+				return do_linear_fault(mm, vma, address, pte, pmd,
+						flags, entry);
+
+			return do_anonymous_page(mm, vma, address, pte, pmd,
+					flags);
 		}
 		if (pte_file(entry))
 			return do_nonlinear_fault(mm, vma, address,

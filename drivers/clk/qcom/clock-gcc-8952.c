@@ -1102,6 +1102,8 @@ static struct rcg_clk cpp_clk_src = {
 };
 
 static struct clk_freq_tbl ftbl_gcc_camss_gp0_1_clk[] = {
+	F( 19200000,	 xo,	1,	0,	0),
+	F( 24000000, 	gpll0,	1,	3,	100),
 	F( 100000000,	gpll0,	8,	0,	0),
 	F( 160000000,	gpll0,	5,	0,	0),
 	F( 200000000,	gpll0,	4,	0,	0),

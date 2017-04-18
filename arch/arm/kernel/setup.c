@@ -144,7 +144,7 @@ char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
 
 static const char *cpu_name;
-static const char *machine_name;
+const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
 const struct machine_desc *machine_desc __initdata;
 
@@ -693,6 +693,29 @@ static int __init early_mem(char *p)
 	return 0;
 }
 early_param("mem", early_mem);
+
+static int __init msm_serialnr_setup(char *p)
+{
+#ifdef CONFIG_EXTEND_SERIAL_NUM_16
+	unsigned long long serial = 0;
+	serial = simple_strtoull(p, NULL, 16);
+	system_serial_high = serial>>32;
+	system_serial_low = serial & 0xFFFFFFFF;
+#else
+	system_serial_low = simple_strtoul(p, NULL, 16);
+	system_serial_high = (system_serial_low&0xFFFF0000)>>16;
+	system_serial_low = system_serial_low&0x0000FFFF;
+#endif
+	return 0;
+}
+early_param("androidboot.serialno", msm_serialnr_setup);
+
+static int __init msm_hw_rev_setup(char *p)
+{
+	system_rev = memparse(p, NULL);
+	return 0;
+}
+early_param("samsung.board_rev", msm_hw_rev_setup);
 
 static void __init request_standard_resources(const struct machine_desc *mdesc)
 {

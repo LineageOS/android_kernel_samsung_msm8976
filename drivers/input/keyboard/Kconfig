@@ -12,6 +12,38 @@ menuconfig INPUT_KEYBOARD
 
 if INPUT_KEYBOARD
 
+source "drivers/input/keyboard/cypress_touchkey/Kconfig"
+
+config KEYBOARD_ABOV_TOUCH_18XX
+	tristate "Abov FT18XX touchkey"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT18XX chip as touchkey.
+
+config KEYBOARD_ABOV_TOUCH_16XX
+	tristate "Abov FT16XX touchkey"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT16XX chip as touchkey.
+
+config KEYBOARD_TC300K
+	tristate "Coreriver TC300K touchkey"
+	depends on I2C
+	help
+	 Say Y if you want use Coreriver TC300K chip as touchkey.
+
+config KEYBOARD_TC350K
+	tristate "Coreriver TC350K touchkey"
+	depends on I2C
+	help
+	 Say Y if you want use Coreriver TC350K chip as touchkey.
+
+config TOUCHKEY_GRIP
+	tristate "Abov FT18XX touchkey"
+	depends on I2C
+	help
+	  Say Y here if you want to use ABOV MC96FT18XX chip as touchkey.
+
 config KEYBOARD_ADP5520
 	tristate "Keypad Support for ADP5520 PMIC"
 	depends on PMIC_ADP5520
@@ -668,4 +700,18 @@ config KEYBOARD_CROS_EC
 	  To compile this driver as a module, choose M here: the
 	  module will be called cros_ec_keyb.
 
+config SENSORS_HALL
+	bool "HALL"
+	depends on KEYBOARD_GPIO
+	default n
+	help
+	Say Y here to enable the HALL
+
+config CERTIFY_HALL
+	tristate "Enable CERTIFY HALL"
+	default n
+	help
+	  Enable Certify Hall Feature
+
+source "drivers/input/keyboard/melfas_mip4/Kconfig"
 endif

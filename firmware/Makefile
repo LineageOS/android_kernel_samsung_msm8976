@@ -136,6 +136,55 @@ fw-shipped-$(CONFIG_USB_VICAM) += vicam/firmware.fw
 fw-shipped-$(CONFIG_VIDEO_CPIA2) += cpia2/stv0672_vp4.bin
 fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
 
+# Input Device
+fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449)		+= tsp_melfas/mms449_a8.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449)		+= tsp_melfas/mms449_a9.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS449)		+= tsp_melfas/mms449_a9xpro.fw
+fw-shipped-$(CONFIG_TOUCHSCREEN_ZT7538_TS)	+= tsp_zinitix/zt7538_a5x.fw
+
+
+fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_DSX2) +=  \
+						tsp_synaptics/synaptics_5807_gts210.fw \
+						tsp_synaptics/synaptics_5806_gts28.fw \
+						tsp_synaptics/synaptics_factory_5806_gts28.fw
+
+fw-shipped-$(CONFIG_KEYBOARD_TC350K) += coreriver/tc350k_gts28.fw \
+					coreriver/tc350k_gts210_swap.fw
+
+ifdef CONFIG_SEC_A9XLTE_PROJECT
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_18XX) += abov/abov_tk_1804_a9.fw
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_16XX) += abov/abov_tk_1604_a9.fw
+endif
+
+ifdef CONFIG_SEC_A9XPROLTE_PROJECT
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_18XX) += abov/abov_tk_1804_a9xpro.fw
+fw-shipped-$(CONFIG_KEYBOARD_TC300K)				+= coreriver/tc305k_a9x.fw
+endif
+
+ifdef CONFIG_SEC_C9LTE_PROJECT
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_18XX) += abov/abov_tk_1804_a9xpro.fw
+fw-shipped-$(CONFIG_KEYBOARD_TC300K)                            += coreriver/tc305k_a9x.fw
+endif
+
+ifdef CONFIG_SEC_J7XLTE_PROJECT
+fw-shipped-$(CONFIG_TOUCHSCREEN_MELFAS_MMS438)		+= tsp_melfas/mms438_j7x.fw
+fw-shipped-$(CONFIG_KEYBOARD_TC300K)				+= coreriver/tc305k_j7x.fw
+endif
+
+ifdef CONFIG_SEC_C5LTE_PROJECT
+fw-shipped-$(CONFIG_TOUCHSCREEN_ZT7538)	+= tsp_zinitix/zt7538_c5.fw
+fw-shipped-$(CONFIG_KEYBOARD_ABOV_TOUCH_16XX) += abov/abov_ft1604_c5.fw
+endif
+
+ifdef CONFIG_SEC_ON5XLTE_PROJECT
+fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_INCELL) += tsp_synaptics/td4100_on5xlte.fw \
+							tsp_synaptics/td4100_on5xlte_recovery.fw
+fw-shipped-$(CONFIG_KEYBOARD_MELFAS_MHS204) += tk_melfas/mhs204_on5xlte.fw
+endif
+
+# Sensorhub
+fw-shipped-$(CONFIG_SENSORS_SSP_STM) += ssp_stm.fw ssp_crashed.fw
+
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
 # Directories which we _might_ need to create, so we have a rule for them.

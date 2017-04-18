@@ -37,7 +37,6 @@ enum ISP_START_PIXEL_PATTERN {
 	ISP_BAYER_GRGRGR,
 	ISP_BAYER_BGBGBG,
 	ISP_BAYER_GBGBGB,
-	ISP_BAYER_GGGGGG,
 	ISP_YUV_YCbYCr,
 	ISP_YUV_YCrYCb,
 	ISP_YUV_CbYCrY,
@@ -526,7 +525,6 @@ struct msm_isp_qbuf_info {
 };
 
 struct msm_isp_clk_rates {
-	uint32_t svs_rate;
 	uint32_t nominal_rate;
 	uint32_t high_rate;
 };
@@ -551,7 +549,7 @@ enum msm_isp_event_mask_index {
 	ISP_EVENT_MASK_INDEX_PING_PONG_MISMATCH		= 10,
 	ISP_EVENT_MASK_INDEX_REG_UPDATE_MISSING		= 11,
 	ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR		= 12,
-	ISP_EVENT_MASK_INDEX_MAX		            = 13
+	ISP_EVENT_MASK_INDEX_MAX		        = 13
 };
 
 
@@ -583,7 +581,6 @@ enum msm_isp_event_mask_index {
 
 #define ISP_EVENT_SUBS_MASK_FE_READ_DONE \
 			(1 << ISP_EVENT_MASK_INDEX_MASK_FE_READ_DONE)
-
 #define ISP_EVENT_SUBS_MASK_HW_FATAL_ERROR \
 			(1 << ISP_EVENT_MASK_INDEX_HW_FATAL_ERROR)
 
@@ -595,6 +592,7 @@ enum msm_isp_event_mask_index {
 
 #define ISP_EVENT_SUBS_MASK_BUF_FATAL_ERROR \
 			(1 << ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR)
+
 
 enum msm_isp_event_idx {
 	ISP_REG_UPDATE        = 0,

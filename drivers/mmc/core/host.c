@@ -222,6 +222,7 @@ static int mmc_host_suspend(struct device *dev)
 		spin_unlock_irqrestore(&host->clk_lock, flags);
 		mmc_set_ios(host);
 	}
+
 out:
 	spin_lock_irqsave(&host->clk_lock, flags);
 	if (ret)
@@ -723,6 +724,8 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	host->max_req_size = PAGE_CACHE_SIZE;
 	host->max_blk_size = 512;
 	host->max_blk_count = PAGE_CACHE_SIZE / 512;
+
+	host->card_detect_cnt = 0;
 
 	return host;
 

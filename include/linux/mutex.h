@@ -16,6 +16,11 @@
 #include <linux/lockdep.h>
 
 #include <linux/atomic.h>
+#ifdef CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK
+#include <asm/current.h>
+#include <asm/processor.h>
+#include <linux/osq_lock.h>
+#endif
 
 /*
  * Simple, straightforward mutexes with strict semantics:
@@ -50,14 +55,20 @@ struct mutex {
 	atomic_t		count;
 	spinlock_t		wait_lock;
 	struct list_head	wait_list;
-#if defined(CONFIG_DEBUG_MUTEXES) || defined(CONFIG_SMP)
+
+#if defined(CONFIG_DEBUG_MUTEXES) || defined(CONFIG_SMP) || \
+	defined(CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK)
 	struct task_struct	*owner;
 #endif
 #ifdef CONFIG_MUTEX_SPIN_ON_OWNER
+#ifdef CONFIG_OSQ_MUTEX_AND_QUEUE_SPINLOCK
+	struct optimistic_spin_queue osq; /* Spinner MCS lock */
+#else
 	void			*spin_mlock;	/* Spinner MCS lock */
 #endif
+#endif
 #ifdef CONFIG_DEBUG_MUTEXES
-	const char 		*name;
+	const char		*name;
 	void			*magic;
 #endif
 #ifdef CONFIG_DEBUG_LOCK_ALLOC

@@ -77,10 +77,19 @@ obj-$(CONFIG_SND_SOC_CPE) += snd-soc-cpe.o
 snd-soc-mdm9630-objs := mdm9630.o
 obj-$(CONFIG_SND_SOC_MDM9630) += snd-soc-mdm9630.o
 
+# for MSM 8x16/8952 common obj for sound card driver
+snd-soc-msm8x16-audio-pinctl-objs := msm-audio-pinctrl.o
+obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16-audio-pinctl.o
+obj-$(CONFIG_SND_SOC_MSM8X16_RT5659) += snd-soc-msm8x16-audio-pinctl.o
+
 # for MSM 8x16/8952 sound card driver
-snd-soc-msm8x16-objs := msm8x16.o msm8939-slimbus.o msm-audio-pinctrl.o msm8952.o
+snd-soc-msm8x16-objs := msm8939-slimbus.o msm8952.o
 snd-soc-msm8x16-objs += msm8952-slimbus.o msm8952-dai-links.o
 obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16.o
+
+# for MSM 8x16/8952 rt5659 sound card driver
+snd-soc-msm8x16-rt5659-objs := msm8952_rt5659.o
+obj-$(CONFIG_SND_SOC_MSM8X16_RT5659) += snd-soc-msm8x16-rt5659.o
 
 # for MSM 8909 sound card driver
 snd-soc-msm8909-objs := msm8x16.o

@@ -252,10 +252,13 @@ config AUDIT
 	  kernel subsystem, such as SELinux (which requires this for
 	  logging of avc messages output).  Does not do system-call
 	  auditing without CONFIG_AUDITSYSCALL.
+	  
+config HAVE_ARCH_AUDITSYSCALL
+	bool
 
 config AUDITSYSCALL
 	bool "Enable system-call auditing support"
-	depends on AUDIT && (X86 || PPC || S390 || IA64 || UML || SPARC64 || SUPERH || (ARM && AEABI && !OABI_COMPAT))
+	depends on AUDIT && HAVE_ARCH_AUDITSYSCALL
 	default y if SECURITY_SELINUX
 	help
 	  Enable low-overhead system-call auditing infrastructure that
@@ -1039,6 +1042,15 @@ config SCHED_HMP
 	  in their instructions per-cycle capability or the maximum
 	  frequency they can attain.
 
+config SCHED_TASK_BEHAVIOR
+	bool "Scheduler support for Task Behavior based task placement"
+	depends on SCHED_HMP
+	default n
+	help
+	  This feature will let the scheduler optimize task placement on
+	  heterogeneous cpus such that the IO-intensive tasks and background
+	  tasks will always be placed on the LITTLE cluster.
+
 config CHECKPOINT_RESTORE
 	bool "Checkpoint/restore support" if EXPERT
 	default n
@@ -1529,6 +1541,20 @@ config VM_EVENT_COUNTERS
 	  This option allows the disabling of the VM event counters
 	  on EXPERT systems.  /proc/vmstat will only show page counts
 	  if VM event counters are disabled.
+
+config SEC_VM_EVENT_STATE_TRACER
+	default n
+	bool "Enable VM event state tracer for logging VM infomation"
+	depends on VM_EVENT_COUNTERS
+	help
+	  VM event tracer to trace VM information for specific amount of time
+
+config SEC_VM_EVENT_STATE_TRACER_DURATION
+	int "VM event state tracer duration (min)"
+	default "10"
+	depends on SEC_VM_EVENT_STATE_TRACER
+	help
+	  VM event state tracer duration (min)
 
 config SLUB_DEBUG
 	default y

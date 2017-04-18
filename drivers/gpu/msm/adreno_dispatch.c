@@ -2632,7 +2632,6 @@ static void adreno_dispatcher_timer(unsigned long data)
 
 	adreno_dispatcher_schedule(device);
 }
-
 /**
  * adreno_dispatcher_start() - activate the dispatcher
  * @adreno_dev: pointer to the adreno device structure

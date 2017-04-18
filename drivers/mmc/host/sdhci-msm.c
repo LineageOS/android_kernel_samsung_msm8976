@@ -1767,6 +1767,7 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 
 	if (of_get_property(np, "qcom,nonremovable", NULL))
 		pdata->nonremovable = true;
+	
 
 	if (of_get_property(np, "qcom,broken-pwr-cycle-host", NULL))
 		pdata->broken_pwr_cycle_host = true;
@@ -2327,7 +2328,7 @@ static irqreturn_t sdhci_msm_sdiowakeup_irq(int irq, void *data)
 	struct sdhci_host *host = (struct sdhci_host *)data;
 	unsigned long flags;
 
-	pr_debug("%s: irq (%d) received\n", __func__, irq);
+	pr_crit("%s: irq (%d) received\n", __func__, irq);
 
 	spin_lock_irqsave(&host->lock, flags);
 	sdhci_msm_cfg_sdiowakeup_gpio_irq(host, false);
@@ -3489,6 +3490,125 @@ static void sdhci_msm_cmdq_init(struct sdhci_host *host,
 }
 #endif
 
+/* SYSFS about SD Card Detection */
+extern struct class *sec_class;
+static struct device *t_flash_detect_dev;
+
+static ssize_t t_flash_detect_show(struct device *dev,
+                struct device_attribute *attr, char *buf)
+{
+        struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
+#if (defined(CONFIG_NO_DETECT_PIN) || defined(CONFIG_SEC_HYBRID_TRAY))
+        if (msm_host->mmc->card) {
+                printk(KERN_DEBUG "SD card inserted.\n");
+                return sprintf(buf, "Insert\n");
+        } else {
+                if (gpio_is_valid(msm_host->pdata->status_gpio) &&
+                                gpio_get_value(msm_host->pdata->status_gpio)) {
+                        printk(KERN_DEBUG "SD slot tray Removed.\n");
+                        return sprintf(buf, "Notray\n");
+                }
+                printk(KERN_DEBUG "SD card removed.\n");
+                return sprintf(buf, "Remove\n");
+        }
+#else
+        unsigned int detect;
+
+        if (gpio_is_valid(msm_host->pdata->status_gpio))
+                detect = gpio_get_value(msm_host->pdata->status_gpio);
+
+        else {
+                pr_info("%s : External  SD detect pin Error\n", __func__);
+                return sprintf(buf, "Error\n");
+        }
+
+        pr_info("%s : detect = %d.\n", __func__, detect);
+        if (!detect) {
+                printk(KERN_DEBUG "SD card inserted.\n");
+                return sprintf(buf, "Insert\n");
+        } else {
+                printk(KERN_DEBUG "SD card removed.\n");
+                return sprintf(buf, "Remove\n");
+        }
+#endif
+}
+
+static ssize_t sd_detect_cnt_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
+
+	dev_info(dev, "%s : The count of detect is %u\n", __func__, msm_host->mmc->card_detect_cnt);
+	return sprintf(buf, "%u", msm_host->mmc->card_detect_cnt);
+}
+
+static struct device *sd_info_dev;
+static ssize_t sd_count_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+        struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
+	struct mmc_card *card = msm_host->mmc->card;
+	struct mmc_card_error_log *err_log;
+	u64 total_cnt = 0;
+	int len = 0;
+	int i = 0;
+
+	if (!card) {
+		len = snprintf(buf, PAGE_SIZE, "no card\n");
+		goto out;
+	}
+	err_log = card->err_log;
+
+	for (i = 0; i < 6; i++) {
+		if (total_cnt < MAX_CNT_U64)
+			total_cnt += err_log[i].count;
+	}
+	len = snprintf(buf, PAGE_SIZE, "%lld\n", total_cnt);
+out:
+	return len;
+}
+
+static struct device *sd_data_dev;
+static ssize_t sd_data_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+        struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
+	struct mmc_card *card = msm_host->mmc->card;
+	struct mmc_card_error_log *err_log;
+	u64 total_c_cnt = 0;
+	u64 total_t_cnt = 0;
+	int len = 0;
+	int i = 0;
+
+	if (!card) {
+		len = snprintf(buf, PAGE_SIZE,
+			"\"GE\":\"0\",\"CC\":\"0\",\"ECC\":\"0\",\"WP\":\"0\","\
+			"\"OOR\":\"0\",\"CRC\":\"0\",\"TMO\":\"0\"\n");
+		goto out;
+	}
+	err_log = card->err_log;
+
+	for (i = 0; i < 6; i++) {
+		if (err_log[i].err_type == -EILSEQ && total_c_cnt < MAX_CNT_U64)
+			total_c_cnt += err_log[i].count;
+		if (err_log[i].err_type == -ETIMEDOUT && total_t_cnt < MAX_CNT_U64)
+			total_t_cnt += err_log[i].count;
+	}
+
+	len = snprintf(buf, PAGE_SIZE,
+			"\"GE\":\"%d\",\"CC\":\"%d\",\"ECC\":\"%d\",\"WP\":\"%d\","\
+			"\"OOR\":\"%d\",\"CRC\":\"%lld\",\"TMO\":\"%lld\"\n",
+			err_log[0].ge_cnt, err_log[0].cc_cnt, err_log[0].ecc_cnt,
+			err_log[0].wp_cnt, err_log[0].oor_cnt, total_c_cnt, total_t_cnt);
+out:
+	return len;
+}
+
+static DEVICE_ATTR(status, S_IRUGO, t_flash_detect_show, NULL);
+static DEVICE_ATTR(cd_cnt, S_IRUGO, sd_detect_cnt_show, NULL);
+static DEVICE_ATTR(sd_count, S_IRUGO, sd_count_show, NULL);
+static DEVICE_ATTR(sd_data, S_IRUGO, sd_data_show, NULL);
+
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
@@ -3818,18 +3938,18 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps |= msm_host->pdata->caps;
 	msm_host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
 	msm_host->mmc->caps2 |= msm_host->pdata->caps2;
-	msm_host->mmc->caps2 |= MMC_CAP2_CORE_RUNTIME_PM;
-	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR;
-	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
+	//msm_host->mmc->caps2 |= MMC_CAP2_CORE_RUNTIME_PM;
+	//msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR;
+	//msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	msm_host->mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC |
 				MMC_CAP2_DETECT_ON_ERR);
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
-	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
+	//msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;
-	msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
+	//msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
 
 	if (msm_host->pdata->nonremovable)
 		msm_host->mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -3879,6 +3999,64 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		}
 	}
 
+        /* SYSFS about SD Card Detection by soonil.lim */
+#if (defined(CONFIG_NO_DETECT_PIN) || defined(CONFIG_SEC_HYBRID_TRAY))
+        if (t_flash_detect_dev == NULL && !strcmp(host->hw_name, "7864900.sdhci")) {
+#else
+        if (t_flash_detect_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
+#endif
+                printk(KERN_DEBUG "%s : Change sysfs Card Detect\n", __func__);
+
+                t_flash_detect_dev = device_create(sec_class,
+                                NULL, 0, NULL, "sdcard");
+                if (IS_ERR(t_flash_detect_dev))
+                        pr_err("%s : Failed to create device!\n", __func__);
+
+                if (device_create_file(t_flash_detect_dev,
+                        &dev_attr_status) < 0)
+                        pr_err("%s : Failed to create device file(%s)!\n",
+                                        __func__, dev_attr_status.attr.name);
+                if (device_create_file(t_flash_detect_dev,
+                        &dev_attr_cd_cnt) < 0)
+                        pr_err("%s : Failed to create device file(%s)!\n",
+                                        __func__, dev_attr_cd_cnt.attr.name);
+                dev_set_drvdata(t_flash_detect_dev, msm_host);
+	}
+#if (defined(CONFIG_NO_DETECT_PIN) || defined(CONFIG_SEC_HYBRID_TRAY))
+        if (sd_info_dev == NULL && !strcmp(host->hw_name, "7864900.sdhci")) {
+#else
+        if (sd_info_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
+#endif
+                sd_info_dev = device_create(sec_class,
+                                NULL, 0, NULL, "sdinfo");
+                if (IS_ERR(sd_info_dev))
+                        pr_err("%s : Failed to create device!\n", __func__);
+
+                if (device_create_file(sd_info_dev,
+                        &dev_attr_sd_count) < 0)
+                        pr_err("%s : Failed to create device file(%s)!\n",
+                                        __func__, dev_attr_sd_count.attr.name);
+
+                dev_set_drvdata(sd_info_dev, msm_host);
+        }
+#if (defined(CONFIG_NO_DETECT_PIN) || defined(CONFIG_SEC_HYBRID_TRAY))
+        if (sd_data_dev == NULL && !strcmp(host->hw_name, "7864900.sdhci")) {
+#else
+        if (sd_data_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
+#endif
+                sd_data_dev = device_create(sec_class,
+                                NULL, 0, NULL, "sddata");
+                if (IS_ERR(sd_data_dev))
+                        pr_err("%s : Failed to create device!\n", __func__);
+
+                if (device_create_file(sd_data_dev,
+                        &dev_attr_sd_data) < 0)
+                        pr_err("%s : Failed to create device file(%s)!\n",
+                                        __func__, dev_attr_sd_data.attr.name);
+
+                dev_set_drvdata(sd_data_dev, msm_host);
+        }
+
 	if ((sdhci_readl(host, SDHCI_CAPABILITIES) & SDHCI_CAN_64BIT) &&
 		(dma_supported(mmc_dev(host->mmc), DMA_BIT_MASK(64)))) {
 		host->dma_mask = DMA_BIT_MASK(64);
@@ -3894,10 +4072,11 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 							  "sdiowakeup_irq");
 	if (msm_host->pdata->sdiowakeup_irq >= 0) {
 		msm_host->is_sdiowakeup_enabled = true;
-		ret = request_irq(msm_host->pdata->sdiowakeup_irq,
-				  sdhci_msm_sdiowakeup_irq,
-				  IRQF_SHARED | IRQF_TRIGGER_HIGH,
-				  "sdhci-msm sdiowakeup", host);
+			ret = request_irq(msm_host->pdata->sdiowakeup_irq,
+				sdhci_msm_sdiowakeup_irq,
+				IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				"sdhci-msm sdiowakeup", host);
+		
 		if (ret) {
 			dev_err(&pdev->dev, "%s: request sdiowakeup IRQ %d: failed: %d\n",
 				__func__, msm_host->pdata->sdiowakeup_irq, ret);
@@ -4111,6 +4290,8 @@ static int sdhci_msm_runtime_suspend(struct device *dev)
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	int ret;
 
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, START\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	ret = sdhci_msm_cfg_sdio_wakeup(host, true);
 	/* pwr_irq is not monitored by mpm on suspend, hence disable it */
 	if (!ret)
@@ -4137,6 +4318,8 @@ skip_disable_host_irq:
 			pr_err("%s: failed to suspend crypto engine %d\n",
 					mmc_hostname(host->mmc), ret);
 	}
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, END\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	return 0;
 }
 
@@ -4147,6 +4330,8 @@ static int sdhci_msm_runtime_resume(struct device *dev)
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	int ret;
 
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, START\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	if (host->is_crypto_en) {
 		ret = sdhci_msm_enable_controller_clock(host);
 		if (ret) {
@@ -4169,6 +4354,8 @@ skip_ice_resume:
 skip_enable_host_irq:
 	enable_irq(msm_host->pwr_irq);
 
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, END\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	return 0;
 }
 #endif
@@ -4182,6 +4369,8 @@ static int sdhci_msm_suspend(struct device *dev)
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	int ret = 0;
 
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, START\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	if (gpio_is_valid(msm_host->pdata->status_gpio))
 		mmc_gpio_free_cd(msm_host->mmc);
 
@@ -4203,6 +4392,8 @@ static int sdhci_msm_resume(struct device *dev)
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	int ret = 0;
 
+	if (host->mmc->index == 2)
+		pr_crit("%s: %s @line=%d, START\n", mmc_hostname(host->mmc), __func__, __LINE__);
 	if (gpio_is_valid(msm_host->pdata->status_gpio)) {
 		ret = mmc_gpio_request_cd(msm_host->mmc,
 				msm_host->pdata->status_gpio);

@@ -450,6 +450,7 @@ int sysmon_send_shutdown(struct subsys_desc *dest_desc)
 
 	INIT_COMPLETION(data->ind_recv);
 	mutex_lock(&sysmon_lock);
+	pr_err("check point send\n");
 	ret = qmi_send_req_wait(data->clnt_handle, &req_desc, &req,
 		sizeof(req), &resp_desc, &resp, sizeof(resp), SERVER_TIMEOUT);
 	if (ret < 0) {
@@ -458,6 +459,7 @@ int sysmon_send_shutdown(struct subsys_desc *dest_desc)
 	}
 
 	/* Check the response */
+	pr_err("check point send resp\n");
 	if (QMI_RESP_BIT_SHIFT(resp.resp.result) != QMI_RESULT_SUCCESS_V01) {
 		pr_err("QMI request failed 0x%x\n",
 					QMI_RESP_BIT_SHIFT(resp.resp.error));
@@ -470,6 +472,7 @@ int sysmon_send_shutdown(struct subsys_desc *dest_desc)
 	 * acknowledgment. Wait for the shutdown_ack SMP2P bit to be
 	 * set by the service if that's the case.
 	 */
+	pr_err("check point wait shutdown ack\n");
 	shutdown_ack_ret = wait_for_shutdown_ack(dest_desc);
 	if (shutdown_ack_ret < 0) {
 		pr_err("shutdown_ack SMP2P bit for %s not set\n", data->name);
@@ -491,6 +494,7 @@ int sysmon_send_shutdown(struct subsys_desc *dest_desc)
 	}
 out:
 	mutex_unlock(&sysmon_lock);
+	pr_err("check point ret = %d\n", ret);
 	return ret;
 }
 EXPORT_SYMBOL(sysmon_send_shutdown);

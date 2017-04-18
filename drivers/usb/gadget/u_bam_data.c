@@ -1283,6 +1283,10 @@ void u_bam_data_start_rndis_ipa(void)
 
 	port_num = u_bam_data_func_to_port(USB_FUNC_RNDIS,
 					RNDIS_QC_ACTIVE_PORT);
+	if (port_num < 0) {
+		pr_err("%s: invalid portno#%d\n", __func__, port_num);
+		return;
+	}
 	port = bam2bam_data_ports[port_num];
 	if (!port) {
 		pr_err("%s: port is NULL", __func__);
@@ -1314,6 +1318,10 @@ void u_bam_data_stop_rndis_ipa(void)
 
 	port_num = u_bam_data_func_to_port(USB_FUNC_RNDIS,
 					RNDIS_QC_ACTIVE_PORT);
+	if (port_num < 0) {
+		pr_err("%s: invalid portno#%d\n", __func__, port_num);
+		return;
+	}
 	port = bam2bam_data_ports[port_num];
 	if (!port) {
 		pr_err("%s: port is NULL", __func__);

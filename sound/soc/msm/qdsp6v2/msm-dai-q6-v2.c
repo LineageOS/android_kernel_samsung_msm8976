@@ -29,6 +29,12 @@
 #include <sound/pcm_params.h>
 #include <video/msm_dba.h>
 
+#ifdef CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+#include "../../codecs/msm8x16-wcd.h"
+#define QUAT_MI2S_ID	(1 << 3)
+#define QUIN_MI2S_ID	(1 << 4)
+#endif
+
 #define MSM_DAI_PRI_AUXPCM_DT_DEV_ID 1
 #define MSM_DAI_SEC_AUXPCM_DT_DEV_ID 2
 
@@ -2857,6 +2863,11 @@ static int msm_mi2s_get_port_id(u32 mi2s_id, int stream, u16 *port_id)
 static int msm_dai_q6_mi2s_prepare(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
+#ifdef CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+#endif /* CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE */
 	struct msm_dai_q6_mi2s_dai_data *mi2s_dai_data =
 		dev_get_drvdata(dai->dev);
 	struct msm_dai_q6_dai_data *dai_data =
@@ -2881,7 +2892,11 @@ static int msm_dai_q6_mi2s_prepare(struct snd_pcm_substream *substream,
 		/* PORT START should be set if prepare called
 		 * in active state.
 		 */
-		rc = afe_port_start(port_id, &dai_data->port_config,
+#ifdef CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+		if (((pdata->ext_pa & QUIN_MI2S_ID) && port_id != AFE_PORT_ID_QUINARY_MI2S_RX) 
+		|| ((pdata->ext_pa & QUAT_MI2S_ID) && port_id != AFE_PORT_ID_QUATERNARY_MI2S_RX))
+#endif /* CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE */
+			rc = afe_port_start(port_id, &dai_data->port_config,
 				    dai_data->rate);
 
 		if (IS_ERR_VALUE(rc))
@@ -3039,12 +3054,16 @@ static int msm_dai_q6_mi2s_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	dev_get_drvdata(dai->dev);
 
 	if (test_bit(STATUS_PORT_STARTED,
-	    mi2s_dai_data->rx_dai.mi2s_dai_data.status_mask) ||
-	    test_bit(STATUS_PORT_STARTED,
-	    mi2s_dai_data->tx_dai.mi2s_dai_data.status_mask)) {
-		dev_err(dai->dev, "%s: err chg i2s mode while dai running",
-			__func__);
-		return -EPERM;
+#ifdef CONFIG_SND_SOC_MSM8X16_RT5659    
+			mi2s_dai_data->rx_dai.mi2s_dai_data.status_mask) &&
+#else /* CONFIG_SND_SOC_MSM8X16_RT5659 */
+			mi2s_dai_data->rx_dai.mi2s_dai_data.status_mask) ||
+#endif /* not CONFIG_SND_SOC_MSM8X16_RT5659 */
+			test_bit(STATUS_PORT_STARTED,
+			mi2s_dai_data->tx_dai.mi2s_dai_data.status_mask)) {
+			dev_err(dai->dev, "%s: err chg i2s mode while dai running",
+				__func__);
+			return -EPERM;
 	}
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -3085,6 +3104,11 @@ static int msm_dai_q6_mi2s_hw_free(struct snd_pcm_substream *substream,
 static void msm_dai_q6_mi2s_shutdown(struct snd_pcm_substream *substream,
 				     struct snd_soc_dai *dai)
 {
+#ifdef CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+#endif /* CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE */
 	struct msm_dai_q6_mi2s_dai_data *mi2s_dai_data =
 			dev_get_drvdata(dai->dev);
 	struct msm_dai_q6_dai_data *dai_data =
@@ -3104,7 +3128,12 @@ static void msm_dai_q6_mi2s_shutdown(struct snd_pcm_substream *substream,
 			__func__, port_id);
 
 	if (test_bit(STATUS_PORT_STARTED, dai_data->status_mask)) {
-		rc = afe_close(port_id);
+#ifdef CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+		if (((pdata->ext_pa & QUIN_MI2S_ID) && port_id != AFE_PORT_ID_QUINARY_MI2S_RX) 
+		|| ((pdata->ext_pa & QUAT_MI2S_ID) && port_id != AFE_PORT_ID_QUATERNARY_MI2S_RX))
+#endif /* CONFIG_AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE */
+			rc = afe_close(port_id);
+
 		if (IS_ERR_VALUE(rc))
 			dev_err(dai->dev, "fail to close AFE port\n");
 		clear_bit(STATUS_PORT_STARTED, dai_data->status_mask);
@@ -3371,20 +3400,24 @@ static struct snd_soc_dai_driver msm_dai_q6_mi2s_dai[] = {
 		.playback = {
 			.stream_name = "Quaternary MI2S Playback",
 			.aif_name = "QUAT_MI2S_RX",
-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
-			SNDRV_PCM_RATE_16000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-			.rate_min =     8000,
-			.rate_max =     48000,
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
+				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
+				SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_44100,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE,
+			.rate_min = 8000,
+			.rate_max = 192000,
 		},
 		.capture = {
 			.stream_name = "Quaternary MI2S Capture",
 			.aif_name = "QUAT_MI2S_TX",
-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
-			SNDRV_PCM_RATE_16000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-			.rate_min =     8000,
-			.rate_max =     48000,
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
+				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
+				SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_44100,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE,
+			.rate_min = 8000,
+			.rate_max = 192000,
 		},
 		.ops = &msm_dai_q6_mi2s_ops,
 		.id = MSM_QUAT_MI2S,
@@ -3407,20 +3440,24 @@ static struct snd_soc_dai_driver msm_dai_q6_mi2s_dai[] = {
 		.playback = {
 			.stream_name = "Quinary MI2S Playback",
 			.aif_name = "QUIN_MI2S_RX",
-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
-			SNDRV_PCM_RATE_16000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-			.rate_min =     8000,
-			.rate_max =     48000,
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
+				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
+				SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_44100,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE,
+			.rate_min = 8000,
+			.rate_max = 192000,
 		},
 		.capture = {
 			.stream_name = "Quinary MI2S Capture",
 			.aif_name = "QUIN_MI2S_TX",
-			.rates = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_8000 |
-			SNDRV_PCM_RATE_16000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-			.rate_min =     8000,
-			.rate_max =     48000,
+			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
+				SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 |
+				SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_44100,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE |
+				SNDRV_PCM_FMTBIT_S24_LE,
+			.rate_min = 8000,
+			.rate_max = 192000,
 		},
 		.ops = &msm_dai_q6_mi2s_ops,
 		.id = MSM_QUIN_MI2S,

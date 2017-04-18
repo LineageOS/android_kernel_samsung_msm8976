@@ -24,6 +24,10 @@
 #include "mdss-pll.h"
 #include "mdss-dsi-pll.h"
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+#include "../../../video/msm/mdss/samsung/ss_dsi_panel_common.h" /* UTIL HEADER */
+#endif
+
 #define VCO_DELAY_USEC		1
 
 static struct clk_div_ops fixed_2div_ops;
@@ -107,16 +111,20 @@ static int dsi_pll_enable_seq(struct mdss_pll_resources *dsi_pll_res)
 	wmb();
 	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
 		DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG, 0x05);
-	udelay(30);
-	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
-		DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG, 0x07);
 	udelay(50);
 	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
+		DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG, 0x07);
+	udelay(100);
+	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
 		DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG, 0x0f);
-	udelay(800);
+	udelay(1000);
 
 	if (!dsi_pll_lock_status(dsi_pll_res)) {
 		pr_err("DSI PLL lock failed\n");
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
+				"dsi1_ctrl", "dsi1_phy", "panic");
+#endif
 		rc = -EINVAL;
 	} else {
 		pr_debug("DSI PLL Lock success\n");

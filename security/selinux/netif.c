@@ -274,10 +274,24 @@ static struct notifier_block sel_netif_netdev_notifier = {
 	.notifier_call = sel_netif_netdev_notifier_handler,
 };
 
+static int sel_netif_avc_callback(u32 event)
+{
+	if (event == AVC_CALLBACK_RESET) {
+		sel_netif_flush();
+		synchronize_net();
+	}
+	return 0;
+}
+
 static __init int sel_netif_init(void)
 {
 	int i, err;
 
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+	selinux_enabled = 1;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	if (!selinux_enabled)
 		return 0;
 
@@ -285,6 +299,10 @@ static __init int sel_netif_init(void)
 		INIT_LIST_HEAD(&sel_netif_hash[i]);
 
 	register_netdevice_notifier(&sel_netif_netdev_notifier);
+
+	err = avc_add_callback(sel_netif_avc_callback, AVC_CALLBACK_RESET);
+	if (err)
+		panic("avc_add_callback() failed, error %d\n", err);
 
 	return err;
 }

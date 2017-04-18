@@ -517,7 +517,7 @@ EXPORT_SYMBOL(sensors_classdev_unregister);
 
 static int __init sensors_init(void)
 {
-	sensors_class = class_create(THIS_MODULE, "sensors");
+	sensors_class = class_create(THIS_MODULE, "sensors1");
 	if (IS_ERR(sensors_class))
 		return PTR_ERR(sensors_class);
 	sensors_class->dev_attrs = sensors_class_attrs;

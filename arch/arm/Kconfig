@@ -21,6 +21,7 @@ config ARM
 	select GENERIC_STRNCPY_FROM_USER
 	select GENERIC_STRNLEN_USER
 	select HARDIRQS_SW_RESEND
+	select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
 	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL
 	select HAVE_ARCH_KGDB
 	select HAVE_ARCH_MMAP_RND_BITS if MMU
@@ -2365,6 +2366,12 @@ config ARTHUR
 	  You can also say M here to compile this support as a module (which
 	  will be called arthur).
 
+config  SEC_DEBUG_ENABLE_LK_WDOG
+        bool "LK in wdog to handle the early lockup"
+        default n
+        help
+           Enable this to get the call stack in case of system lockup during early crash
+
 endmenu
 
 menu "Power management options"
@@ -2381,6 +2388,56 @@ config ARM_CPU_SUSPEND
 	def_bool PM_SLEEP
 
 endmenu
+
+config SEC_FACTORY
+	bool "when it comes to sec factory mode"
+	default n
+	help
+	  It will support a sec factory mode.
+	  
+config SAMSUNG_PRODUCT_SHIP 
+        bool "set up for product shipping" 
+        default n
+
+config TIMA_GET_QSEE_LOGS_USING_RDX
+	bool "Enable QSEE Log Extraction using RDX tool"
+	default n
+
+config TIMA_LKMAUTH
+       bool "Enable LKM authentication TIMA feature"
+       default n
+       help
+         TIMA authenticates loaded kernel modules. Disable it if you don't
+         want TIMA enabled.
+
+config TIMA_LKMAUTH_CODE_PROT
+       bool "Support kernel Module"
+       depends on MODULES
+       default n
+       help
+         When enabled, this feature will mark all Executable sections in an
+         LKM as RO
+
+config TIMA_TEST_INFRA
+       tristate "Testing infrastructure for TIMA"
+       default n
+       help
+         Kernel bits of the TIMA test infrastructure
+
+config TIMA_UEVENT
+       bool "Uevent message propagation for TIMA"
+       default n
+       help
+         Uevent messages for TIMA PKM/LKM
+
+config DRV_SAMSUNG
+	bool "samsung device dedicated drivers option"
+	default y
+	help
+	  This is driver option for samsung sec_class
+	  Say y here to enable samsung classes for drivers
+	  Provide option of enabling sec class
+	  Supports sec drivers key, touch, sec_debug etc
 
 source "net/Kconfig"
 

@@ -17,6 +17,15 @@
 #include <linux/errno.h>
 
 #define MMC_CARD_CMDQ_BLK_SIZE 512
+#define MAX_CNT_U64	0xFFFFFFFFFF
+#define MAX_CNT_U32	0x7FFFFFFF
+#define STATUS_MASK		\
+	(R1_ERROR |		\
+	 R1_CC_ERROR | 		\
+	 R1_CARD_ECC_FAILED |	\
+	 R1_WP_VIOLATION |	\
+	 R1_OUT_OF_RANGE)
+#define MMC_CARD_ERROR_LOGGING
 
 struct mmc_cid {
 	unsigned int		manfid;
@@ -119,6 +128,22 @@ struct mmc_ext_csd {
 	u8			fw_version;		/* 254 */
 	unsigned int            feature_support;
 #define MMC_DISCARD_FEATURE	BIT(0)                  /* CMD38 feature */
+	/*
+	 * smart_info : It's for eMMC 5.0 or later device
+	 * [63:56] : DEVICE_LIFE_TIME_EST_TYPE_B [269]
+	 * [55:48] : DEVICE_LIFE_TIME_EST_TYPE_A [268]
+	 * [47:40] : PRE_EOL_INFO [267]
+	 * [39:32] : OPTIMAL_TRIM_UNIT_SIZE [264]
+	 * [31:16] : DEVICE_VERSION [263-262]
+	 * [15:08] : HC_ERASE_GRP_SIZE [224]
+	 * [07:00] : HC_WP_GRP_SIZE [221]
+	 */
+	unsigned long long	smart_info;
+	/*
+	 * fwdate : It's for eMMC 5.0 or later device
+	 * [63:00] : FIRMWARE_VERSION [261-254]
+	 */
+	unsigned long long	fwdate;
 };
 
 struct sd_scr {
@@ -265,6 +290,22 @@ struct mmc_part {
 #define MMC_BLK_DATA_AREA_RPMB	(1<<3)
 };
 
+#ifdef MMC_CARD_ERROR_LOGGING
+struct mmc_card_error_log {
+	char	type[4];	// sbc, cmd, data, stop, busy
+	int	err_type;
+	u32	status;
+	u64	first_issue_time;
+	u64	last_issue_time;
+	u32	count;
+	u32	ge_cnt;		// status[19] : general error or unknown error
+	u32	cc_cnt;		// status[20] : internal card controller error
+	u32	ecc_cnt;	// status[21] : ecc error
+	u32	wp_cnt;		// status[26] : write protection error
+	u32	oor_cnt;	// status[31] : out of range error
+};
+#endif
+
 #define BKOPS_NUM_OF_SEVERITY_LEVELS	3
 #define BKOPS_SEVERITY_1_INDEX		0
 #define BKOPS_SEVERITY_2_INDEX		1
@@ -379,6 +420,7 @@ struct mmc_card {
 #define MMC_QUIRK_CACHE_DISABLE (1 << 14)       /* prevent cache enable */
 #define MMC_QUIRK_QCA6574_SETTINGS (1 << 15)	/* QCA6574 card settings*/
 #define MMC_QUIRK_QCA9377_SETTINGS (1 << 16)	/* QCA9377 card settings*/
+
 /* Make sure CMDQ is empty before queuing DCMD */
 #define MMC_QUIRK_CMDQ_EMPTY_BEFORE_DCMD (1 << 17)
 
@@ -423,6 +465,10 @@ struct mmc_card {
 	enum mmc_pon_type pon_type;
 	u8 *cached_ext_csd;
 	bool cmdq_init;
+#ifdef MMC_CARD_ERROR_LOGGING
+	struct device_attribute	error_count;
+	struct mmc_card_error_log err_log[10];
+#endif
 };
 
 /*

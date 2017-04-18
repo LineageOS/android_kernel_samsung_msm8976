@@ -16,6 +16,7 @@
 
 #include "smpboot.h"
 
+
 enum {
 	CSD_FLAG_LOCK		= 0x01,
 };
@@ -123,6 +124,7 @@ void __init call_function_init(void)
  */
 static void csd_lock_wait(struct call_single_data *csd)
 {
+
 	while (csd->flags & CSD_FLAG_LOCK)
 		cpu_relax();
 }
@@ -131,7 +133,6 @@ static void csd_lock(struct call_single_data *csd)
 {
 	csd_lock_wait(csd);
 	csd->flags |= CSD_FLAG_LOCK;
-
 	/*
 	 * prevent CPU from reordering the above assignment
 	 * to ->flags with any subsequent assignments to other
@@ -143,7 +144,6 @@ static void csd_lock(struct call_single_data *csd)
 static void csd_unlock(struct call_single_data *csd)
 {
 	WARN_ON(!(csd->flags & CSD_FLAG_LOCK));
-
 	/*
 	 * ensure we're all done before releasing data:
 	 */
@@ -166,6 +166,7 @@ void generic_exec_single(int cpu, struct call_single_data *csd, int wait)
 
 	raw_spin_lock_irqsave(&dst->lock, flags);
 	ipi = list_empty(&dst->list);
+
 	list_add_tail(&csd->list, &dst->list);
 	raw_spin_unlock_irqrestore(&dst->lock, flags);
 
@@ -192,10 +193,10 @@ void generic_exec_single(int cpu, struct call_single_data *csd, int wait)
  *
  * Invoked by arch to handle an IPI for call function single.
  * Must be called with interrupts disabled.
- */
+  */
 void generic_smp_call_function_single_interrupt(void)
 {
-	flush_smp_call_function_queue(true);
+		flush_smp_call_function_queue(true);
 }
 
 /**
@@ -212,8 +213,10 @@ void generic_smp_call_function_single_interrupt(void)
  * Loop through the call_single_queue and run all the queued callbacks.
  * Must be called with interrupts disabled.
  */
+
 static void flush_smp_call_function_queue(bool warn_cpu_offline)
 {
+
 	struct call_single_queue *q = &__get_cpu_var(call_single_queue);
 	LIST_HEAD(list);
 	static bool warned;
@@ -230,6 +233,8 @@ static void flush_smp_call_function_queue(bool warn_cpu_offline)
 		warned = true;
 		WARN(1, "IPI on offline CPU %d\n", smp_processor_id());
 	}
+
+
 
 	while (!list_empty(&list)) {
 		struct call_single_data *csd;
@@ -636,6 +641,7 @@ void __init smp_init(void)
 	/* Any cleanup work */
 	printk(KERN_INFO "Brought up %ld CPUs\n", (long)num_online_cpus());
 	smp_cpus_done(setup_max_cpus);
+
 }
 
 /*

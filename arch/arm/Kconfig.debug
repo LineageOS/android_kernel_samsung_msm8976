@@ -702,6 +702,21 @@ config ARM_KPROBES_TEST
 	help
 	  Perform tests of kprobes API and instruction set simulation.
 
+comment "PowerManagement Feature"
+menuconfig SEC_PM
+	bool "Samsung TN PowerManagement Feature"
+	default y
+	help
+	  Samsung TN PowerManagement Feature.
+
+if SEC_PM
+config SEC_PM_DEBUG
+	bool "Samsung TN PowerManagement Debug Feature"
+	default n
+	help
+	  Samsung TN PowerManagement Debug Feature.
+endif
+
 config PID_IN_CONTEXTIDR
 	bool "Write the current PID to the CONTEXTIDR register"
 	depends on CPU_COPY_V6
@@ -710,6 +725,12 @@ config PID_IN_CONTEXTIDR
 	  the PROCID field of the CONTEXTIDR register, at the expense of some
 	  additional instructions during context switch. Say Y here only if you
 	  are planning to use hardware trace tools with this kernel.
+
+config UNUSED_PR_SET_TIMERSLACK_PID
+	bool "Unused PR_SET_TIMERSLACK_PID feature"
+	default n
+	help
+	  Due to some potential bug of this android kernel feature that suggested by Google, it is disabled not to use in SEC project.
 
 config DEBUG_SET_MODULE_RONX
 	bool "Set loadable kernel module data as NX and text as RO"
@@ -721,5 +742,11 @@ config DEBUG_SET_MODULE_RONX
 	  patching and dynamic kernel tracing - and they might also protect
 	  against certain classes of kernel exploits.
 	  If in doubt, say "N".
+
+config RESTART_REASON_SEC_PARAM
+	bool "Save restart reason in SEC param partition"
+	default n
+	help
+	  Param partition can retain the values across reboot, hence this comes in handy backup, when restart reason saved in IMEM is lost.
 
 endmenu

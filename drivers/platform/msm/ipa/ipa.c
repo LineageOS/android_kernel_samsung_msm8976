@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -549,7 +549,8 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			retval = -EFAULT;
 			break;
 		}
-		if (ipa_del_hdr((struct ipa_ioc_del_hdr *)param)) {
+		if (ipa_del_hdr_by_user((struct ipa_ioc_del_hdr *)param,
+			true)) {
 			retval = -EFAULT;
 			break;
 		}
@@ -583,8 +584,7 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_add_rt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_add_rt_rule *)param)->
-				num_rules,
+				((struct ipa_ioc_add_rt_rule *)param)->num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -623,8 +623,7 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_mdfy_rt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_mdfy_rt_rule *)param)->
-				num_rules,
+				((struct ipa_ioc_mdfy_rt_rule *)param)->num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -702,8 +701,7 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_add_flt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_add_flt_rule *)param)->
-				num_rules,
+				((struct ipa_ioc_add_flt_rule *)param)->num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -742,8 +740,7 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_del_flt_rule *)param)->num_hdls
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_del_flt_rule *)param)->
-				num_hdls,
+				((struct ipa_ioc_del_flt_rule *)param)->num_hdls,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -782,8 +779,7 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_mdfy_flt_rule *)param)->num_rules
 			!= pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_mdfy_flt_rule *)param)->
-				num_rules,
+				((struct ipa_ioc_mdfy_flt_rule *)param)->num_rules,
 				pre_entry);
 			retval = -EFAULT;
 			break;
@@ -1224,14 +1220,13 @@ static long ipa_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (unlikely(((struct ipa_ioc_del_hdr_proc_ctx *)
 			param)->num_hdls != pre_entry)) {
 			IPAERR("current %d pre %d\n",
-				((struct ipa_ioc_del_hdr_proc_ctx *)param)->
-				num_hdls,
+				((struct ipa_ioc_del_hdr_proc_ctx *)param)->num_hdls,
 				pre_entry);
 			retval = -EFAULT;
 			break;
 		}
-		if (ipa_del_hdr_proc_ctx(
-			(struct ipa_ioc_del_hdr_proc_ctx *)param)) {
+		if (ipa_del_hdr_proc_ctx_by_user(
+			(struct ipa_ioc_del_hdr_proc_ctx *)param, true)) {
 			retval = -EFAULT;
 			break;
 		}
@@ -1535,7 +1530,7 @@ int ipa_q6_monitor_holb_mitigation(bool enable)
 		}
 	}
 	ipa_dec_client_disable_clks();
-
+	
 	return 0;
 }
 
@@ -2512,7 +2507,7 @@ fail_schedule_delayed_work:
 	if (ipa_ctx->dflt_v4_rt_rule_hdl)
 		__ipa_del_rt_rule(ipa_ctx->dflt_v4_rt_rule_hdl);
 	if (ipa_ctx->excp_hdr_hdl)
-		__ipa_del_hdr(ipa_ctx->excp_hdr_hdl);
+		__ipa_del_hdr(ipa_ctx->excp_hdr_hdl, false);
 	ipa_teardown_sys_pipe(ipa_ctx->clnt_hdl_cmd);
 fail_cmd:
 	return result;
@@ -2524,7 +2519,7 @@ static void ipa_teardown_apps_pipes(void)
 	ipa_teardown_sys_pipe(ipa_ctx->clnt_hdl_data_in);
 	__ipa_del_rt_rule(ipa_ctx->dflt_v6_rt_rule_hdl);
 	__ipa_del_rt_rule(ipa_ctx->dflt_v4_rt_rule_hdl);
-	__ipa_del_hdr(ipa_ctx->excp_hdr_hdl);
+	__ipa_del_hdr(ipa_ctx->excp_hdr_hdl, false);
 	ipa_teardown_sys_pipe(ipa_ctx->clnt_hdl_cmd);
 }
 
@@ -2937,8 +2932,10 @@ void ipa_inc_client_enable_clks(void)
 {
 	ipa_active_clients_lock();
 	ipa_ctx->ipa_active_clients.cnt++;
-	if (ipa_ctx->ipa_active_clients.cnt == 1)
+	if (ipa_ctx->ipa_active_clients.cnt == 1) {
+		pm_stay_awake(ipa_ctx->pdev);
 		ipa_enable_clks();
+	}
 	IPADBG("active clients = %d\n", ipa_ctx->ipa_active_clients.cnt);
 	ipa_active_clients_unlock();
 }
@@ -2998,6 +2995,7 @@ void ipa_dec_client_disable_clks(void)
 			ipa_ctx->ipa_active_clients.cnt = 1;
 			queue_work(ipa_ctx->power_mgmt_wq, &ipa_tag_work);
 		} else {
+			pm_relax(ipa_ctx->pdev);
 			ipa_disable_clks();
 		}
 	}
@@ -3776,6 +3774,9 @@ static int ipa_init(const struct ipa_plat_drv_res *resource_p,
 	/* Create a wakeup source. */
 	wakeup_source_init(&ipa_ctx->w_lock, "IPA_WS");
 	spin_lock_init(&ipa_ctx->wakelock_ref_cnt.spinlock);
+
+	/* Create a wakeup source. */
+	ipa_ctx->pdev->power.wakeup = wakeup_source_register("IPA_WS2");
 
 	/* Initialize the SPS PM lock. */
 	mutex_init(&ipa_ctx->sps_pm.sps_pm_lock);

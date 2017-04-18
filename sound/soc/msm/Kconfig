@@ -259,20 +259,35 @@ config SND_SOC_MSM8X16
 	select MFD_CORE
 	select SND_DYNAMIC_MINORS
 	select QTI_PP
-	select DTS_SRS_TM
-	select DOLBY_DAP
-	select DOLBY_DS2
 	select MSM_QDSP6_APRV2
 	select MSM_QDSP6V2_CODECS
-	select SND_SOC_CPE
-	select SND_HWDEP
-        select DTS_EAGLE
 	help
 	 To add support for SoC audio on MSM8X16.
 	 This will enable sound soc drivers which
 	 interfaces with DSP, also it will enable
 	 the machine drivers and the corresponding
 	 DAI-links.
+
+config SND_SOC_MSM8X16_RT5659
+	tristate "SoC Machine driver for MSM8X16 RT5659 boards"
+	depends on ARCH_MSM8916
+	select SND_SOC_QDSP6V2
+	select SND_SOC_MSM_STUB
+	select SND_SOC_MSM_HOSTLESS_PCM
+	select SLIMBUS
+	select MFD_CORE
+	select SND_DYNAMIC_MINORS
+	select QTI_PP
+	select MSM_QDSP6_APRV2
+	select MSM_QDSP6V2_CODECS
+	select SND_SOC_RT5659
+	select AUDIO_EXT_CLK
+	help
+	 To add support for SoC audio on MSM8X16 with RT5659 codec.
+	 This will enable sound soc drivers which
+	 interfaces with DSP, also it will enable
+	 the machine drivers and the corresponding
+	 DAI-links.	 
 
 config SND_SOC_MSM8909
 	tristate "SoC Machine driver for MSM8909 boards"
@@ -352,4 +367,41 @@ config SND_SOC_MDM9640
 	 interfaces with DSP, also it will enable
 	 the machine drivers and the corresponding
 	 DAI-links.
+
+config SEC_SND_SOLUTION
+	tristate "Samsung sound solution"
+	default n
+	help
+		To add support for Samsung sound solution
+
+config SEC_VOC_SOLUTION
+	tristate "Samsung voice solution"
+	default n
+	help
+		To add support for Samsung voice solution
+
+config SND_SOC_JACK_AUDIO
+	tristate "Samsung Jack Audio"
+	default n
+	help
+		To add support for Samsung Jack Audio
+
+config AUDIO_SPEAKER_OUT_NXP_AMP_ENABLE
+	tristate "Samsung audio speaker NXP amp feature"
+	default n
+	help
+		To add support for speaker NXP amp
+
+config SND_SOC_SECONDARY_AUXPCM
+	tristate "SND_SOC_SECONDARY_AUXPCM feature"
+	default n
+	help
+		To add support for secondary aux pcm
+		
+config AUDIO_NXP_AMP_WITH_QUAT_I2S
+	tristate "AUDIO_NXP_AMP_WITH_QUAT_I2S feature"
+	default n
+	help
+		To add support for nxp amp with quat i2s
+
 endmenu

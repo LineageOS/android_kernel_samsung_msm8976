@@ -1683,6 +1683,30 @@ int mdss_mdp_pipe_addr_setup(struct mdss_data_type *mdata,
 
 	return 0;
 }
+/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+static void mdss_validate_secure_layer(struct mdss_mdp_pipe *pipe,u32 cur_buf)
+{
+	static u32 pre_buf = 0;
+
+	if(!pipe->mfd)
+		return;
+
+	pipe->mfd->sd_skiplayer = false;
+
+	if (pipe->mfd->sd_framecnt) {
+		if (pipe->mfd->sd_framecnt==1) {
+			pre_buf = (u32)cur_buf;
+			pipe->mfd->sd_skiplayer = true;
+		} else {
+			if (pre_buf&&(pre_buf ==(u32)cur_buf)) {
+				pipe->mfd->sd_skiplayer = true;
+			}
+			else {
+				pre_buf = 0; 
+			}
+		}
+	} else pre_buf = 0;
+}
 
 static int mdss_mdp_src_addr_setup(struct mdss_mdp_pipe *pipe,
 				   struct mdss_mdp_data *src_data)
@@ -1724,6 +1748,8 @@ static int mdss_mdp_src_addr_setup(struct mdss_mdp_pipe *pipe,
 	if ((mdata->mdp_rev == MDSS_MDP_HW_REV_200) &&
 		(pipe->flags & MDP_VPU_PIPE))
 		mdss_mdp_pipe_write(pipe, MDSS_MDP_REG_VIG_FLUSH_SEL, 0);
+	/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+	mdss_validate_secure_layer(pipe,data.p[0].addr);
 
 	return 0;
 }

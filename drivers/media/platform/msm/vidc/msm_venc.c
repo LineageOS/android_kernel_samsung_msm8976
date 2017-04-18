@@ -179,6 +179,13 @@ static const char *const timestamp_mode[] = {
 	"Ignore",
 };
 
+static const char *const iframe_sizes[] = {
+	"Default",
+	"Medium",
+	"Huge",
+	"Unlimited"
+};
+
 static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_IDR_PERIOD,
@@ -1169,7 +1176,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_DISABLE,
 		.step = 1,
 	},
-
 };
 
 #define NUM_CTRLS ARRAY_SIZE(msm_venc_ctrls)

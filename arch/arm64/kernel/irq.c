@@ -29,6 +29,10 @@
 #include <linux/seq_file.h>
 #include <linux/ratelimit.h>
 
+#ifdef CONFIG_SEC_DEBUG
+#include <linux/qcom/sec_debug.h>
+#endif
+
 unsigned long irq_err_count;
 
 int arch_show_interrupts(struct seq_file *p, int prec)
@@ -50,6 +54,11 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
+#ifdef CONFIG_SEC_DEBUG
+	int cpu = smp_processor_id();
+	u64 start_time = cpu_clock(cpu);
+#endif
+
 	irq_enter();
 
 	/*
@@ -64,6 +73,9 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	}
 
 	irq_exit();
+#ifdef CONFIG_SEC_DEBUG
+	sec_debug_irq_enterexit_log(irq, start_time);
+#endif
 	set_irq_regs(old_regs);
 }
 

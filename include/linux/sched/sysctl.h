@@ -48,6 +48,9 @@ extern unsigned int sysctl_sched_min_runtime;
 extern unsigned int sysctl_sched_enable_power_aware;
 extern unsigned int sysctl_sched_enable_colocation;
 extern unsigned int sysctl_sched_enable_thread_grouping;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+extern int is_boot_complete(void);
+#endif /*CONFIG_SCHED_TASK_BEHAVIOR*/
 
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 extern unsigned int sysctl_sched_init_task_load_pct;
@@ -71,6 +74,10 @@ extern unsigned int sysctl_sched_grp_task_active_windows;
 extern unsigned int sysctl_sched_powerband_limit_pct;
 extern unsigned int sysctl_sched_boost;
 extern unsigned int sysctl_power_aware_timer_migration;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+extern u32 sysctl_time_slice_value;
+extern u32 sysctl_io_exec_ratio;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 
 #else /* CONFIG_SCHED_HMP */
 

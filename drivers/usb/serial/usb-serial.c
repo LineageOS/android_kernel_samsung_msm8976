@@ -1476,7 +1476,12 @@ EXPORT_SYMBOL_GPL(usb_serial_register_drivers);
  */
 void usb_serial_deregister_drivers(struct usb_serial_driver *const serial_drivers[])
 {
-	struct usb_driver *udriver = (*serial_drivers)->usb_driver;
+	struct usb_driver *udriver;
+
+	if (!*serial_drivers)
+		return;
+
+	udriver = (*serial_drivers)->usb_driver;
 
 	for (; *serial_drivers; ++serial_drivers)
 		usb_serial_deregister(*serial_drivers);

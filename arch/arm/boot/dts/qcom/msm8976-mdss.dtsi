@@ -268,8 +268,6 @@
 			qcom,mdss-mdp = <&mdss_mdp>;
 			vdd-supply = <&pm8950_l17>;
 			vddio-supply = <&pm8950_l6>;
-			lab-supply = <&lab_regulator>;
-			ibb-supply = <&ibb_regulator>;
 
 			clocks = <&clock_gcc_mdss clk_gcc_mdss_byte0_clk>,
 				<&clock_gcc_mdss clk_gcc_mdss_pclk0_clk>,
@@ -305,8 +303,6 @@
 			qcom,mdss-mdp = <&mdss_mdp>;
 			vdd-supply = <&pm8950_l17>;
 			vddio-supply = <&pm8950_l6>;
-			lab-supply = <&lab_regulator>;
-			ibb-supply = <&ibb_regulator>;
 
 			clocks = <&clock_gcc_mdss clk_gcc_mdss_byte1_clk>,
 				<&clock_gcc_mdss clk_gcc_mdss_pclk1_clk>,

@@ -147,6 +147,12 @@ static char *ramdisk_execute_command;
 unsigned int reset_devices;
 EXPORT_SYMBOL(reset_devices);
 
+#ifdef CONFIG_KNOX_KAP
+int boot_mode_security;
+EXPORT_SYMBOL(boot_mode_security);
+#endif
+
+
 static int __init set_reset_devices(char *str)
 {
 	reset_devices = 1;
@@ -231,6 +237,24 @@ static int __init loglevel(char *str)
 }
 
 early_param("loglevel", loglevel);
+
+#ifdef CONFIG_ARCH_MSM8952
+/* check uart boot */
+int jig_boot_clk_limit = 0;
+static int __init jig_status_phone(char *str)
+{
+	int jig_val;
+
+	if(get_option(&str, &jig_val)) {
+		jig_boot_clk_limit |= jig_val;
+		printk(KERN_INFO "%s = %d\n", __func__, jig_boot_clk_limit);
+		return 0;
+	}
+
+	return -EINVAL;
+}
+early_param("uart_dbg", jig_status_phone);
+#endif
 
 /* Change NUL term back to "=", to make "param" the whole string. */
 static int __init repair_env_string(char *param, char *val, const char *unused)
@@ -408,6 +432,15 @@ static int __init do_early_param(char *param, char *val, const char *unused)
 		}
 	}
 	/* We accept everything at this stage. */
+#ifdef CONFIG_KNOX_KAP
+	if ((strncmp(param, "androidboot.security_mode", 26) == 0)) {
+		pr_warn("val = %d\n",*val);
+	        if ((strncmp(val, "1526595585", 10) == 0)) {
+				pr_info("Security Boot Mode \n");
+				boot_mode_security = 1;
+			}
+	}
+#endif
 	return 0;
 }
 

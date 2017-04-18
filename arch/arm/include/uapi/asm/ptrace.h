@@ -60,6 +60,8 @@
 #define PSR_C_BIT	0x20000000
 #define PSR_Z_BIT	0x40000000
 #define PSR_N_BIT	0x80000000
+#define PSR_MODE_MASK	0x0000000f
+#define PSR_MODE_EL2t	0x00000008
 
 /*
  * Groups of PSR bits

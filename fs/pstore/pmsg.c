@@ -19,13 +19,14 @@
 #include "internal.h"
 
 static DEFINE_MUTEX(pmsg_lock);
+static char *pmsg_buffer;
 #define PMSG_MAX_BOUNCE_BUFFER_SIZE (2*PAGE_SIZE)
 
 static ssize_t write_pmsg(struct file *file, const char __user *buf,
 			  size_t count, loff_t *ppos)
 {
 	size_t i, buffer_size;
-	char *buffer;
+	char *buffer = pmsg_buffer;
 
 	if (!count)
 		return 0;
@@ -36,9 +37,6 @@ static ssize_t write_pmsg(struct file *file, const char __user *buf,
 	buffer_size = count;
 	if (buffer_size > PMSG_MAX_BOUNCE_BUFFER_SIZE)
 		buffer_size = PMSG_MAX_BOUNCE_BUFFER_SIZE;
-	buffer = vmalloc(buffer_size);
-	if (!buffer)
-		return -ENOMEM;
 
 	mutex_lock(&pmsg_lock);
 	for (i = 0; i < count; ) {
@@ -49,17 +47,18 @@ static ssize_t write_pmsg(struct file *file, const char __user *buf,
 		ret = __copy_from_user(buffer, buf + i, c);
 		if (unlikely(ret != 0)) {
 			mutex_unlock(&pmsg_lock);
-			vfree(buffer);
 			return -EFAULT;
 		}
 		psinfo->write_buf(PSTORE_TYPE_PMSG, 0, &id, 0, buffer, c,
 				  psinfo);
 
+#ifdef CONFIG_PSTORE_PMSG_SSPLOG
+		ss_hook_pmsg(buffer, c);
+#endif
 		i += c;
 	}
 
 	mutex_unlock(&pmsg_lock);
-	vfree(buffer);
 	return count;
 }
 
@@ -105,6 +104,13 @@ void pstore_register_pmsg(void)
 		pr_err("failed to create device\n");
 		goto err_device;
 	}
+
+	pmsg_buffer = vmalloc(PMSG_MAX_BOUNCE_BUFFER_SIZE);
+
+	if (!pmsg_buffer) {
+		pr_err("failed to create pmsg buffer\n");
+		goto err_device;
+	}
 	return;
 
 err_device:
@@ -113,4 +119,11 @@ err_class:
 	unregister_chrdev(pmsg_major, PMSG_NAME);
 err:
 	return;
+}
+
+void pstore_unregister_pmsg(void)
+{
+	device_destroy(pmsg_class, MKDEV(pmsg_major, 0));
+	class_destroy(pmsg_class);
+	unregister_chrdev(pmsg_major, PMSG_NAME);
 }

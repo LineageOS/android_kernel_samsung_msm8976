@@ -17,6 +17,7 @@
 #include <linux/pfn.h>
 #include <linux/bit_spinlock.h>
 #include <linux/shrinker.h>
+#include <linux/sched.h>
 
 #ifdef CONFIG_STRICT_MEMORY_RWX
 extern char __init_data_begin[];
@@ -86,6 +87,12 @@ extern struct rb_root nommu_region_tree;
 extern struct rw_semaphore nommu_region_sem;
 
 extern unsigned int kobjsize(const void *objp);
+#endif
+
+#ifdef CONFIG_ZSWAP
+extern int sysctl_zswap_compact;
+extern int sysctl_zswap_compaction_handler(struct ctl_table *table, int write,
+			void __user *buffer, size_t *length, loff_t *ppos);
 #endif
 
 /*
@@ -1089,6 +1096,7 @@ void account_page_writeback(struct page *page);
 int set_page_dirty(struct page *page);
 int set_page_dirty_lock(struct page *page);
 int clear_page_dirty_for_io(struct page *page);
+int get_cmdline(struct task_struct *task, char *buffer, int buflen);
 
 /* Is the vma a continuation of the stack vma above it? */
 static inline int vma_growsdown(struct vm_area_struct *vma, unsigned long addr)
@@ -1615,10 +1623,20 @@ extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
 static inline unsigned long
 vm_unmapped_area(struct vm_unmapped_area_info *info)
 {
+	unsigned long addr;
+
 	if (!(info->flags & VM_UNMAPPED_AREA_TOPDOWN))
-		return unmapped_area(info);
+		addr = unmapped_area(info);
 	else
-		return unmapped_area_topdown(info);
+		addr = unmapped_area_topdown(info);
+	if (addr == -ENOMEM)
+		printk(KERN_ERR "%s %d - NOMEM in vm_unmapped_area "
+			"pid=%d flags=%lx length=%lx low_limit=%lx "
+			"high_limit=%lx align_mask=%lx\n",
+			__func__, __LINE__,
+			current->pid, info->flags, info->length, info->low_limit,
+			info->high_limit, info->align_mask);
+	return addr;
 }
 
 /* truncate.c */
@@ -1753,6 +1771,7 @@ static inline struct page *follow_page(struct vm_area_struct *vma,
 #define FOLL_NUMA	0x200	/* force NUMA hinting page fault */
 #define FOLL_MIGRATION	0x400	/* wait for page to replace migration entry */
 #define FOLL_COW	0x4000	/* internal GUP flag */
+#define FOLL_CMA	0x80000	/* migrate if the page is from cma pageblock */
 
 typedef int (*pte_fn_t)(pte_t *pte, pgtable_t token, unsigned long addr,
 			void *data);

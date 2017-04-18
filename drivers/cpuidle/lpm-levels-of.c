@@ -161,6 +161,153 @@ uint32_t *get_per_cpu_min_residency(int cpu)
 	return per_cpu(min_residency, cpu);
 }
 
+#if defined(CONFIG_SW_SELF_DISCHARGING)
+extern int selfdischg_cpu_mask;
+#endif
+
+static int cpu_lpm_set_mode(int cpu_no, int power_level, bool on)
+{
+	int ret = 0, mode = 0;
+	struct kernel_param kp;
+	struct lpm_level_avail *level_list = NULL;
+	level_list = cpu_level_available[cpu_no];
+	
+	if (power_level == 0) /*  WFI */ {
+		mode = MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT;
+	} else if (power_level == 1) /* RETENTION */ {
+		mode = MSM_PM_SLEEP_MODE_RETENTION;
+	} else if (power_level == 2) /*  SPC */ {
+		mode = MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE;
+	} else if (power_level == 3) /*  PC  */ {
+		mode = MSM_PM_SLEEP_MODE_POWER_COLLAPSE;
+	} else {
+		pr_err("Bad mode for cpu lpm mode!\n");
+		return -EINVAL;
+	}
+	
+	kp.arg = &level_list[mode].idle_enabled;
+	if (on)
+		ret = param_set_bool("Y", &kp);
+	else
+		ret = param_set_bool("N", &kp);
+
+	return ret;
+}
+
+int lpm_set_mode(u8 cpu_mask, u32 power_level, bool on)
+{
+	int cpu = 0, cpu_bit = 0, each_mode =0;
+	int ret = 0;
+	const int power_mode = 4;
+
+	for_each_possible_cpu(cpu) {
+	    if (cpu_mask & (1 << cpu)) {
+		    for (cpu_bit = cpu*4, each_mode = 0; each_mode < power_mode; 
+				cpu_bit++, each_mode++) {
+				if (power_level & (1 << cpu_bit)) {
+#if defined(CONFIG_SW_SELF_DISCHARGING)
+					if (unlikely(selfdischg_cpu_mask & (1<<cpu)))
+						return ret;
+#endif			
+					ret = cpu_lpm_set_mode(cpu, each_mode, on);
+					if (ret)
+						return ret;
+				}
+			}
+		}
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(lpm_set_mode);
+ssize_t lpm_bundle_store(struct kobject *kobj, struct kobj_attribute *attr,
+				const char *buf, size_t len)
+{
+	int mode;
+	/*
+	 * 1. set all core to wfi off
+	 * 2. set all core to spc off
+	 * 3. set all core to wfi on
+	 * 4. set all core to spc on
+	 */
+
+	pr_err("This node is only for TEST\n");
+	sscanf(buf, "%i", &mode);
+	if (mode == 1) {
+		lpm_set_mode(0xFF, 0x11111111, 0);
+	} else if (mode == 2) {
+		lpm_set_mode(0xFF, 0x22222222, 0);
+	} else if (mode == 3) {
+		lpm_set_mode(0xFF, 0x11111111, 1);
+	} else if (mode == 4) {
+		lpm_set_mode(0xFF, 0x22222222, 1);
+	} else {
+		pr_err("Wrong test mode!\n");
+		return -EINVAL;
+	}
+
+	return len;
+}
+
+ssize_t lpm_bundle_show(struct kobject *kobj, struct kobj_attribute *attr,
+				char *buf)
+{
+	int i = 0, j = 0;
+	int cpu;
+	u32 len = 0, size = 0;
+	struct lpm_cluster *child_cluster;
+
+	len = snprintf(&buf[size], PAGE_SIZE - size,
+			"########################################\n");
+	size += len;
+	len = snprintf(&buf[size], PAGE_SIZE - size,
+			" LPM mode status ALL CPUs\n");
+	size += len;
+	len = snprintf(&buf[size], PAGE_SIZE - size,
+					"########################################\n");
+	size += len;
+	len = snprintf(&buf[size], PAGE_SIZE - size,
+					"[CPUIDLE] %s, %s\n",__func__,attr->attr.name);
+	size += len;
+
+	if (!lpm_root_node) {
+		pr_err("lpm_root_node is NULL!!\n");
+		return 0;
+	}
+	list_for_each_entry(child_cluster, &lpm_root_node->child, list) {
+		len = snprintf(&buf[size], PAGE_SIZE - size,
+				"[LPM] %s Cluster\n",child_cluster->cluster_name);
+		size += len;
+
+		for (i = 0; i < child_cluster->nlevels; i++) {
+			len = snprintf(&buf[size], PAGE_SIZE - size, "%s enabled : %d\n",
+				child_cluster->levels[i].level_name,
+				child_cluster->levels[i].available.idle_enabled);
+			size += len;
+		}
+		len = snprintf(&buf[size], PAGE_SIZE - size,
+				"========================================\n");
+		size += len;
+		for_each_cpu(cpu, &child_cluster->child_cpus) {
+			for (j = 0; j < child_cluster->cpu->nlevels; j++) {
+				len = snprintf(&buf[size], PAGE_SIZE - size,
+					"CPU%d, %15s mode :%d enabled:%d\n",
+					cpu, child_cluster->cpu->levels[j].name,
+					child_cluster->cpu->levels[j].psci_id,
+					cpu_level_available[cpu][j].idle_enabled);
+				size += len;
+			}
+		}
+		len = snprintf(&buf[size], PAGE_SIZE - size,
+				"========================================\n");
+		size += len;
+	}
+
+	return size;
+}
+static struct kobj_attribute lpm_bundle_attribute =
+		__ATTR(lpm_bundle, 0660, lpm_bundle_show, lpm_bundle_store);
+
 ssize_t lpm_enable_show(struct kobject *kobj, struct kobj_attribute *attr,
 				char *buf)
 {
@@ -194,6 +341,13 @@ ssize_t lpm_enable_store(struct kobject *kobj, struct kobj_attribute *attr,
 		set_optimum_cpu_residency(avail->data, avail->idx, false);
 	else
 		set_optimum_cluster_residency(avail->data, false);
+
+#if defined(CONFIG_SW_SELF_DISCHARGING)
+	if ( attr->attr.name )
+		printk("[SELFDISCHG] LPM %s %s\n", buf, attr->attr.name);
+	else
+		printk("[SELFDISCHG] LPM %s null\n", buf);
+#endif
 
 	return ret ? ret : len;
 }
@@ -343,6 +497,12 @@ int create_cluster_lvl_nodes(struct lpm_cluster *p, struct kobject *kobj)
 
 	if (p->cpu) {
 		ret = create_cpu_lvl_nodes(p, cluster_kobj);
+		if (ret)
+			return ret;
+	}
+
+	if (!p->parent) {
+		ret = sysfs_create_file(kobj, &lpm_bundle_attribute.attr);
 		if (ret)
 			return ret;
 	}

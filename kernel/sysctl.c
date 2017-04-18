@@ -131,6 +131,9 @@ static int __maybe_unused two = 2;
 static int __maybe_unused three = 3;
 static unsigned long one_ul = 1;
 static int one_hundred = 100;
+#ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
+static int max_swappiness = 200;
+#endif
 #ifdef CONFIG_PRINTK
 static int ten_thousand = 10000;
 #endif
@@ -145,6 +148,10 @@ static int min_percpu_pagelist_fract = 8;
 
 static int ngroups_max = NGROUPS_MAX;
 static const int cap_last_cap = CAP_LAST_CAP;
+
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+unsigned int sysctl_sched_boot_complete_pct = 0;
+#endif /*CONFIG_SCHED_TASK_BEHAVIOR*/
 
 /*this is needed for proc_doulongvec_minmax of sysctl_hung_task_timeout_secs */
 #ifdef CONFIG_DETECT_HUNG_TASK
@@ -414,6 +421,29 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &zero,
 	},
+	#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	{
+		.procname	= "time_slice_value",
+		.data		= &sysctl_time_slice_value,
+		.maxlen		= sizeof(u32),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "io_exec_ratio",
+		.data		= &sysctl_io_exec_ratio,
+		.maxlen		= sizeof(u32),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "sched_boot_complete",
+		.data		= &sysctl_sched_boot_complete_pct,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 	{
 		.procname	= "sched_upmigrate",
 		.data		= &sysctl_sched_upmigrate_pct,
@@ -1440,7 +1470,11 @@ static struct ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &zero,
+#ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
+		.extra2		= &max_swappiness,
+#else
 		.extra2		= &one_hundred,
+#endif
 	},
 #ifdef CONFIG_HUGETLB_PAGE
 	{
@@ -1508,7 +1542,7 @@ static struct ctl_table vm_table[] = {
 		.procname	= "compact_memory",
 		.data		= &sysctl_compact_memory,
 		.maxlen		= sizeof(int),
-		.mode		= 0200,
+		.mode		= 0644,
 		.proc_handler	= sysctl_compaction_handler,
 	},
 	{
@@ -1522,6 +1556,15 @@ static struct ctl_table vm_table[] = {
 	},
 
 #endif /* CONFIG_COMPACTION */
+#ifdef CONFIG_ZSWAP
+	{
+		.procname	= "zswap_compact",
+		.data		= &sysctl_zswap_compact,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= sysctl_zswap_compaction_handler,
+	},
+#endif
 	{
 		.procname	= "min_free_kbytes",
 		.data		= &min_free_kbytes,
@@ -1917,6 +1960,20 @@ static struct ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &pipe_proc_fn,
 		.extra1		= &pipe_min_size,
+	},
+	{
+		.procname	= "pipe-user-pages-hard",
+		.data		= &pipe_user_pages_hard,
+		.maxlen		= sizeof(pipe_user_pages_hard),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
+	{
+		.procname	= "pipe-user-pages-soft",
+		.data		= &pipe_user_pages_soft,
+		.maxlen		= sizeof(pipe_user_pages_soft),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
 	},
 	{ }
 };
@@ -2939,6 +2996,14 @@ int proc_doulongvec_ms_jiffies_minmax(struct ctl_table *table, int write,
 
 
 #endif /* CONFIG_PROC_SYSCTL */
+
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+int is_boot_complete(void)
+{
+	return sysctl_sched_boot_complete_pct;
+}
+EXPORT_SYMBOL(is_boot_complete);
+#endif /*CONFIG_SCHED_TASK_BEHAVIOR*/
 
 /*
  * No sense putting this after each symbol definition, twice,

@@ -150,4 +150,7 @@ int adm_get_sound_focus(int port_id, int copp_idx,
 			struct sound_focus_param *soundFocusData);
 int adm_get_source_tracking(int port_id, int copp_idx,
 			    struct source_tracking_param *sourceTrackingData);
+#ifdef CONFIG_SEC_SND_SOLUTION
+int adm_set_sound_booster(int port_id, long *param);
+#endif
 #endif /* __Q6_ADM_V2_H__ */

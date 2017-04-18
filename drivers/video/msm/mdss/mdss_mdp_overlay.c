@@ -27,7 +27,9 @@
 #include <linux/sort.h>
 #include <linux/sw_sync.h>
 #include <linux/kmemleak.h>
-
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+#include "../../../video/msm/mdss/samsung/ss_dsi_panel_common.h" /* UTIL HEADER */
+#endif
 #include <linux/msm_iommu_domains.h>
 #include <soc/qcom/event_timer.h>
 #include <linux/msm-bus.h>
@@ -1120,6 +1122,23 @@ skip_reconfigure:
 	*ppipe = pipe;
 
 	mdss_mdp_pipe_unmap(pipe);
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	pr_debug("L_mixer:%d R_mixer:%d %s z:%d format:%d flag:0x%x src.x:%d y:%d w:%d h:%d "
+			"des_rect.x:%d y:%d w:%d h:%d mdss\n",
+			pipe->mixer_left ? pipe->mixer_left->num : -1,
+			pipe->mixer_right? pipe->mixer_right->num : -1,
+			pipe->ndx == BIT(0) ? "VG0" : pipe->ndx == BIT(1) ? "VG1" :
+			pipe->ndx == BIT(2) ? "VG2" : pipe->ndx == BIT(3) ? "RGB0" :
+			pipe->ndx == BIT(4) ? "RGB1" : pipe->ndx == BIT(5) ? "RGB2" :
+			pipe->ndx == BIT(6) ? "DMA0" : pipe->ndx == BIT(7) ? "DMA1":
+			pipe->ndx == BIT(8) ? "VG3" : pipe->ndx == BIT(9) ? "RGB3":
+			pipe->ndx == BIT(10) ? "CURSOR0" : pipe->ndx == BIT(11) ? "CURSOR1" : "MAX_SSPP",
+			pipe->mixer_stage - MDSS_MDP_STAGE_0,
+			pipe->src_fmt->format,
+			pipe->flags,
+			pipe->src.x, pipe->src.y, pipe->src.w, pipe->src.h,
+			pipe->dst.x, pipe->dst.y, pipe->dst.w, pipe->dst.h);
+#endif
 
 	return ret;
 exit_fail:
@@ -1669,6 +1688,23 @@ static int __overlay_queue_pipes(struct msm_fb_data_type *mfd)
 			if (buf)
 				__pipe_buf_mark_cleanup(mfd, buf);
 		}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+		pr_debug("L_mixer:%d R_mixer:%d %s z:%d format:%d flag:0x%x src.x:%d y:%d w:%d h:%d "
+			"des_rect.x:%d y:%d w:%d h:%d mdss\n",
+			pipe->mixer_left ? pipe->mixer_left->num : -1,
+			pipe->mixer_right? pipe->mixer_right->num : -1,
+			pipe->ndx == BIT(0) ? "VG0" : pipe->ndx == BIT(1) ? "VG1" :
+			pipe->ndx == BIT(2) ? "VG2" : pipe->ndx == BIT(3) ? "RGB0" :
+			pipe->ndx == BIT(4) ? "RGB1" : pipe->ndx == BIT(5) ? "RGB2" :
+			pipe->ndx == BIT(6) ? "DMA0" : pipe->ndx == BIT(7) ? "DMA1":
+			pipe->ndx == BIT(8) ? "VG3" : pipe->ndx == BIT(9) ? "RGB3":
+			pipe->ndx == BIT(10) ? "CURSOR0" : pipe->ndx == BIT(11) ? "CURSOR1" : "MAX_SSPP",
+			pipe->mixer_stage - MDSS_MDP_STAGE_0,
+			pipe->src_fmt->format,
+			pipe->flags,
+			pipe->src.x, pipe->src.y, pipe->src.w, pipe->src.h,
+			pipe->dst.x, pipe->dst.y, pipe->dst.w, pipe->dst.h);
+#endif
 	}
 
 	return 0;
@@ -1957,6 +1993,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd);
 	int ret = 0;
 	int sd_in_pipe = 0;
+	int rgb_sd = 0;
 	bool need_cleanup = false;
 	struct mdss_mdp_commit_cb commit_cb;
 
@@ -1997,8 +2034,21 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 			sd_in_pipe = 1;
 			pr_debug("Secure pipe: %u : %08X\n",
 					pipe->num, pipe->flags);
+				/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+			if(! pipe->src_fmt->is_yuv && !mfd->index) {
+				rgb_sd = 1;
+			}
 		}
 	}
+		/* check First frame of Secure display (RGB and FB0) to avoid to be flushed (W/A of distorted image on SSPAY) */
+	if (sd_in_pipe && rgb_sd) {
+		if(!mdp5_data->sd_enabled)
+			mfd->sd_framecnt =1;
+		else mfd->sd_framecnt ++;
+	} else {
+		mfd->sd_framecnt =0;
+	}
+
 	/*
 	 * If there is no secure display session and sd_enabled, disable the
 	 * secure display session
@@ -2108,6 +2158,10 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 			}
 		}
 	}
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mdss_mdp_ctl_intf_event(mdp5_data->ctl, MDSS_SAMSUNG_EVENT_FRAME_UPDATE, NULL);
+#endif
+
 commit_fail:
 	ATRACE_BEGIN("overlay_cleanup");
 	mdss_mdp_overlay_cleanup(mfd);
@@ -4910,7 +4964,11 @@ static int mdss_mdp_overlay_handoff(struct msm_fb_data_type *mfd)
 	if (rc)
 		pr_err("Failed to handoff smps\n");
 
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mdp5_data->handoff = false;
+#else
 	mdp5_data->handoff = true;
+#endif
 
 error:
 	if (rc && ctl) {

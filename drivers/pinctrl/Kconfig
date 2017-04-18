@@ -236,6 +236,16 @@ config PINCTRL_S3C64XX
 	depends on ARCH_S3C64XX
 	select PINCTRL_SAMSUNG
 
+config SENSORS_FP_SPI_GPIO_START
+    depends on SENSORS_FINGERPRINT
+	int "Fingerprint spi gpio number start"
+	default 0
+
+config SENSORS_FP_SPI_GPIO_END
+    depends on SENSORS_FINGERPRINT
+	int "Fingerprint spi gpio number end"
+	default 0
+
 source "drivers/pinctrl/mvebu/Kconfig"
 source "drivers/pinctrl/sh-pfc/Kconfig"
 source "drivers/pinctrl/spear/Kconfig"

@@ -114,7 +114,7 @@ static int hbtp_vm_report_events(struct hbtp_virtual_mouse *hbtp_data,
 
 	if (mt_data->num_touches == 1) {
 		tch = &(mt_data->touches[0]);
-		if (hbtp_vm->last_x != -1 && hbtp_vm->last_x != -1) {
+		if (hbtp_vm->last_x != -1 && hbtp_vm->last_y != -1) {
 			dx = tch->x - hbtp_vm->last_x;
 			dy = tch->y - hbtp_vm->last_y;
 		}

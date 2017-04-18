@@ -676,3 +676,11 @@ config MMC_CQ_HCI
 	  If you have a controller with this interface, say Y or M here.
 
 	  If unsure, say N.
+
+config SEC_HYBRID_TRAY
+        bool "Samsung HYBRID TRAY Project"
+        depends on MMC_SDHCI
+        default n
+        help
+          Support for Samsung HYBRID TRAY Project
+

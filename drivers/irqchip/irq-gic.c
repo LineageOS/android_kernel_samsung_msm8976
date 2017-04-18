@@ -49,6 +49,7 @@
 #include <asm/irq.h>
 #include <asm/exception.h>
 #include <asm/smp_plat.h>
+#include <linux/wakeup_reason.h>
 
 #include "irqchip.h"
 
@@ -300,6 +301,11 @@ uint32_t gic_return_irq_pending(void)
 }
 EXPORT_SYMBOL(gic_return_irq_pending);
 
+#ifdef CONFIG_SEC_PM
+extern char last_resume_kernel_reason[];
+extern int last_resume_kernel_reason_len;
+#endif
+
 static void gic_show_resume_irq(struct gic_chip_data *gic)
 {
 	unsigned int i;
@@ -321,16 +327,27 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 	for (i = find_first_bit((unsigned long *)pending, gic->gic_irqs);
 	i < gic->gic_irqs;
 	i = find_next_bit((unsigned long *)pending, gic->gic_irqs, i+1)) {
+#ifdef CONFIG_SEC_PM
+		unsigned int irq = irq_find_mapping(gic->domain, i);
+		struct irq_desc *desc = irq_to_desc(irq);
+#else
 		struct irq_desc *desc = irq_to_desc(i + gic->irq_offset);
+#endif
 		const char *name = "null";
 
 		if (desc == NULL)
 			name = "stray irq";
 		else if (desc->action && desc->action->name)
 			name = desc->action->name;
-
+#ifdef CONFIG_SEC_PM
+		pr_info("Resume caused by IRQ %d(GIC %d) %s\n", irq, i, name);
+		last_resume_kernel_reason_len +=
+			sprintf(last_resume_kernel_reason + last_resume_kernel_reason_len,
+			"%d,%d,%s|", irq, i, name);
+#else
 		pr_warning("%s: %d triggered %s\n", __func__,
 					i + gic->irq_offset, name);
+#endif
 	}
 }
 
@@ -940,7 +957,6 @@ void gic_set_irq_secure(unsigned int irq)
 {
 	unsigned int gicd_isr_reg, gicd_pri_reg;
 	unsigned int mask = 0xFFFFFF00;
-	struct gic_chip_data *gic_data = &gic_data[0];
 	struct irq_data *d = irq_get_irq_data(irq);
 
 	if (is_cpu_secure()) {

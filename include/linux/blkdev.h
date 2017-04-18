@@ -193,6 +193,11 @@ struct request {
 
 	/* for bidi */
 	struct request *next_rq;
+#ifdef CONFIG_SCHED_TASK_BEHAVIOR
+	struct task_struct *owner;
+	pid_t owner_id;
+	u64 req_start_time_ns;
+#endif /* CONFIG_SCHED_TASK_BEHAVIOR */
 };
 
 static inline unsigned short req_get_ioprio(struct request *req)

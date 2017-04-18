@@ -41,6 +41,11 @@ static struct timespec curr_xtime; /* wall time after last suspend */
 static struct timespec last_stime; /* total_sleep_time before last suspend */
 static struct timespec curr_stime; /* total_sleep_time after last suspend */
 
+#ifdef CONFIG_SEC_PM
+char last_resume_kernel_reason[512];
+int last_resume_kernel_reason_len;
+#endif
+
 static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
 {
@@ -50,6 +55,13 @@ static ssize_t last_resume_reason_show(struct kobject *kobj, struct kobj_attribu
 	if (suspend_abort) {
 		buf_offset = sprintf(buf, "Abort: %s", abort_reason);
 	} else {
+#ifdef CONFIG_SEC_PM
+		pr_err("%s: %s(%d)\n", __func__,
+			last_resume_kernel_reason,
+			last_resume_kernel_reason_len);
+		buf_offset += sprintf(buf + buf_offset, "%d %s\n",
+				0, last_resume_kernel_reason);
+#endif
 		for (irq_no = 0; irq_no < irqcount; irq_no++) {
 			desc = irq_to_desc(irq_list[irq_no]);
 			if (desc && desc->action && desc->action->name)
@@ -171,6 +183,11 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 
 		get_xtime_and_monotonic_and_sleep_offset(&last_xtime, &xtom,
 			&last_stime);
+#ifdef CONFIG_SEC_PM
+		/* reset resume kernel reason buffer */
+		last_resume_kernel_reason[0] = '\0';
+		last_resume_kernel_reason_len = 0;
+#endif
 		break;
 	case PM_POST_SUSPEND:
 		get_xtime_and_monotonic_and_sleep_offset(&curr_xtime, &xtom,
@@ -210,7 +227,74 @@ int __init wakeup_reason_init(void)
 		printk(KERN_WARNING "[%s] failed to create a sysfs group %d\n",
 				__func__, retval);
 	}
+#ifdef CONFIG_SEC_PM
+	/* reset resume kernel reason buffer */
+	last_resume_kernel_reason[0] = '\0';
+	last_resume_kernel_reason_len = 0;
+#endif
 	return 0;
 }
 
 late_initcall(wakeup_reason_init);
+
+#ifdef CONFIG_ARCH_MSM
+#include <linux/debugfs.h>
+#define NR_TOTAL_IRQS   1024
+
+struct wakeup_reason_stats {
+        unsigned int wakeup_count;
+};
+static struct wakeup_reason_stats wakeup_reason_stats[NR_TOTAL_IRQS] = {{0,},};
+
+void update_wakeup_reason_stats(int irq)
+{
+        pr_debug("IRQ %d [%ps]\n", irq, __builtin_return_address(0));
+        wakeup_reason_stats[irq].wakeup_count++;
+}
+
+#ifdef CONFIG_DEBUG_FS
+static int wakeup_reason_stats_show(struct seq_file *s, void *unused)
+{
+        int i;
+
+        pr_info("nr_irqs: %d\n", nr_irqs);
+        seq_puts(s, "irq\twakeup_count\tname\n");
+        for (i = 0; i < nr_irqs; i++) {
+                if (wakeup_reason_stats[i].wakeup_count > 0) {
+                        struct irq_desc *desc = irq_to_desc(i);
+                        const char *irq_name = NULL;
+
+                        if (desc && desc->action && desc->action->name)
+                                irq_name = desc->action->name;
+
+                        seq_printf(s, "%d\t%u\t%s\n", i,
+                                        wakeup_reason_stats[i].wakeup_count, irq_name);
+                }
+        }
+
+        return 0;
+}
+
+static int wakeup_reason_stats_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, wakeup_reason_stats_show, NULL);
+}
+
+static const struct file_operations wakeup_reason_stats_ops = {
+        .open           = wakeup_reason_stats_open,
+        .read           = seq_read,
+        .llseek         = seq_lseek,
+        .release        = single_release,
+};
+
+static int __init wakeup_reason_debugfs_init(void)
+{
+        debugfs_create_file("wakeup_reason_stats", S_IFREG | S_IRUGO,
+                        NULL, NULL, &wakeup_reason_stats_ops);
+        return 0;
+}
+
+late_initcall(wakeup_reason_debugfs_init);
+#endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_ARCH_MSM */
+

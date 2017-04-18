@@ -1,10 +1,10 @@
 /*
  *  Sysfs interface for the universal power supply monitor class
  *
- *  Copyright © 2007  David Woodhouse <dwmw2@infradead.org>
- *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
- *  Copyright © 2004  Szabolcs Gyurko
- *  Copyright © 2003  Ian Molton <spyro@f2s.com>
+ *  Copyright ?? 2007  David Woodhouse <dwmw2@infradead.org>
+ *  Copyright ?? 2007  Anton Vorontsov <cbou@mail.ru>
+ *  Copyright ?? 2004  Szabolcs Gyurko
+ *  Copyright ?? 2003  Ian Molton <spyro@f2s.com>
  *
  *  Modified: 2004, Oct     Szabolcs Gyurko
  *
@@ -46,19 +46,22 @@ static ssize_t power_supply_show_property(struct device *dev,
 	static char *type_text[] = {
 		"Unknown", "Battery", "UPS", "Mains", "USB",
 		"USB_DCP", "USB_CDP", "USB_ACA",
-		"USB_HVDCP", "USB_HVDCP_3", "Wireless", "BMS", "USB_Parallel",
-		"Wipower"
+		"BMS", "MISC", "Wireless", "CARDOCK", "UARTOFF", "OTG",
+		"LAN_HUB", "MHL_500", "MHL_900", "MHL_1500", "MHL_2000",
+		"MHL_USB", "MHL_USB_100", "SMART_OTG", "SMART_NOTG", "POWER_SHARING",
+		"HV_Prepare_Mains", "HV_Err", "HV_Unknown", "HV_Mains",
+		"USB_Parallel"
 	};
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
 	};
 	static char *charge_type[] = {
-		"Unknown", "N/A", "Trickle", "Fast", "Taper"
+		"Unknown", "N/A", "Trickle", "Fast", "Taper", "Slow"
 	};
 	static char *health_text[] = {
 		"Unknown", "Good", "Overheat", "Warm", "Dead", "Over voltage",
 		"Unspecified failure", "Cold", "Cool", "Watchdog timer expire",
-		"Safety timer expire"
+		"Safety timer expire", "Under voltage", "OverheatLimit"
 	};
 	static char *technology_text[] = {
 		"Unknown", "NiMH", "Li-ion", "Li-poly", "LiFe", "NiCd",
@@ -164,6 +167,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(bypass_vchg_loop_debouncer),
 	POWER_SUPPLY_ATTR(current_now),
 	POWER_SUPPLY_ATTR(current_avg),
+	POWER_SUPPLY_ATTR(current_full),
 	POWER_SUPPLY_ATTR(power_now),
 	POWER_SUPPLY_ATTR(power_avg),
 	POWER_SUPPLY_ATTR(charge_full_design),
@@ -175,6 +179,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(charge_now_error),
 	POWER_SUPPLY_ATTR(charge_avg),
 	POWER_SUPPLY_ATTR(charge_counter),
+	POWER_SUPPLY_ATTR(charge_otg_control),
+	POWER_SUPPLY_ATTR(charger_powered_otg_control),
+	POWER_SUPPLY_ATTR(charge_uno_control),
 	POWER_SUPPLY_ATTR(charge_counter_shadow),
 	POWER_SUPPLY_ATTR(constant_charge_current),
 	POWER_SUPPLY_ATTR(constant_charge_current_max),
@@ -218,6 +225,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(usb_hc),
 	POWER_SUPPLY_ATTR(usb_otg),
 	POWER_SUPPLY_ATTR(charge_enabled),
+	POWER_SUPPLY_ATTR(multi_charger_mode),
+	POWER_SUPPLY_ATTR(read_slave_reg),
 	POWER_SUPPLY_ATTR(flash_current_max),
 	POWER_SUPPLY_ATTR(update_now),
 	POWER_SUPPLY_ATTR(esr_count),
@@ -240,6 +249,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
 	POWER_SUPPLY_ATTR(serial_number),
+	POWER_SUPPLY_ATTR(afc_charger_mode),
 	POWER_SUPPLY_ATTR(battery_type),
 };
 

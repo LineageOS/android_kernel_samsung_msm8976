@@ -462,7 +462,7 @@ static int vfe_probe(struct platform_device *pdev)
 	memset(&vfe_common_data, 0, sizeof(vfe_common_data));
 	spin_lock_init(&vfe_common_data.common_dev_data_lock);
 	spin_lock_init(&vfe_common_data.common_dev_axi_lock);
-
+	spin_lock_init(&vfe_common_data.common_dev_sync_lock);
 	for_each_available_child_of_node(dt_node, node) {
 		new_dev = of_platform_device_create(node, NULL, &pdev->dev);
 		if (!new_dev) {

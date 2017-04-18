@@ -23,6 +23,9 @@
 #include <linux/syscore_ops.h>
 #include "pinctrl-msm.h"
 
+#include <linux/pinctrl/sec-pinmux.h>
+
+
 /* config translations */
 #define drv_str_to_rval(drv)	((drv >> 1) - 1)
 #define rval_to_drv_str(val)	((val + 1) << 1)
@@ -401,6 +404,16 @@ static int msm_tlmm_gp_cfg(uint pin_no, unsigned long *config,
 	void __iomem *inout_reg = NULL;
 	void __iomem *cfg_reg = TLMM_GP_CFG(pinfo, pin_no);
 
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	if (pin_no >= CONFIG_SENSORS_FP_SPI_GPIO_START
+		&& pin_no <= CONFIG_SENSORS_FP_SPI_GPIO_END)
+		return 0;
+#endif
+#ifdef CONFIG_MST_LDO
+		if (pin_no == MST_GPIO_D_MINUS || pin_no == MST_GPIO_D_PLUS)
+			return 0;
+#endif
+
 	id = pinconf_to_config_param(*config);
 	val = readl_relaxed(cfg_reg);
 	/* Get mask and shft values for this config type */
@@ -623,6 +636,13 @@ static void msm_tlmm_gp_fn(uint pin_no, u32 func, bool enable,
 {
 	unsigned int val;
 	void __iomem *cfg_reg = TLMM_GP_CFG(pinfo, pin_no);
+	
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+	if (pin_no >= CONFIG_SENSORS_FP_SPI_GPIO_START
+		&& pin_no <= CONFIG_SENSORS_FP_SPI_GPIO_END)
+		return;
+#endif
+
 	val = readl_relaxed(cfg_reg);
 	val &= ~(TLMM_GP_FUNC_MASK << TLMM_GP_FUNC_SHFT);
 	if (enable)
@@ -758,6 +778,12 @@ static void msm_tlmm_set_intr_cfg_type(struct msm_tlmm_irq_chip *ic,
 	udelay(5);
 }
 
+#ifdef CONFIG_SEC_PM
+int wakeup_gpio_irq_flag = 0;
+extern char last_resume_kernel_reason[];
+extern int last_resume_kernel_reason_len;
+#endif
+
 static irqreturn_t msm_tlmm_gp_handle_irq(int irq, struct msm_tlmm_irq_chip *ic)
 {
 	unsigned long i;
@@ -766,6 +792,11 @@ static irqreturn_t msm_tlmm_gp_handle_irq(int irq, struct msm_tlmm_irq_chip *ic)
 	struct irq_desc *desc = irq_to_desc(irq);
 	struct msm_pintype_info *pinfo = ic_to_pintype(ic);
 	struct gpio_chip *gc = pintype_get_gc(pinfo);
+
+#ifdef CONFIG_SEC_PM
+	struct irq_desc *desc_g;
+#endif
+
 
 	if (unlikely(!desc))
 		return IRQ_HANDLED;
@@ -782,6 +813,28 @@ static irqreturn_t msm_tlmm_gp_handle_irq(int irq, struct msm_tlmm_irq_chip *ic)
 				dev_dbg(ic->dev, "invalid virq\n");
 				return IRQ_NONE;
 			}
+
+#ifdef CONFIG_SEC_PM
+			desc_g = irq_to_desc(virq);
+			if (wakeup_gpio_irq_flag == 1) {
+				if (desc_g && desc_g->action && desc_g->action->name) {
+					pr_info("Resume caused by IRQ %u(GPIO %lu) %s\n",
+							virq, i, desc_g->action->name);
+					last_resume_kernel_reason_len +=
+							sprintf(last_resume_kernel_reason + last_resume_kernel_reason_len,
+							"%u,%lu,%s|",
+							virq, i, desc_g->action->name);
+				} else {
+					pr_info("Resume caused by IRQ %u(GPIO %lu)\n",
+							virq, i);
+					last_resume_kernel_reason_len +=
+							sprintf(last_resume_kernel_reason + last_resume_kernel_reason_len,
+							"%u,%lu|",
+							virq, i);
+				}
+				wakeup_gpio_irq_flag = 0;
+			}
+#endif
 			generic_handle_irq(virq);
 		}
 
@@ -1153,6 +1206,106 @@ static const struct of_device_id msm_tlmm_dt_match[] = {
 	{ },
 };
 MODULE_DEVICE_TABLE(of, msm_tlmm_dt_match);
+
+int msm_tlmm_v4_set_gp_cfg(uint pin_no, uint id, bool level)
+{
+        unsigned int val, data, inout_val;
+        u32 mask = 0, shft = 0;
+	struct msm_pintype_info *pinfo = &tlmm_pininfo[0];
+        void __iomem *inout_reg = NULL;
+        void __iomem *cfg_reg = TLMM_GP_CFG(pinfo, pin_no);
+	pr_info("[%s] pin_no = %d, id = %d, level = %d\n",
+				__func__,pin_no,id,level);
+
+        val = readl_relaxed(cfg_reg);
+        /* Get mask and shft values for this config type */
+        switch (id) {
+        case PIN_CONFIG_BIAS_PULL_DOWN:
+                mask = TLMM_GP_PULL_MASK;
+                shft = TLMM_GP_PULL_SHFT;
+                data = TLMM_PULL_DOWN;
+                break;
+        case PIN_CONFIG_BIAS_PULL_UP:
+                mask = TLMM_GP_PULL_MASK;
+                shft = TLMM_GP_PULL_SHFT;
+                data = TLMM_PULL_UP;
+                break;
+	case PIN_CONFIG_BIAS_DISABLE:
+                mask = TLMM_GP_PULL_MASK;
+                shft = TLMM_GP_PULL_SHFT;
+                data = TLMM_NO_PULL;
+                break;
+        case PIN_CONFIG_OUTPUT:
+                mask = TLMM_GP_DIR_MASK;
+                shft = TLMM_GP_DIR_SHFT;
+                inout_reg = TLMM_GP_INOUT(pinfo, pin_no);
+                data = level;
+                inout_val = dir_to_inout_val(data);
+                writel_relaxed(inout_val, inout_reg);
+                data = mask;
+                break;
+        default:
+                return -EINVAL;
+        };
+
+        val &= ~(mask << shft);
+        val |= (data << shft);
+		if(id == PIN_CONFIG_OUTPUT)
+			val |= BIT(GPIO_OE_BIT);
+		else
+			val &= ~BIT(GPIO_OE_BIT);
+        writel_relaxed(val, cfg_reg);
+		return 0;
+}
+
+int msm_tlmm_get_gp_num(void)
+{
+        struct msm_pintype_info pinfo = tlmm_pininfo[0];
+
+        return pinfo.num_pins;
+}
+
+void msm_tlmm_v4_get_gp_cfg(uint pin_no, struct gpiomux_setting *val)
+{
+        unsigned int cfg_val, inout_val;
+        struct msm_pintype_info *pinfo = &tlmm_pininfo[0];
+
+        void __iomem *cfg_reg = TLMM_GP_CFG(pinfo, pin_no);
+        void __iomem *inout_reg = TLMM_GP_INOUT(pinfo, pin_no);
+
+        cfg_val = readl_relaxed(cfg_reg);
+        inout_val = readl_relaxed(inout_reg);
+
+        val->pull = cfg_val & 0x3;
+        val->func = (cfg_val >> 2) & 0xf;
+        val->drv = (cfg_val >> 6) & 0x7;
+        val->dir = cfg_val& BIT_MASK(9) ? 1 : GPIOMUX_IN;
+
+        if ((val->func == GPIOMUX_FUNC_GPIO) && (val->dir))
+                val->dir = inout_val & BIT_MASK(1) ?
+                GPIOMUX_OUT_HIGH : GPIOMUX_OUT_LOW;
+
+}
+
+int msm_tlmm_v4_get_gp_value(uint pin_no)
+{
+        struct msm_pintype_info *pinfo = &tlmm_pininfo[0];
+
+        void __iomem *inout_reg = TLMM_GP_INOUT(pinfo, pin_no);
+
+        return readl_relaxed(inout_reg) & BIT(GPIO_OUT_BIT);
+}
+
+
+int msm_tlmm_v4_get_gp_input_value(uint pin_no)
+{
+        struct msm_pintype_info *pinfo = &tlmm_pininfo[0];
+
+        void __iomem *inout_reg = TLMM_GP_INOUT(pinfo, pin_no);
+
+        return readl_relaxed(inout_reg) & BIT(GPIO_IN_BIT);
+}
+
 
 static int msm_tlmm_probe(struct platform_device *pdev)
 {

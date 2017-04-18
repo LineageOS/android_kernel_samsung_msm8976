@@ -542,6 +542,7 @@ struct mmc_host {
 	 */
 	void *cmdq_private;
 	struct mmc_request	*err_mrq;
+	unsigned int		card_detect_cnt;
 	unsigned long		private[0] ____cacheline_aligned;
 };
 

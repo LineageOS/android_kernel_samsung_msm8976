@@ -73,8 +73,12 @@ zinstall install: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot)/dts $(boot)/dts/$@
 
 dtbs: scripts
-	$(Q)$(MAKE) $(build)=$(boot)/dts dtbs
+#	$(Q)$(MAKE) $(build)=$(boot)/dts dtbs
+ifeq ($(CONFIG_ARCH_MSM8976),y)
+	$(Q)$(MAKE) $(build)=$(boot)/dts/samsung/msm8976 dtbs
+else
 	$(Q)$(MAKE) $(build)=$(boot)/dts/qcom dtbs
+endif
 
 PHONY += vdso_install
 vdso_install:

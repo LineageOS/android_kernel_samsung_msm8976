@@ -33,6 +33,7 @@
 #include "fault.h"
 
 #include <trace/events/exception.h>
+#include <linux/qcom/sec_debug.h>
 
 #ifdef CONFIG_MMU
 
@@ -70,9 +71,13 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 		mm = &init_mm;
 
 	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
+	sec_debug_store_pte((unsigned long)mm->pgd, 0);
 	pgd = pgd_offset(mm, addr);
 	printk(KERN_ALERT "[%08lx] *pgd=%08llx",
 			addr, (long long)pgd_val(*pgd));
+
+	sec_debug_store_pte((unsigned long)addr, 1);
+	sec_debug_store_pte((unsigned long)pgd_val(*pgd), 2);
 
 	do {
 		pud_t *pud;
@@ -88,6 +93,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 		}
 
 		pud = pud_offset(pgd, addr);
+		sec_debug_store_pte((unsigned long)pud_val(*pud), 3);
 		if (PTRS_PER_PUD != 1)
 			printk(", *pud=%08llx", (long long)pud_val(*pud));
 
@@ -102,6 +108,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 		pmd = pmd_offset(pud, addr);
 		if (PTRS_PER_PMD != 1)
 			printk(", *pmd=%08llx", (long long)pmd_val(*pmd));
+		sec_debug_store_pte((unsigned long)pmd_val(*pmd), 4);
 
 		if (pmd_none(*pmd))
 			break;
@@ -121,6 +128,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 		printk(", *ppte=%08llx",
 		       (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
 #endif
+		sec_debug_store_pte((unsigned long)pte_val(*pte), 5);
 		pte_unmap(pte);
 	} while(0);
 

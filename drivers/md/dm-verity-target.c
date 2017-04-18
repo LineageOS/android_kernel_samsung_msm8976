@@ -202,6 +202,11 @@ static int verity_handle_err(struct dm_verity *v, enum verity_block_type type,
 
 	/* Corruption should be visible in device status in all modes */
 	v->hash_failed = 1;
+	
+	if(block == 0){
+        DMERR("%s: block 0 is superblock. Skipping verity_handle_err" , v->data_dev->name);
+        return 0 ;
+	}
 
 	if (v->corrupted_errs >= DM_VERITY_MAX_CORRUPTED_ERRS)
 		goto out;

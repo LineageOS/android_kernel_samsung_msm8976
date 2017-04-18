@@ -549,6 +549,11 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
                         read_lba(state, 0, (u8 *) legacymbr,
 				 sizeof (*legacymbr));
                         good_pmbr = is_pmbr_valid(legacymbr);
+#ifdef CONFIG_CHECK_GPT
+			// panic before kfree to check the buffer content
+			if (!good_pmbr && !memcmp(state->pp_buf, " mmcblk0", 8))
+				BUG_ON(1);
+#endif
                         kfree(legacymbr);
                 }
                 if (!good_pmbr)
@@ -594,6 +599,11 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
         }
 
  fail:
+#ifdef CONFIG_CHECK_GPT
+	// panic before kfree to check the buffer content
+	if (!memcmp(state->pp_buf, " mmcblk0", 8))
+		BUG_ON(1);
+#endif
         kfree(pgpt);
         kfree(agpt);
         kfree(pptes);

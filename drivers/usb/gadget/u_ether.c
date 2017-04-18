@@ -635,12 +635,34 @@ static void process_rx_w(struct work_struct *work)
 				|| ETH_HLEN > skb->len
 				|| (skb->len > ETH_FRAME_LEN &&
 				test_bit(RMNET_MODE_LLP_ETH, &dev->flags))) {
+#ifdef CONFIG_USB_NCM_SUPPORT_MTU_CHANGE
+		/*
+		  Need to revisit net->mtu  does not include header size incase of changed MTU
+		*/
+			if(!strcmp(dev->port_usb->func.name,"ncm")) {
+				if (status < 0
+					|| ETH_HLEN > skb->len
+					|| skb->len > (dev->net->mtu + ETH_HLEN)) {
+					printk(KERN_ERR "usb: %s  drop incase of NCM rx length %d\n",__func__,skb->len);
+				} else {
+					printk(KERN_ERR "usb: %s  Dont drop incase of NCM rx length %d\n",__func__,skb->len);
+					goto process_frame;
+				}
+			}
+#endif
 			dev->net->stats.rx_errors++;
 			dev->net->stats.rx_length_errors++;
+#ifndef CONFIG_USB_NCM_SUPPORT_MTU_CHANGE
 			DBG(dev, "rx length %d\n", skb->len);
+#else
+			printk(KERN_ERR "usb: %s Drop rx length %d\n",__func__,skb->len);
+#endif
 			dev_kfree_skb_any(skb);
 			continue;
 		}
+#ifdef CONFIG_USB_NCM_SUPPORT_MTU_CHANGE
+process_frame:
+#endif
 		if (test_bit(RMNET_MODE_LLP_IP, &dev->flags))
 			skb->protocol = ether_ip_type_trans(skb, dev->net);
 		else
@@ -789,7 +811,11 @@ static void tx_complete(struct usb_ep *ep, struct usb_request *req)
 				retval = usb_ep_queue(in, new_req, GFP_ATOMIC);
 				switch (retval) {
 				default:
+#ifndef CONFIG_USB_NCM_SUPPORT_MTU_CHANGE
 					DBG(dev, "tx queue err %d\n", retval);
+#else
+					printk(KERN_ERR"usb:%s tx queue err %d\n",__func__, retval);
+#endif
 					new_req->length = 0;
 					spin_lock(&dev->req_lock);
 					list_add_tail(&new_req->list,
@@ -1359,8 +1385,9 @@ static int eth_stop(struct net_device *net)
 }
 
 /*-------------------------------------------------------------------------*/
-
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 static u8 host_ethaddr[ETH_ALEN];
+#endif
 
 /* initial value, changed by "ifconfig usb0 hw ether xx:xx:xx:xx:xx:xx" */
 static char *dev_addr;
@@ -1394,7 +1421,7 @@ static int get_ether_addr(const char *str, u8 *dev_addr)
 }
 
 static int ether_ioctl(struct net_device *, struct ifreq *, int);
-
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 static int get_host_ether_addr(u8 *str, u8 *dev_addr)
 {
 	memcpy(dev_addr, str, ETH_ALEN);
@@ -1405,6 +1432,7 @@ static int get_host_ether_addr(u8 *str, u8 *dev_addr)
 	memcpy(str, dev_addr, ETH_ALEN);
 	return 1;
 }
+#endif
 
 static const struct net_device_ops eth_netdev_ops = {
 	.ndo_open		= eth_open,
@@ -1657,6 +1685,12 @@ struct eth_dev *gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
 		dev_warn(&g->dev,
 			"using random %s ethernet address\n", "self");
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	if (ethaddr != NULL) {
+		memcpy(dev->host_mac, ethaddr, ETH_ALEN);
+		printk(KERN_DEBUG "usb: set unique host mac\n");
+	}
+#else
 	if (get_host_ether_addr(host_ethaddr, dev->host_mac))
 		dev_warn(&g->dev, "using random %s ethernet address\n", "host");
 	else
@@ -1664,7 +1698,7 @@ struct eth_dev *gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
 
 	if (ethaddr)
 		memcpy(ethaddr, dev->host_mac, ETH_ALEN);
-
+#endif
 	net->netdev_ops = &eth_netdev_ops;
 
 	SET_ETHTOOL_OPS(net, &ops);

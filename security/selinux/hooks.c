@@ -86,6 +86,9 @@
 #include <linux/shm.h>
 #include <linux/pft.h>
 
+// [ SEC_SELINUX_PORTING_COMMON
+#include <linux/delay.h>
+// ] SEC_SELINUX_PORTING_COMMON
 
 #include "avc.h"
 #include "objsec.h"
@@ -111,7 +114,13 @@ static int __init enforcing_setup(char *str)
 {
 	unsigned long enforcing;
 	if (!strict_strtoul(str, 0, &enforcing))
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+		selinux_enforcing = 1;
+#else
 		selinux_enforcing = enforcing ? 1 : 0;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	return 1;
 }
 __setup("enforcing=", enforcing_setup);
@@ -124,7 +133,13 @@ static int __init selinux_enabled_setup(char *str)
 {
 	unsigned long enabled;
 	if (!strict_strtoul(str, 0, &enabled))
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+		selinux_enforcing = 1;
+#else
 		selinux_enabled = enabled ? 1 : 0;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	return 1;
 }
 __setup("selinux=", selinux_enabled_setup);
@@ -1683,7 +1698,7 @@ static int may_create(struct inode *dir,
 	if (rc)
 		return rc;
 
-	return avc_has_perm(newsid, sbsec->sid,
+	rc = avc_has_perm(newsid, sbsec->sid,
 			    SECCLASS_FILESYSTEM,
 			    FILESYSTEM__ASSOCIATE, &ad);
 	if (rc)
@@ -2774,6 +2789,25 @@ static int selinux_inode_permission(struct inode *inode, int mask)
 
 	sid = cred_sid(cred);
 	isec = inode->i_security;
+
+// [ SEC_SELINUX_PORTING_COMMON
+	/* skip sid == 1(kernel), it means first boot time */
+	if(isec->initialized != 1 && sid != 1) {
+		int count = 5;
+
+		while(count-- > 0) {
+			printk(KERN_ERR "SELinux : inode->i_security is not initialized. waiting...(%d/5)\n", 5-count); 
+			udelay(500);
+			if(isec->initialized == 1) {
+				printk(KERN_ERR "SELinux : inode->i_security is INITIALIZED.\n"); 
+				break;
+			}
+		}
+		if(isec->initialized != 1) {
+			printk(KERN_ERR "SELinux : inode->i_security is not initialized. not fixed.\n"); 
+		}
+	}
+// ] SEC_SELINUX_PORTING_COMMON
 
 	rc = avc_has_perm_noaudit(sid, isec->sid, isec->sclass, perms, 0, &avd);
 	audited = avc_audit_required(perms, &avd, rc,
@@ -4705,7 +4739,13 @@ static int selinux_nlmsg_perm(struct sock *sk, struct sk_buff *skb)
 				  "SELinux:  unrecognized netlink message"
 				  " type=%hu for sclass=%hu\n",
 				  nlh->nlmsg_type, sksec->sclass);
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+			if (security_get_allow_unknown())
+#else
 			if (!selinux_enforcing || security_get_allow_unknown())
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 				err = 0;
 		}
 
@@ -5988,7 +6028,13 @@ static struct security_operations selinux_ops = {
 static __init int selinux_init(void)
 {
 	if (!security_module_enable(&selinux_ops)) {
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+		selinux_enabled = 1;
+#else
 		selinux_enabled = 0;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 		return 0;
 	}
 
@@ -6014,7 +6060,11 @@ static __init int selinux_init(void)
 
 	if (avc_add_callback(selinux_netcache_avc_callback, AVC_CALLBACK_RESET))
 		panic("SELinux: Unable to register AVC netcache callback\n");
-
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+		selinux_enforcing = 1;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	if (selinux_enforcing)
 		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
 	else
@@ -6091,7 +6141,11 @@ static struct nf_hook_ops selinux_ipv6_ops[] = {
 static int __init selinux_nf_ip_init(void)
 {
 	int err = 0;
-
+// [ SEC_SELINUX_PORTING_COMMON
+#ifdef CONFIG_ALWAYS_ENFORCE
+		selinux_enabled = 1;
+#endif
+// ] SEC_SELINUX_PORTING_COMMON
 	if (!selinux_enabled)
 		goto out;
 

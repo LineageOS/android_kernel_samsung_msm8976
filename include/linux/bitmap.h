@@ -123,6 +123,11 @@ extern unsigned long bitmap_find_next_zero_area_off(unsigned long *map,
 						    unsigned long align_mask,
 						    unsigned long align_offset);
 
+extern unsigned long bitmap_find_next_zero_area_and_size(unsigned long *map,
+							 unsigned long size,
+							 unsigned long start,
+							 unsigned int *nr);
+
 static inline unsigned long
 bitmap_find_next_zero_area(unsigned long *map,
 			   unsigned long size,

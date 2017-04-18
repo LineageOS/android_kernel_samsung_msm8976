@@ -51,6 +51,18 @@ config CPU_FREQ_STAT_DETAILS
 
 	  If in doubt, say N.
 
+config CPU_FREQ_LIMIT
+	bool "CPU frequency limit API"
+	default n
+	help
+	  This driver supports API to limit CPU frequency.
+
+config CPU_FREQ_LIMIT_HMP
+	bool "CPU frequency limit API for HMP systems"
+	default SCHED_HMP
+	help
+	  This driver supports API to limit CPU frequency for HMP systems.
+
 choice
 	prompt "Default CPUFreq governor"
 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if ARM_SA1100_CPUFREQ || ARM_SA1110_CPUFREQ

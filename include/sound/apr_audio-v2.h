@@ -2535,6 +2535,15 @@ struct afe_lpass_core_shared_clk_config_command {
 #define ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX		0x10015002
 #define ADM_CMD_COPP_OPEN_TOPOLOGY_ID_AUDIOSPHERE	0x10028000
 
+#ifdef CONFIG_SEC_VOC_SOLUTION
+#define VPM_TX_SM_LVVEFQ_COPP_TOPOLOGY      0x1000BFF0
+#define VPM_TX_DM_LVVEFQ_COPP_TOPOLOGY      0x1000BFF1
+#define VPM_TX_SM_LVSAFQ_COPP_TOPOLOGY      0x1000BFF4
+/* Fotemeia */
+#define VOICE_TX_DIAMONDVOICE_FVSAM_DM      0x1000110A
+#define VOICE_TX_DIAMONDVOICE_FVSAM_QM      0x10001109
+#endif /* CONFIG_SEC_VOC_SOLUTION */
+
 /* Memory map regions command payload used by the
  * #ASM_CMD_SHARED_MEM_MAP_REGIONS ,#ADM_CMD_SHARED_MEM_MAP_REGIONS
  * commands.
@@ -7648,12 +7657,16 @@ struct afe_param_id_clip_bank_sel {
 #define Q6AFE_LPASS_OSR_CLK_DISABLE		     0x0
 
 /* Supported Bit clock values */
+#define Q6AFE_LPASS_IBIT_CLK_11_P2896_MHZ	0xAC4400
+#define Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ	0xBB8000
 #define Q6AFE_LPASS_IBIT_CLK_8_P192_MHZ		0x7D0000
 #define Q6AFE_LPASS_IBIT_CLK_6_P144_MHZ		0x5DC000
 #define Q6AFE_LPASS_IBIT_CLK_4_P096_MHZ		0x3E8000
 #define Q6AFE_LPASS_IBIT_CLK_3_P072_MHZ		0x2EE000
+#define Q6AFE_LPASS_IBIT_CLK_2_P8224_MHZ	0x2b1100
 #define Q6AFE_LPASS_IBIT_CLK_2_P048_MHZ		0x1F4000
 #define Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ		0x177000
+#define Q6AFE_LPASS_IBIT_CLK_1_P4112_MHZ	0x158880
 #define Q6AFE_LPASS_IBIT_CLK_1_P024_MHZ		 0xFA000
 #define Q6AFE_LPASS_IBIT_CLK_768_KHZ		 0xBB800
 #define Q6AFE_LPASS_IBIT_CLK_512_KHZ		 0x7D000
@@ -7911,6 +7924,81 @@ struct afe_lpass_digital_clk_config_command {
 	struct afe_port_param_data_v2    pdata;
 	struct afe_digital_clk_cfg clk_cfg;
 } __packed;
+
+#ifdef CONFIG_SEC_SND_SOLUTION
+#define ADM_MODULE_ID_PP_SS_REC             0x10001050
+#define ADM_PARAM_ID_PP_SS_REC_GETPARAMS    0x10001052
+
+#define ASM_MODULE_ID_PP_SA                 0x10001fa0
+#define ASM_PARAM_ID_PP_SA_PARAMS           0x10001fa1
+
+#define ASM_MODULE_ID_PP_SA_VSP             0x10001fb0
+#define ASM_PARAM_ID_PP_SA_VSP_PARAMS       0x10001fb1
+
+#define ASM_MODULE_ID_PP_DHA                0x10001fc0
+#define ASM_PARAM_ID_PP_DHA_PARAMS          0x10001fc1
+
+#define ASM_MODULE_ID_PP_LRSM               0x10001fe0
+#define ASM_PARAM_ID_PP_LRSM_PARAMS         0x10001fe1
+
+#define ASM_MODULE_ID_PP_SA_MSP             0x10001ff0
+#define ASM_MODULE_ID_PP_SA_MSP_PARAM       0x10001ff1
+
+struct asm_stream_cmd_set_pp_params_sa {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+
+	int16_t OutDevice;
+	int16_t Preset;
+	int32_t EqLev[7];
+	int16_t m3Dlevel;
+	int16_t BElevel;
+	int16_t CHlevel;
+	int16_t CHRoomSize;
+	int16_t Clalevel;
+	int16_t volume;
+	int16_t Sqrow;
+	int16_t Sqcol;
+	int16_t TabInfo;
+	int16_t NewUI;
+} __packed;
+
+struct asm_stream_cmd_set_pp_params_vsp {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+
+	uint32_t speed_int;
+} __packed;
+
+struct asm_stream_cmd_set_pp_params_dha {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+
+	int32_t enable;
+	int16_t gain[2][6];
+	int16_t device;
+} __packed;
+
+struct asm_stream_cmd_set_pp_params_lrsm {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+
+	int16_t sm;
+	int16_t lr;
+} __packed;
+
+struct asm_stream_cmd_set_pp_params_msp {
+	struct apr_hdr	hdr;
+	struct asm_stream_cmd_set_pp_params_v2 param;
+	struct asm_stream_param_data_v2 data;
+
+	uint32_t msp_int;
+} __packed;
+#endif /* CONFIG_SEC_SND_SOLUTION */
 
 /*
  * Opcode for AFE to start DTMF.
@@ -8440,6 +8528,17 @@ enum {
 	COMPRESSED_PASSTHROUGH,
 	COMPRESSED_PASSTHROUGH_CONVERT,
 };
+
+#ifdef CONFIG_SEC_SND_SOLUTION
+#define AUDPROC_MODULE_ID_PP_SB                 0x10001f01
+#define AUDPROC_PARAM_ID_PP_SB_PARAM            0x10001f04
+
+struct adm_set_pp_sb_param {
+	struct adm_cmd_set_pp_params_v5 command;
+	struct adm_param_data_v5 params;
+	u32    sb_enable;
+} __packed;
+#endif
 
 #define AUDPROC_MODULE_ID_COMPRESSED_MUTE                0x00010770
 #define AUDPROC_PARAM_ID_COMPRESSED_MUTE                 0x00010771

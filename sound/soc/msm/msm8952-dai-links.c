@@ -44,7 +44,6 @@ static struct snd_soc_ops msm8952_slimbus_be_ops = {
 	.hw_params = msm_snd_hw_params,
 };
 
-
 static struct snd_soc_ops msm8952_cpe_ops = {
 	.hw_params = msm_snd_cpe_hw_params,
 };
@@ -954,6 +953,23 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.codec_name = "snd-soc-dummy",
 		.be_id = MSM_FRONTEND_DAI_VOICEMMODE2,
 	},
+#if defined(CONFIG_SND_SOC_JACK_AUDIO)
+	{
+		.name = "MSM8994 JACK LowLatency",
+		.stream_name = "MultiMedia17",
+		.cpu_dai_name   = "MultiMedia17",
+		.platform_name  = "msm-pcm-dsp.1",
+		.dynamic = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		/* this dainlink has playback support */
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
+		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA17,
+	},
+#endif
 };
 
 static struct snd_soc_dai_link msm8952_common_be_dai[] = {
