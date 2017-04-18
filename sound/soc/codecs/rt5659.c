@@ -4971,7 +4971,6 @@ static int rt5659_probe(struct snd_soc_codec *codec)
 		return ret;
 	}
 
-	schedule_delayed_work(&rt5659->calibrate_work, msecs_to_jiffies(100));
 	return 0;
 }
 
@@ -5486,15 +5485,6 @@ static void rt5659_dac2r_depop_work(struct work_struct *work)
 	mutex_unlock(&rt5659->codec->card->dapm_mutex);
 }
 
-
-static void rt5659_calibrate_handler(struct work_struct *work)
-{
-	struct rt5659_priv *rt5659 = container_of(work, struct rt5659_priv,
-		calibrate_work.work);
-
-	rt5659_calibrate(rt5659);
-}
-
 static int rt5659_i2c_probe(struct i2c_client *i2c,
 		    const struct i2c_device_id *id)
 {
@@ -5582,6 +5572,9 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	regmap_write(rt5659->regmap, RT5659_RESET, 0);
 
 	global_regmap = rt5659->regmap;
+
+	mutex_init(&rt5659->calibrate_mutex);
+	rt5659_calibrate(rt5659);
 
 	pr_debug("%s: dmic1_data_pin = %d, dmic2_data_pin =%d\n", __func__,
 		rt5659->pdata.dmic1_data_pin, rt5659->pdata.dmic2_data_pin);
@@ -5688,7 +5681,6 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 			RT5659_DMIC_1_DP_IN2N | RT5659_DMIC_2_DP_IN2P);
 	}
 
-	mutex_init(&rt5659->calibrate_mutex);
 	INIT_DELAYED_WORK(&rt5659->i2s_switch_slave_work[RT5659_AIF1],
 		rt5659_i2s_switch_slave_work_0);
 	INIT_DELAYED_WORK(&rt5659->i2s_switch_slave_work[RT5659_AIF2],
@@ -5698,8 +5690,6 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	INIT_DELAYED_WORK(&rt5659->dac1_depop_work, rt5659_dac1_depop_work);
 	INIT_DELAYED_WORK(&rt5659->dac2l_depop_work, rt5659_dac2l_depop_work);
 	INIT_DELAYED_WORK(&rt5659->dac2r_depop_work, rt5659_dac2r_depop_work);
-	INIT_DELAYED_WORK(&rt5659->calibrate_work,
-		rt5659_calibrate_handler);
 
 	return snd_soc_register_codec(&i2c->dev, &soc_codec_dev_rt5659,
 			rt5659_dai, ARRAY_SIZE(rt5659_dai));
