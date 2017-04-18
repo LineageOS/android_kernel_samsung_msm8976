@@ -1236,7 +1236,11 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		return NULL;
 	}
 
-	if (!strcmp(card->name, "msm8952-tomtom-snd-card")) {
+	if (!strcmp(card->name, "msm8952-tomtom-snd-card")
+#if defined(CONFIG_PROJECT_GTS28VE) || defined(CONFIG_PROJECT_GTS210VE)
+			&& false
+#endif
+		) {
 		len1 = ARRAY_SIZE(msm8952_common_fe_dai);
 		len2 = len1 + ARRAY_SIZE(msm8952_tomtom_fe_dai);
 		len3 = len2 + ARRAY_SIZE(msm8952_common_be_dai);

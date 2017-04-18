@@ -3017,7 +3017,7 @@ static struct snd_soc_codec_conf msm8952_codec_conf[] = {
 
 static struct snd_soc_card bear_card = {
 	/* snd_soc_card_msm8952 */
-	.name		= "msm8952-rt5659-snd-card",
+	.name		= "msm8952-tomtom-snd-card",
 	.dai_link	= msm8952_dai,
 	.num_links	= ARRAY_SIZE(msm8952_dai),
 	.controls = rt5659_controls,
