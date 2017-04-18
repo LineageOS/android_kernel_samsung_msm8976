@@ -5184,9 +5184,6 @@ void rt5659_calibrate(struct rt5659_priv *rt5659)
 	
 	mutex_lock(&rt5659->calibrate_mutex);
 	
-	regcache_cache_bypass(rt5659->regmap, true);
-	regmap_write(rt5659->regmap, RT5659_RESET, 0);
-
 	/* Calibrate HPO Start */
 	/* Fine tune HP Performance */
 	regmap_write(rt5659->regmap, RT5659_BIAS_CUR_CTRL_8, 0xa502);
@@ -5380,14 +5377,6 @@ void rt5659_calibrate(struct rt5659_priv *rt5659)
 	regmap_write(rt5659->regmap, RT5659_HP_VOL, 0x8080);
 	regmap_write(rt5659->regmap, RT5659_HP_CHARGE_PUMP_1, 0x0c16);
 
-	regmap_write(rt5659->regmap, RT5659_RESET, 0);
-	regcache_cache_bypass(rt5659->regmap, false);
-	regcache_mark_dirty(rt5659->regmap);
-	regcache_sync(rt5659->regmap);
-
-	/* Recovery the volatile values */
-	regmap_write(rt5659->regmap, RT5659_MONO_NG2_CTRL_5, 0x0009);
-	
 	mutex_unlock(&rt5659->calibrate_mutex);
 }
 
