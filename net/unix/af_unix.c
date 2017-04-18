@@ -340,7 +340,7 @@ found:
  */
 
 static int unix_dgram_peer_wake_relay(wait_queue_t *q, unsigned mode, int flags,
-		void *key)
+				      void *key)
 {
 	struct unix_sock *u;
 	wait_queue_head_t *u_sleep;
@@ -348,7 +348,7 @@ static int unix_dgram_peer_wake_relay(wait_queue_t *q, unsigned mode, int flags,
 	u = container_of(q, struct unix_sock, peer_wake);
 
 	__remove_wait_queue(&unix_sk(u->peer_wake.private)->peer_wait,
-			q);
+			    q);
 	u->peer_wake.private = NULL;
 
 	/* relaying can only happen while the wq still exists */
@@ -381,7 +381,7 @@ static int unix_dgram_peer_wake_connect(struct sock *sk, struct sock *other)
 }
 
 static void unix_dgram_peer_wake_disconnect(struct sock *sk,
-		struct sock *other)
+					    struct sock *other)
 {
 	struct unix_sock *u, *u_other;
 
@@ -398,13 +398,13 @@ static void unix_dgram_peer_wake_disconnect(struct sock *sk,
 }
 
 static void unix_dgram_peer_wake_disconnect_wakeup(struct sock *sk,
-		struct sock *other)
+						   struct sock *other)
 {
 	unix_dgram_peer_wake_disconnect(sk, other);
 	wake_up_interruptible_poll(sk_sleep(sk),
-			POLLOUT |
-			POLLWRNORM |
-			POLLWRBAND);
+				   POLLOUT |
+				   POLLWRNORM |
+				   POLLWRBAND);
 }
 
 /* preconditions:
@@ -426,7 +426,7 @@ static int unix_dgram_peer_wake_me(struct sock *sk, struct sock *other)
 	return 0;
 }
 
-static int unix_writable(const struct sock *sk)
+static inline int unix_writable(struct sock *sk)
 {
 	return (atomic_read(&sk->sk_wmem_alloc) << 2) <= sk->sk_sndbuf;
 }
@@ -1946,14 +1946,7 @@ static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
 	if (flags&MSG_OOB)
 		goto out;
 
-	err = mutex_lock_interruptible(&u->readlock);
-	if (unlikely(err)) {
-		/* recvmsg() in non blocking mode is supposed to return -EAGAIN
-		 * sk_rcvtimeo is not honored by mutex_lock_interruptible()
-		 */
-		err = noblock ? -EAGAIN : -ERESTARTSYS;
-		goto out;
-	}
+	mutex_lock(&u->readlock);
 
 	skip = sk_peek_offset(sk, flags);
 
@@ -2150,12 +2143,12 @@ again:
 
 			timeo = unix_stream_data_wait(sk, timeo, last);
 
-			if (signal_pending(current)
-			    ||  mutex_lock_interruptible(&u->readlock)) {
+			if (signal_pending(current)) {
 				err = sock_intr_errno(timeo);
 				goto out;
 			}
 
+			mutex_lock(&u->readlock);
 			continue;
  unlock:
 			unix_state_unlock(sk);
