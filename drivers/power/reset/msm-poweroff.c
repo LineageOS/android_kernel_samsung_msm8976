@@ -405,6 +405,7 @@ static void msm_restart_prepare(const char *cmd)
 #endif
 	printk(KERN_NOTICE "%s : warm_reboot_set = %d\n",
 			__func__, warm_reboot_set);
+#ifndef CONFIG_PROJECT_GTS210VE
 #ifdef CONFIG_RESTART_REASON_SEC_PARAM
 	//fixme : Enabling Hard reset
 	/* Memory contents will be lost when when PMIC is configured for HARD RESET */
@@ -418,6 +419,7 @@ static void msm_restart_prepare(const char *cmd)
 	}
 #else
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+#endif
 #endif
 	pr_info("%s: Flushing the cache content\n",__func__);
 	flush_cache_all();
