@@ -85,6 +85,7 @@ extern struct dst_entry *	ip6_route_output(struct net *net,
 extern struct dst_entry *	ip6_route_lookup(struct net *net,
 						 struct flowi6 *fl6, int flags);
 
+extern void			ip6_route_init_special_entries(void);
 extern int			ip6_route_init(void);
 extern void			ip6_route_cleanup(void);
 
