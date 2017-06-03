@@ -172,9 +172,6 @@ obj-$(CONFIG_IPACK_BUS)		+= ipack/
 obj-$(CONFIG_NTB)		+= ntb/
 obj-$(CONFIG_ANDROID)		+= android/
 
-# <t-base drivers
-obj-$(CONFIG_TRUSTONIC_TEE)	+= gud/
-
 obj-$(CONFIG_CORESIGHT)		+= coresight/
 obj-$(CONFIG_ESOC)		+= esoc/
 
