@@ -11782,6 +11782,7 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     int ret;
     ENTER();
 
+    wlan_hdd_tdls_disable_offchan_and_teardown_links(pHddCtx);
     iniConfig = pHddCtx->cfg_ini;
     pHostapdState = WLAN_HDD_GET_HOSTAP_STATE_PTR(pHostapdAdapter);
 
@@ -16184,6 +16185,8 @@ int wlan_hdd_cfg80211_connect_start( hdd_adapter_t  *pAdapter,
         hddLog(VOS_TRACE_LEVEL_ERROR, "%s: wrong SSID len", __func__);
         return -EINVAL;
     }
+
+    wlan_hdd_tdls_disable_offchan_and_teardown_links(pHddCtx);
 
     pRoamProfile = &pWextState->roamProfile;
 
