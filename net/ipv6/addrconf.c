@@ -3087,6 +3087,8 @@ static int addrconf_notify(struct notifier_block *this, unsigned long event,
 		 * MTU falled under IPV6_MIN_MTU.
 		 * Stop IPv6 on this interface.
 		 */
+		addrconf_ifdown(dev, dev != net->loopback_dev);
+		break;
 
 	case NETDEV_DOWN:
 	case NETDEV_UNREGISTER:
