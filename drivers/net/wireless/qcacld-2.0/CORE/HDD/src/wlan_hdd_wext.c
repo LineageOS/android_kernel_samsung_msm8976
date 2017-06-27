@@ -12137,6 +12137,10 @@ static const struct iw_priv_args we_private_args[] = {
         0,
         "setGripTxPower" },
 #endif
+    {
+        WLAN_PRIV_SET_FTIES,
+        IW_PRIV_TYPE_CHAR | MAX_FTIE_SIZE,
+        0, "set_ft_ies" },
 };
 
 
