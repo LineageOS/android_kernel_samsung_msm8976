@@ -1035,6 +1035,9 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		gpio_set_value(dev->desc->force_stop_gpio, 0);
 	silent_ssr = 0;
 
+	if (strcmp(name, "AR6320") == 0)
+        dev->restart_level = RESET_SUBSYS_COUPLED;
+
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
 	 * However, print a message so that we know that a subsystem behaved

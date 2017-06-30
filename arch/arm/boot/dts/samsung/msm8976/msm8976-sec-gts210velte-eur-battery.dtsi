@@ -127,7 +127,7 @@
 		battery,swelling_low_temp_recov = <150>;
 		//battery,swelling_chg_current = <1500>;
 		battery,swelling_high_chg_current = <2100>;
-		battery,swelling_low_chg_current = <1500>;
+		battery,swelling_low_chg_current = <2100>;
 		battery,swelling_full_check_current_2nd = <200>;
 		battery,swelling_drop_float_voltage = <4200>;
 		battery,swelling_high_rechg_voltage = <4150>;

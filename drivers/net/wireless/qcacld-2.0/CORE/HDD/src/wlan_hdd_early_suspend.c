@@ -2261,6 +2261,7 @@ err_re_init:
          wlan_hdd_wakelocks_destroy(pHddCtx);
          wlan_hdd_deinit_tx_rx_histogram(pHddCtx);
          wiphy_unregister(pHddCtx->wiphy);
+         wlan_hdd_cfg80211_deinit(pHddCtx->wiphy);
          wiphy_free(pHddCtx->wiphy);
       }
    }
