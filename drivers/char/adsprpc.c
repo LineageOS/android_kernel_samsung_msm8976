@@ -280,6 +280,8 @@ static void fastrpc_mmap_add(struct fastrpc_mmap *map)
 		hlist_add_head(&map->hn, &fl->maps);
 		spin_unlock(&fl->hlock);
 	}
+bail:
+	return err;
 }
 
 static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
