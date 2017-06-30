@@ -4153,7 +4153,7 @@ static void load_tuning_file(struct device *dev, char *filename)
 	filp = filp_open(filename, O_RDONLY, 0);
 	if (IS_ERR(filp)) {
 		printk(KERN_ERR "%s File open failed\n", __func__);
-		return;
+		goto err;
 	}
 
 	l = filp->f_path.dentry->d_inode->i_size;
@@ -4163,7 +4163,7 @@ static void load_tuning_file(struct device *dev, char *filename)
 	if (dp == NULL) {
 		LCD_INFO("Can't not alloc memory for tuning file load\n");
 		filp_close(filp, current->files);
-		return;
+		goto err;
 	}
 	pos = 0;
 	memset(dp, 0, l);
@@ -4176,7 +4176,7 @@ static void load_tuning_file(struct device *dev, char *filename)
 		LCD_INFO("vfs_read() filed ret : %d\n", ret);
 		kfree(dp);
 		filp_close(filp, current->files);
-		return;
+		goto err;
 	}
 
 	filp_close(filp, current->files);
@@ -4186,6 +4186,10 @@ static void load_tuning_file(struct device *dev, char *filename)
 	sending_tune_cmd(dev, dp, l);
 
 	kfree(dp);
+	
+	return;
+err:
+	set_fs(fs);
 }
 
 static ssize_t tuning_show(struct device *dev,
@@ -4280,7 +4284,8 @@ int mdss_samsung_read_otherline_panel_data(struct samsung_display_driver_data *v
 
 		if (!IS_ERR_OR_NULL(vdd->panel_func.set_panel_fab_type))
 			vdd->panel_func.set_panel_fab_type(BASIC_FB_PANLE_TYPE);/*to work as original line panel*/
-		return -ENOENT;
+		ret = -ENOENT;
+		goto err;
 	}
 
 	l = filp->f_path.dentry->d_inode->i_size;
@@ -4290,7 +4295,8 @@ int mdss_samsung_read_otherline_panel_data(struct samsung_display_driver_data *v
 	if (dp == NULL) {
 		LCD_INFO("Can't not alloc memory for tuning file load\n");
 		filp_close(filp, current->files);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	pos = 0;
 	memset(dp, 0, l);
@@ -4303,7 +4309,8 @@ int mdss_samsung_read_otherline_panel_data(struct samsung_display_driver_data *v
 		LCD_INFO("vfs_read() filed ret : %d\n", ret);
 		kfree(dp);
 		filp_close(filp, current->files);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	if (!IS_ERR_OR_NULL(vdd->panel_func.parsing_otherline_pdata))
@@ -4315,6 +4322,9 @@ int mdss_samsung_read_otherline_panel_data(struct samsung_display_driver_data *v
 
 	kfree(dp);
 
+	return ret;
+err:
+	set_fs(fs);
 	return ret;
 }
 
