@@ -2760,6 +2760,7 @@ int hif_reset_target(HIF_DEVICE *hif_device)
 			("AR6000: %s invalid HIF DEVICE \n", __func__));
 		return -ENODEV;
 	}
+	sdio_claim_host(hif_device->func);
 	/* Disable sdio func->pull down WLAN_EN-->pull down DAT_2 line */
 	ret = mmc_power_save_host(hif_device->func->card->host);
 	if(ret) {
@@ -2778,6 +2779,7 @@ int hif_reset_target(HIF_DEVICE *hif_device)
 	}
 
 done:
+	sdio_release_host(hif_device->func);
 	return ret;
 }
 #endif
