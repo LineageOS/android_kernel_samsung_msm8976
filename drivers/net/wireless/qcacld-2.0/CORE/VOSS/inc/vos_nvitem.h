@@ -92,6 +92,17 @@ typedef enum
 }
 eDFS_CAC_STATUS;
 
+/**
+ * struct chan_to_ht_40_index_map - information of secondary channel index
+ *
+ * @ht_40_minus_index: HT40- channel index
+ * @ht_40_plus_index: HT40+ channel index
+ */
+struct chan_to_ht_40_index_map {
+   uint16 ht_40_minus_index;
+   uint16 ht_40_plus_index;
+};
+
 // country code type
 typedef v_U8_t v_COUNTRYCODE_t[VOS_COUNTRY_CODE_LEN];
 
@@ -254,4 +265,5 @@ VOS_STATUS vos_init_wiphy_from_nv_bin(void);
 const char * voss_DomainIdtoString(const v_U8_t domainIdCurrent);
 VOS_STATUS vos_init_wiphy_from_eeprom(void);
 bool vos_is_dsrc_channel(uint16_t);
+void vos_reset_global_reg_params(void);
 #endif // __VOS_NVITEM_H
