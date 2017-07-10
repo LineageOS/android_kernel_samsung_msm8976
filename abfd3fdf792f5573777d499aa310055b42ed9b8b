@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d9993093_cbc001e2",
+        "filename": "drivers/media/platform/msm/camera_v2/sensor/csiphy/msm_csiphy.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2017-07-10T20:43:20Z",
+      "side": 1,
+      "message": "original caf change didn\u0027t add that",
+      "range": {
+        "startLine": 1,
+        "startChar": 28,
+        "endLine": 1,
+        "endChar": 32
+      },
+      "revId": "abfd3fdf792f5573777d499aa310055b42ed9b8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
