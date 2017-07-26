@@ -11775,7 +11775,7 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     v_SINT_t i;
     hdd_config_t *iniConfig;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pHostapdAdapter);
-    tSmeConfigParams sme_config;
+    tSmeConfigParams *sme_config_ptr = NULL;
     v_BOOL_t MFPCapable =  VOS_FALSE;
     v_BOOL_t MFPRequired =  VOS_FALSE;
     u_int16_t prev_rsn_length = 0;
@@ -12204,16 +12204,22 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
      * As per spec 11n/11AC STA are QOS STA and may not connect to nonQOS 11n AP
      * Default enable QOS for SAP
      */
-    vos_mem_zero(&sme_config, sizeof(tSmeConfigParams));
-    sme_GetConfigParam(pHddCtx->hHal, &sme_config);
-    sme_config.csrConfig.WMMSupportMode = eCsrRoamWmmAuto;
+    sme_config_ptr = vos_mem_malloc(sizeof(*sme_config_ptr));
+    if (!sme_config_ptr) {
+        hddLog(LOGE, FL("memory allocation failed for sme_config"));
+        return -ENOMEM;
+    }
+    vos_mem_zero(sme_config_ptr, sizeof(tSmeConfigParams));
+    sme_GetConfigParam(pHddCtx->hHal, sme_config_ptr);
+    sme_config_ptr->csrConfig.WMMSupportMode = eCsrRoamWmmAuto;
+
     pIe = wlan_hdd_get_vendor_oui_ie_ptr(WMM_OUI_TYPE, WMM_OUI_TYPE_SIZE,
                                          pBeacon->tail, pBeacon->tail_len);
     if (!pIe && (pConfig->SapHw_mode == eCSR_DOT11_MODE_11a ||
                  pConfig->SapHw_mode == eCSR_DOT11_MODE_11g ||
                  pConfig->SapHw_mode == eCSR_DOT11_MODE_11b))
-        sme_config.csrConfig.WMMSupportMode = eCsrRoamWmmNoQos;
-    sme_UpdateConfig(pHddCtx->hHal, &sme_config);
+        sme_config_ptr->csrConfig.WMMSupportMode = eCsrRoamWmmNoQos;
+    sme_UpdateConfig(pHddCtx->hHal, sme_config_ptr);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)) && !defined(WITH_BACKPORTS)
     /* Linux kernel < 3.8 does not support ch width param. So for
@@ -12289,6 +12295,7 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
         WLANSAP_ResetSapConfigAddIE(pConfig, eUPDATE_IE_ALL);
         //Bss already started. just return.
         //TODO Probably it should update some beacon params.
+        vos_mem_free(sme_config_ptr);
         hddLog( LOGE, "Bss Already started...Ignore the request");
         EXIT();
         return 0;
@@ -12378,11 +12385,13 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
 #endif
 
     pHostapdState->bCommit = TRUE;
+    vos_mem_free(sme_config_ptr);
     EXIT();
 
    return 0;
 
 error:
+    vos_mem_free(sme_config_ptr);
     if (pHostapdAdapter->sessionCtx.ap.sapConfig.acs_cfg.ch_list) {
         vos_mem_free(pHostapdAdapter->sessionCtx.ap.sapConfig.acs_cfg.ch_list);
         pHostapdAdapter->sessionCtx.ap.sapConfig.acs_cfg.ch_list = NULL;
