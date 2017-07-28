@@ -21635,11 +21635,6 @@ int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
         pAdapter = pAdapterNode->pAdapter;
         pScanInfo = &pAdapter->scan_info;
 
-        if (sme_staInMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
-            hddLog(LOG1, FL("Roaming in progress, do not allow suspend"));
-            return -EAGAIN;
-        }
-
         if (pScanInfo->mScanPending && pAdapter->request)
         {
            INIT_COMPLETION(pScanInfo->abortscan_event_var);
@@ -21656,6 +21651,11 @@ int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
                          __func__);
               return -ETIME;
            }
+        }
+
+        if (sme_staInMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
+            hddLog(LOG1, FL("Roaming in progress, don't allow suspend"));
+            return -EAGAIN;
         }
 
         if (pAdapter->is_roc_inprogress)
