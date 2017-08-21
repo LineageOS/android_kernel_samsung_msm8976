@@ -1072,6 +1072,7 @@ struct dst_entry *ip6_blackhole_route(struct net *net, struct dst_entry *dst_ori
 static struct dst_entry *ip6_dst_check(struct dst_entry *dst, u32 cookie)
 {
 	struct rt6_info *rt;
+	u32 rt_cookie;
 
 	rt = (struct rt6_info *) dst;
 
@@ -1082,7 +1083,7 @@ static struct dst_entry *ip6_dst_check(struct dst_entry *dst, u32 cookie)
 	if (rt->rt6i_genid != rt_genid(dev_net(rt->dst.dev)))
 		return NULL;
 
-	if (!rt->rt6i_node || (rt->rt6i_node->fn_sernum != cookie))
+	if (!rt6_get_cookie_safe(rt, &rt_cookie) || rt_cookie != cookie)
 		return NULL;
 
 	if (rt6_check_expired(rt))
@@ -1121,8 +1122,14 @@ static void ip6_link_failure(struct sk_buff *skb)
 			dst_hold(&rt->dst);
 			if (ip6_del_rt(rt))
 				dst_free(&rt->dst);
-		} else if (rt->rt6i_node && (rt->rt6i_flags & RTF_DEFAULT)) {
-			rt->rt6i_node->fn_sernum = -1;
+		} else {
+			struct fib6_node *fn;
+
+			rcu_read_lock();
+			fn = rcu_dereference(rt->rt6i_node);
+			if (fn && (rt->rt6i_flags & RTF_DEFAULT))
+				fn->fn_sernum = -1;
+			rcu_read_unlock();
 		}
 	}
 }
