@@ -135,6 +135,7 @@ static bool get_dload_mode(void)
 }
 #endif
 
+#if 0
 static void enable_emergency_dload_mode(void)
 {
 	int ret;
@@ -159,6 +160,7 @@ static void enable_emergency_dload_mode(void)
 	if (ret)
 		pr_err("Failed to set secure EDLOAD mode: %d\n", ret);
 }
+#endif
 
 static int dload_set(const char *val, struct kernel_param *kp)
 {
@@ -378,9 +380,11 @@ static void msm_restart_prepare(const char *cmd)
 					&& !kstrtoul(cmd + 5, 0, &value)) {
 			__raw_writel(0xabce0000 | value, restart_reason);
 #endif
+#if 0
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
 			warm_reboot_set = 1;
+#endif
 		} else if (!strncmp(cmd, "lpm", 3)) {
 			__raw_writel(0x12345678, restart_reason);/* Do normal reboot from lpm*/
 		} else if (strlen(cmd) == 0) {
