@@ -1413,7 +1413,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
 
    pAdapter = pHddCtx->sta_to_adapter[staId];
    if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic)) {
-      hddLog(LOGE, FL("invalid adapter %p for sta Id %d"), pAdapter, staId);
+      hddLog(LOGE, FL("invalid adapter %pK for sta Id %d"), pAdapter, staId);
       return VOS_STATUS_E_FAILURE;
    }
 
