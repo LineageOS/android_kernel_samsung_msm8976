@@ -1070,7 +1070,7 @@ VOS_STATUS hdd_mon_rx_packet_cbk(v_VOID_t *vos_ctx, adf_nbuf_t rx_buf,
 	adapter = adapter_node->pAdapter;
 	if ((NULL == adapter) || (WLAN_HDD_ADAPTER_MAGIC != adapter->magic)) {
 		VOS_TRACE(VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
-			  "invalid adapter %p for sta Id %d", adapter, sta_id);
+			  "invalid adapter %pK for sta Id %d", adapter, sta_id);
 		return VOS_STATUS_E_FAILURE;
 	}
 
