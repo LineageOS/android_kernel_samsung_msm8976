@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -505,7 +505,8 @@ typedef struct sPESession           // Added to Support BT-AMP
     uint8_t vendor_specific_vht_ie_type;
     uint8_t vendor_specific_vht_ie_sub_type;
     bool vendor_vht_for_24ghz_sap;
-
+    uint8_t deauthmsgcnt;
+    uint8_t disassocmsgcnt;
 } tPESession, *tpPESession;
 
 /*-------------------------------------------------------------------------
