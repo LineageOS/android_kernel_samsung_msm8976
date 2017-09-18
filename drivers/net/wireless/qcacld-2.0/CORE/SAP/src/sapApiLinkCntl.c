@@ -761,7 +761,7 @@ WLANSAP_RoamCallback
                         pSapContext = pMac->sap.sapCtxList[intf].pSapContext;
                         VOS_TRACE(VOS_MODULE_ID_SAP,
                                   VOS_TRACE_LEVEL_ERROR,
-                        "sapdfs: no available channel for sapctx[%p], StopBss",
+                        "sapdfs: no available channel for sapctx[%pK], StopBss",
                                   pSapContext);
 
                         WLANSAP_StopBss(pSapContext);
@@ -1227,7 +1227,7 @@ WLANSAP_RoamCallback
                                       pMac->sap.sapCtxList[intf].pSapContext;
                                       VOS_TRACE(VOS_MODULE_ID_SAP,
                                                 VOS_TRACE_LEVEL_INFO_MED,
-                                    "sapdfs:issue chnl change for sapctx[%p]",
+                                    "sapdfs:issue chnl change for sapctx[%pK]",
                                                 pSapContext);
                                    /* Send channel switch request */
                                    sapEvent.event = eWNI_SME_CHANNEL_CHANGE_REQ;
@@ -1243,7 +1243,7 @@ WLANSAP_RoamCallback
                                        halStatus = eHAL_STATUS_FAILURE;
                                        VOS_TRACE(VOS_MODULE_ID_SAP,
                                                  VOS_TRACE_LEVEL_ERROR,
-                                       FL("post chnl chng req failed, sap[%p]"),
+                                       FL("post chnl chng req failed, sap[%pK]"),
                                        sapContext);
                                    }
                                    else
@@ -1258,7 +1258,7 @@ WLANSAP_RoamCallback
                      else
                      {
                          VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
-                         FL("sapdfs: sapctx[%p] ready but not concurrent sap"),
+                         FL("sapdfs: sapctx[%pK] ready but not concurrent sap"),
                          sapContext);
 
                          halStatus = eHAL_STATUS_SUCCESS;
@@ -1319,7 +1319,7 @@ WLANSAP_RoamCallback
                       sapContext->sapsMachine = eSAP_DISCONNECTED;
 
                       VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
-                      "sapdfs: from state %s => %s with ignore cac FALSE on sapctx[%p]",
+                      "sapdfs: from state %s => %s with ignore cac FALSE on sapctx[%pK]",
                       "eSAP_DISCONNECTING", "DISCONNECTED", sapContext);
 
                       /* DFS Channel */
@@ -1331,7 +1331,7 @@ WLANSAP_RoamCallback
                    else
                    {
                       VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
-                      "sapdfs: from state %s => %s with ignore cac TRUE on sapctx[%p]",
+                      "sapdfs: from state %s => %s with ignore cac TRUE on sapctx[%pK]",
                       "eSAP_DISCONNECTING", "eSAP_STARTING", sapContext);
 
                       /* Start beaconing on the new channel */
@@ -1347,7 +1347,7 @@ WLANSAP_RoamCallback
                else
                {
                   VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
-                  "sapdfs: from state %s => %s on sapctx[%p]",
+                  "sapdfs: from state %s => %s on sapctx[%pK]",
                   "eSAP_DISCONNECTING", "eSAP_STARTING", sapContext);
 
                   /* non-DFS channel */
