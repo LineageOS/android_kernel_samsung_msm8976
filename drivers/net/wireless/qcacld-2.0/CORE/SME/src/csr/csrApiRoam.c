@@ -19326,6 +19326,8 @@ void csrInitOperatingClasses(tHalHandle hHal)
              if (!found) {
                  opClasses[i]= class;
                  i++;
+                 if (i == SIR_MAC_MAX_SUPP_OPER_CLASSES)
+                     break;
              }
         }
     }
