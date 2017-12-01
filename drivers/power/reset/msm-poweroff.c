@@ -32,12 +32,6 @@
 #include <soc/qcom/restart.h>
 #include <soc/qcom/watchdog.h>
 
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/qcom/sec_debug.h>
-#include <linux/notifier.h>
-#include <linux/ftrace.h>
-#endif
-
 #define EMERGENCY_DLOAD_MAGIC1    0x322A4F99
 #define EMERGENCY_DLOAD_MAGIC2    0xC67E4350
 #define EMERGENCY_DLOAD_MAGIC3    0x77777777
@@ -122,18 +116,12 @@ void set_dload_mode(int on)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
 
 	dload_mode_enabled = on;
-#ifdef CONFIG_SEC_DEBUG
-	pr_err("set_dload_mode <%d> ( 0x%x )\n", on,
-			(unsigned int) CALLER_ADDR0);
-#endif
 }
-EXPORT_SYMBOL(set_dload_mode);
-#if 0/*  Always WARM Reset */
+
 static bool get_dload_mode(void)
 {
 	return dload_mode_enabled;
 }
-#endif
 
 static void enable_emergency_dload_mode(void)
 {
@@ -226,14 +214,8 @@ static void halt_spmi_pmic_arbiter(void)
 
 static void msm_restart_prepare(const char *cmd)
 {
-	//bool need_warm_reset = false;
-	unsigned int warm_reboot_set = 0;
-	unsigned long sud_val = 0;
-#ifdef CONFIG_SEC_DEBUG
-	unsigned long value;
-#endif
+	bool need_warm_reset = false;
 
-#ifndef CONFIG_SEC_DEBUG
 #ifdef CONFIG_MSM_DLOAD_MODE
 
 	/* Write download mode flags if we're panic'ing
@@ -244,27 +226,7 @@ static void msm_restart_prepare(const char *cmd)
 	set_dload_mode(download_mode &&
 			(in_panic || restart_mode == RESTART_DLOAD));
 #endif
-#endif
-#ifdef CONFIG_SEC_DEBUG_LOW_LOG
-#ifdef CONFIG_MSM_DLOAD_MODE
-#ifdef CONFIG_SEC_DEBUG
-	if (sec_debug_is_enabled()
-	&& ((restart_mode == RESTART_DLOAD) || in_panic))
-		set_dload_mode(1);
-	else
-		set_dload_mode(0);
-#else
-	set_dload_mode(0);
-	set_dload_mode(in_panic);
-	if (restart_mode == RESTART_DLOAD)
-		set_dload_mode(1);
-#endif
-#endif
-#endif
-	pr_info("preparing for restart now\n");
-	warm_reboot_set = 0;
 
-#if 0
 	if (qpnp_pon_check_hard_reset_stored()) {
 		/* Set warm reset as true when device is in dload mode
 		 *  or device doesn't boot up into recovery, bootloader or rtc.
@@ -291,7 +253,6 @@ static void msm_restart_prepare(const char *cmd)
 	}
 
 	if (cmd != NULL) {
-		printk(KERN_NOTICE " Reboot cmd=%s\n",cmd);
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
@@ -317,109 +278,13 @@ static void msm_restart_prepare(const char *cmd)
 			if (!ret)
 				__raw_writel(0x6f656d00 | (code & 0xff),
 					     restart_reason);
-#endif
-	if (cmd != NULL) {
-		printk(KERN_NOTICE " Reboot cmd=%s\n",cmd);
-		if (!strncmp(cmd, "bootloader", 10)) {
-			__raw_writel(0x77665500, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "recovery", 8)) {
-			__raw_writel(0x77665502, restart_reason);
-		} else if (!strcmp(cmd, "rtc")) {
-			__raw_writel(0x77665503, restart_reason);
-#ifdef CONFIG_SEC_PERIPHERAL_SECURE_CHK
-		} else if (!strncmp(cmd, "peripheral_hw_reset", 19)) {
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_SECURE_CHECK_FAIL);
-			__raw_writel(0x77665507, restart_reason);
-			warm_reboot_set = 1;
-#endif
-		} else if (!strncmp(cmd, "oem-", 4)) {
-			unsigned long code;
-			int ret;
-			ret = kstrtoul(cmd + 4, 16, &code);
-			if (!ret)
-				__raw_writel(0x6f656d00 | (code & 0xff),
-					     restart_reason);
-#ifdef CONFIG_SEC_DEBUG
-		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {
-			__raw_writel(SECDEBUG_MODE, restart_reason);
-			warm_reboot_set = 1;
-#endif
-		} else if (!strncmp(cmd, "download", 8)) {
-			__raw_writel(0x12345671, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "nvbackup", 8)) {
-			__raw_writel(0x77665511, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "nvrestore", 9)) {
-			__raw_writel(0x77665512, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "nverase", 7)) {
-			__raw_writel(0x77665514, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "nvrecovery", 10)) {
-			__raw_writel(0x77665515, restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "sud", 3)) {
-			if (strlen(cmd) == 5)
-				sud_val = ((cmd[3] - '0') * 10) + (cmd[4] - '0');
-			else
-				sud_val = cmd[3] - '0';
-			__raw_writel(0xabcf0000 | sud_val,restart_reason);
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "debug", 5)
-					&& !kstrtoul(cmd + 5, 0, &value)) {
-			__raw_writel(0xabcd0000 | value, restart_reason);
-		} else if (!strncmp(cmd, "cpdebug", 7) /*  set cp debug level */
-					&& !kstrtoul(cmd + 7, 0, &value)) {
-			__raw_writel(0xfedc0000 | value, restart_reason);
-#if defined(CONFIG_MUIC_SUPPORT_RUSTPROOF)
-		} else if (!strncmp(cmd, "swsel", 5) /* set switch value */
-					&& !kstrtoul(cmd + 5, 0, &value)) {
-			__raw_writel(0xabce0000 | value, restart_reason);
-#endif
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
-			warm_reboot_set = 1;
-		} else if (!strncmp(cmd, "lpm", 3)) {
-			__raw_writel(0x12345678, restart_reason);/* Do normal reboot from lpm*/
-		} else if (strlen(cmd) == 0) {
-			printk(KERN_NOTICE "%s : value of cmd is NULL.\n", __func__);
-			__raw_writel(0x12345678, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
-#ifdef CONFIG_SEC_DEBUG
-		pr_info("%s : restart_reason = 0x%x\n",
-				__func__, __raw_readl(restart_reason));
-#endif
 	}
-#ifdef CONFIG_SEC_DEBUG
-	else {
-		printk(KERN_NOTICE "%s: clear reset flag\n", __func__);
-		__raw_writel(0x12345678, restart_reason);
-		printk(KERN_NOTICE "%s : restart_reason = 0x%x\n",
-				__func__, __raw_readl(restart_reason));
-		warm_reboot_set = 1;
-	}
-#endif
-	printk(KERN_NOTICE "%s : warm_reboot_set = %d\n",
-			__func__, warm_reboot_set);
-#ifdef CONFIG_RESTART_REASON_SEC_PARAM
-	//fixme : Enabling Hard reset
-	/* Memory contents will be lost when when PMIC is configured for HARD RESET */
-	if (warm_reboot_set == 1) {
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-		printk(KERN_NOTICE "Configure as WARM RESET\n");
-	}
-	else {
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
-		printk(KERN_NOTICE "Configure as HARD RESET\n");
-	}
-#else
-	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-#endif
-	pr_info("%s: Flushing the cache content\n",__func__);
+
 	flush_cache_all();
 
 	/*outer_flush_all is not supported by 64bit kernel*/
@@ -465,7 +330,7 @@ void do_msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	pr_notice("Going down for restart now\n");
 
 	msm_restart_prepare(cmd);
-	pr_info("%s: end of msm_restart_pareare\n",__func__);
+
 #ifdef CONFIG_MSM_DLOAD_MODE
 	/*
 	 * Trigger a watchdog bite here and if this fails,
@@ -473,10 +338,7 @@ void do_msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	 */
 
 	if (WDOG_BITE_ON_PANIC && in_panic)
-	{
-		printk(KERN_NOTICE " WDOG_BITE_ON_PANIC : %d, in_panic : %d\n", WDOG_BITE_ON_PANIC, in_panic);
 		msm_trigger_wdog_bite();
-	}
 #endif
 
 	/* Needed to bypass debug image on some chips */
@@ -527,19 +389,6 @@ static void do_msm_poweroff(void)
 	return;
 }
 
-#ifdef CONFIG_SEC_DEBUG
-static int dload_mode_normal_reboot_handler(struct notifier_block *nb,
-				unsigned long l, void *p)
-{
-	set_dload_mode(0);
-	return 0;
-}
-
-static struct notifier_block dload_reboot_block = {
-	.notifier_call = dload_mode_normal_reboot_handler
-};
-#endif
-
 static int msm_restart_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -552,9 +401,6 @@ static int msm_restart_probe(struct platform_device *pdev)
 		scm_dload_supported = true;
 
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
-#ifdef CONFIG_SEC_DEBUG
-	register_reboot_notifier(&dload_reboot_block);
-#endif
 	np = of_find_compatible_node(NULL, NULL, DL_MODE_PROP);
 	if (!np) {
 		pr_err("unable to find DT imem DLOAD mode node\n");
@@ -573,13 +419,6 @@ static int msm_restart_probe(struct platform_device *pdev)
 			pr_err("unable to map imem EDLOAD mode offset\n");
 	}
 
-	set_dload_mode(download_mode);
-
-#ifdef CONFIG_SEC_DEBUG_LOW_LOG
-	if (!sec_debug_is_enabled()) {
-		set_dload_mode(0);
-	}
-#endif
 #endif
 	np = of_find_compatible_node(NULL, NULL,
 				"qcom,msm-imem-restart_reason");
