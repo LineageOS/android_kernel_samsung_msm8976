@@ -89,7 +89,7 @@ int		audit_ever_enabled;
 EXPORT_SYMBOL_GPL(audit_enabled);
 
 /* Default state when kernel boots without any parameters. */
-static int	audit_default = 1;
+static int	audit_default;
 
 /* If auditing cannot proceed, audit_failure selects what happens. */
 static int	audit_failure = AUDIT_FAIL_PRINTK;
@@ -191,7 +191,8 @@ void audit_panic(const char *message)
 	case AUDIT_FAIL_SILENT:
 		break;
 	case AUDIT_FAIL_PRINTK:
-		printk(KERN_ERR "audit: %s\n", message);
+		if (printk_ratelimit())
+			printk(KERN_ERR "audit: %s\n", message);
 		break;
 	case AUDIT_FAIL_PANIC:
 		/* test audit_pid since printk is always losey, why bother? */
@@ -261,12 +262,13 @@ void audit_log_lost(const char *message)
 	}
 
 	if (print) {
-		printk(KERN_WARNING
-			"audit: audit_lost=%d audit_rate_limit=%d "
-			"audit_backlog_limit=%d\n",
-			atomic_read(&audit_lost),
-			audit_rate_limit,
-			audit_backlog_limit);
+		if (printk_ratelimit())
+			printk(KERN_WARNING
+				"audit: audit_lost=%d audit_rate_limit=%d "
+				"audit_backlog_limit=%d\n",
+				atomic_read(&audit_lost),
+				audit_rate_limit,
+				audit_backlog_limit);
 		audit_panic(message);
 	}
 }
