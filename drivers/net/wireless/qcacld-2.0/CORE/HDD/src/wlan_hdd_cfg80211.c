@@ -17527,7 +17527,7 @@ static int __wlan_hdd_cfg80211_join_ibss(struct wiphy *wiphy,
        if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_IBSS_AUTO_BSSID, 0,
                         NULL, eANI_BOOLEAN_FALSE)==eHAL_STATUS_FAILURE) {
            hddLog (VOS_TRACE_LEVEL_ERROR,
-                   "%s:ccmCfgStInt faild for WNI_CFG_IBSS_AUTO_BSSID", __func__);
+                   "%s:ccmCfgStInt failed for WNI_CFG_IBSS_AUTO_BSSID", __func__);
            return -EIO;
        }
        vos_mem_copy((v_U8_t *)bssid, (v_U8_t *)params->bssid, sizeof(bssid));
@@ -17538,7 +17538,7 @@ static int __wlan_hdd_cfg80211_join_ibss(struct wiphy *wiphy,
                          NULL, eANI_BOOLEAN_FALSE)==eHAL_STATUS_FAILURE)
         {
             hddLog (VOS_TRACE_LEVEL_ERROR,
-                    "%s:ccmCfgStInt faild for WNI_CFG_IBSS_AUTO_BSSID", __func__);
+                    "%s:ccmCfgStInt failed for WNI_CFG_IBSS_AUTO_BSSID", __func__);
             return -EIO;
         }
         vos_mem_copy((v_U8_t *)bssid,
