@@ -856,16 +856,6 @@ void hdd_wlan_get_version(hdd_adapter_t *pAdapter, union iwreq_data *wrqu,
                                      CRMId,
                                      pHWversion);
     } else {
-#ifdef SEC_WRITE_VERSION_IN_FILE
-        tANI_U8 versionString[128];
-        scnprintf(versionString, 128,
-				"Host SW:%s, FW:%d.%d.%d.%d, HW:%s",
-				QWLAN_VERSIONSTR, MSPId, mSPId, SIId, CRMId, pHWversion);
-        if (!wlan_hdd_sec_write_version_file(versionString)) {
-			hddLog(VOS_TRACE_LEVEL_FATAL,
-					"%s: faild to write version info in the file",__func__);
-        }
-#endif /* SEC_WRITE_VERSION_IN_FILE */
         pr_info("Host SW:%s, FW:%d.%d.%d.%d, HW:%s\n",
                 QWLAN_VERSIONSTR,
                 MSPId,

@@ -1898,11 +1898,6 @@ void wlan_hdd_cfg80211_link_layer_stats_init(hdd_context_t *pHddCtx);
 
 void hdd_update_macaddr(hdd_config_t *cfg_ini, v_MACADDR_t hw_macaddr);
 
-/* Samsung specific code */
-#ifdef SEC_WRITE_VERSION_IN_FILE
-int wlan_hdd_sec_write_version_file (char *swversion);
-#endif /* SEC_WRITE_VERSION_IN_FILE */
-
 #if defined(FEATURE_WLAN_LFR) && defined(WLAN_FEATURE_ROAM_SCAN_OFFLOAD)
 void wlan_hdd_disable_roaming(hdd_adapter_t *pAdapter);
 void wlan_hdd_enable_roaming(hdd_adapter_t *pAdapter);

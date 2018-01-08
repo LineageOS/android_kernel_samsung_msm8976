@@ -13371,40 +13371,6 @@ void wlan_hdd_netdev_notifiers_cleanup(hdd_context_t * hdd_ctx)
 	unregister_netdevice_notifier(&hdd_netdev_notifier);
 }
 
-// write version info in /data/.wifiver.info
-#ifdef SEC_WRITE_VERSION_IN_FILE
-#include "qwlan_version.h"
-
-#define SEC_VERSION_FILEPATH	"/data/misc/conn/.wifiver.info"
-
-int wlan_hdd_sec_write_version_file(char *swversion)
-{
-	int ret = 0;
-	struct file *fp = NULL;
-	char strbuffer[128]   = {0};
-	mm_segment_t oldfs   = {0};
-
-	oldfs = get_fs();
-	set_fs(get_ds());
-
-	fp = filp_open(SEC_VERSION_FILEPATH, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
-	if (IS_ERR(fp)) {
-		printk("%s: can't create file : %s\n",__func__,SEC_VERSION_FILEPATH);
-	} else {
-		if (fp->f_mode & FMODE_WRITE) {
-			snprintf(strbuffer,sizeof(strbuffer),"%s\n", swversion);
-			if (vfs_write(fp, strbuffer, strlen(strbuffer), &fp->f_pos) < 0)
-				printk("%s: can't write file : %s",__func__,SEC_VERSION_FILEPATH);
-			else
-				ret = 1;
-		}
-	}
-	if (fp && (!IS_ERR(fp)))
-		filp_close(fp, NULL);
-	set_fs(oldfs);
-	return ret;
-}
-#endif /* SEC_WRITE_VERSION_IN_FILE */
 /**---------------------------------------------------------------------------
 
   \brief hdd_exchange_version_and_caps() - HDD function to exchange version and capability
