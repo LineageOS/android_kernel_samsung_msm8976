@@ -55,15 +55,15 @@ static ssize_t rmidev_sysfs_attn_state_show(struct kobject *kobj,
 static struct bin_attribute attr_data = {
 	.attr = {
 		.name = "data",
-		.mode = (S_IRUGO | S_IWUSR | S_IWGRP),
+		.mode = (S_IRUGO | S_IWUSR),
 	},
 	.size = 0,
 	.read = rmidev_sysfs_data_show,
 	.write = rmidev_sysfs_data_store,
 };
 
-RMI_KOBJ_ATTR(open, S_IWUSR | S_IWGRP, synaptics_rmi4_show_error, rmidev_sysfs_open_store);
-RMI_KOBJ_ATTR(release, S_IWUSR | S_IWGRP, synaptics_rmi4_show_error, rmidev_sysfs_release_store);
+RMI_KOBJ_ATTR(open, S_IWUSR, synaptics_rmi4_show_error, rmidev_sysfs_open_store);
+RMI_KOBJ_ATTR(release, S_IWUSR, synaptics_rmi4_show_error, rmidev_sysfs_release_store);
 RMI_KOBJ_ATTR(attn_state, S_IRUGO, rmidev_sysfs_attn_state_show, synaptics_rmi4_store_error);
 
 static struct attribute *attrs[] = {
