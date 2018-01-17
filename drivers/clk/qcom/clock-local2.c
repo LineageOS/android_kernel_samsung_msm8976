@@ -211,9 +211,9 @@ static int rcg_clk_enable(struct clk *c)
 {
 	struct rcg_clk *rcg = to_rcg_clk(c);
 
-	WARN(rcg->current_freq == &rcg_dummy_freq,
-		"Attempting to prepare %s before setting its rate. "
-		"Set the rate first!\n", rcg->c.dbg_name);
+	if (rcg->current_freq == &rcg_dummy_freq)
+		pr_err("Attempting to prepare %s before setting its rate. "
+		       "Set the rate first!\n", rcg->c.dbg_name);
 
 	if (!rcg->non_local_children || rcg->current_freq == &rcg_dummy_freq)
 		return 0;
