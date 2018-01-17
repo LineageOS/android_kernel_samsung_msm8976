@@ -613,7 +613,6 @@ static inline bool of_property_read_bool(const struct device_node *np,
 	 * configuration error, since even a boolean property having a value of
 	 * 0 will be treated as "true" by the DT framework.
 	 */
-	WARN_ON(prop && prop->length);
 
 	return prop ? true : false;
 }
