@@ -613,7 +613,8 @@ static inline bool of_property_read_bool(const struct device_node *np,
 	 * configuration error, since even a boolean property having a value of
 	 * 0 will be treated as "true" by the DT framework.
 	 */
-	WARN_ON(prop && prop->length);
+	WARN((prop && prop->length), "Boolean property %s has nonzero number of "
+				     "value cells.\n", propname);
 
 	return prop ? true : false;
 }
