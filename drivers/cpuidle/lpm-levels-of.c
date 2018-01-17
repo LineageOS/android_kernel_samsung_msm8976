@@ -890,7 +890,7 @@ static int calculate_residency(struct power_params *base_pwr,
 	residency /= (int32_t)(base_pwr->ss_power  - next_pwr->ss_power);
 
 	if (residency < 0) {
-		__WARN_printf("%s: Incorrect power attributes for LPM\n",
+		pr_err("%s: Incorrect power attributes for LPM\n",
 				__func__);
 		return 0;
 	}
