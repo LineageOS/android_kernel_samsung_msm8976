@@ -134,14 +134,14 @@
 
 	mux_sel {
 		compatible = "samsung,sec-mux-sel";
-		mux_sel,mux_sel_1_en = <1>;
+		mux_sel,mux_sel_1_en;
 		mux_sel,mux_sel_1 = <&msm_gpio 143 0x0>;
 		mux_sel,mux_sel_1_type = <3>; /* EAR_ADC_MUX_SEL | BATT_ID_MUX_SEL */
 		mux_sel,mux_sel_1_mpp = <2>; /* SEC_MPP2_MUX_SEL */
 		mux_sel,mux_sel_1_low = <1>; /* SEC_MUX_SEL_BATT_ID */
 		mux_sel,mux_sel_1_high = <0>; /* SEC_MUX_SEL_EAR_ADC */
 
-		mux_sel,mux_sel_2_en = <1>;
+		mux_sel,mux_sel_2_en;
 		mux_sel,mux_sel_2 = <&msm_gpio 88 0x0>;
 		mux_sel,mux_sel_2_type = <20>; /* BATT_THM_MUX_SEL | AP_THM_MUX_SEL */
 		mux_sel,mux_sel_2_mpp = <4>; /* SEC_MPP4_MUX_SEL */
