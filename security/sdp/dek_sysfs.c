@@ -116,13 +116,13 @@ int get_sdp_sysfs_key_dump(void) {
 }
 #else
 int dek_create_sysfs_key_dump(struct device *d) {
-    printk("key_dump feature not available");
+    printk("key_dump feature not available\n");
 
     return 0;
 }
 
 int get_sdp_sysfs_key_dump(void) {
-    printk("key_dump feature not available");
+    printk("key_dump feature not available\n");
 
     return 0;
 }
