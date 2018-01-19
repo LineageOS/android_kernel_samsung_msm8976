@@ -183,8 +183,8 @@
 			interrupts = <120 0>;
 			interrupt-parent = <&msm_gpio>;
 
-			realtek,in3-differential = "true";
-			realtek,in4-differential = "true";
+			realtek,in3-differential;
+			realtek,in4-differential;
 
 			realtek,gpio_reset = <&msm_gpio 144 0x0>;
 			realtek,gpio_ldo = <&pm8950_gpios 7 0x00>;
