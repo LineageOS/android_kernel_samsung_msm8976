@@ -5248,22 +5248,6 @@ static int hdd_driver_command(hdd_adapter_t *pAdapter,
            /* Change band request received */
            ret = hdd_setBand_helper(pAdapter->dev, ptr);
        }
-#ifdef SEC_CONFIG_GRIP_POWER
-       else if(strncmp(command, "SET_TX_POWER_CALLING", 20) == 0)
-       {
-           tANI_U8 *ptr = command ;
-           /* Change band request received */
-
-           /* First 8 bytes will have "SETBAND " and
-            * 9 byte will have band setting value */
-           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s: SetGripPower Info  comm %s UL %d, TL %d", __func__, command, priv_data.used_len, priv_data.total_len);
-           ret = hdd_setGripPwr_helper(pAdapter->dev, ptr);
-           if(ret < 0)
-               VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                          "%s: failed to setGripPwr ret=%d", __func__, ret);
-       }
-#endif
        else if (strncmp(command, "SETWMMPS", 8) == 0)
        {
            tANI_U8 *ptr = command;

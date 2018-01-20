@@ -449,9 +449,6 @@ static const hdd_freq_chan_map_t freq_chan_map[] = { {2412, 1}, {2417, 2},
 
 #define WLAN_GET_LINK_SPEED          (SIOCIWFIRSTPRIV + 31)
 
-#ifdef SEC_CONFIG_GRIP_POWER
-#define WLAN_SET_GRIP_PWR_CONFIG     (SIOCIWFIRSTPRIV + 33)
-#endif
 /* Private ioctls and their sub-ioctls */
 #define WLAN_PRIV_SET_TWO_INT_GET_NONE   (SIOCIWFIRSTPRIV + 28)
 #define WE_SET_SMPS_PARAM    1
@@ -10571,77 +10568,6 @@ int hdd_setBand_helper(struct net_device *dev, const char *command)
     return hdd_setBand(dev, band);
 }
 
-#ifdef SEC_CONFIG_GRIP_POWER
-int hdd_setGripPwr(struct net_device *dev, u8 set_value)
-{
-    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(pAdapter);
-    tSirTxPowerLimit *hddtxlimit;
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
-    unsigned int pwr_2g, pwr_5g;
-    bool status = FALSE;
-    hddtxlimit = vos_mem_malloc(sizeof(tSirTxPowerLimit));
-    if (!hddtxlimit)
-    {
-        hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Memory allocation for TxPowerLimit failed!",
-               __func__);
-        return -1;
-    }
-    if ( 0 == set_value ) // Restore
-    {
-        hddLog(VOS_TRACE_LEVEL_INFO, "%s: Restoring the original maximum tx power",
-                __func__);
-        hddtxlimit->txPower2g = pHddCtx->cfg_ini->TxPower2g;
-        hddtxlimit->txPower5g = pHddCtx->cfg_ini->TxPower5g;
-        if( sme_TxpowerLimit(hHal, hddtxlimit) !=
-            eHAL_STATUS_SUCCESS )
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Setting maximum tx power failed",
-            __func__);
-            return -1;
-        }
-    }
-    else if ( 1 == set_value ) // enable
-    {
-        extern bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g);
-        status = wlan_hdd_sec_get_grip_power(&pwr_2g, &pwr_5g);
-        if (status == FALSE)
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Can't get grip power", __func__);
-            vos_mem_free(hddtxlimit);
-            return -1;
-        }
-        hddLog(VOS_TRACE_LEVEL_INFO, "%s: Setting the configured tx power:%d %d dbm",
-                __func__, pwr_2g, pwr_5g);
-        hddtxlimit->txPower2g = pwr_2g;
-        hddtxlimit->txPower5g = pwr_5g;
-        if( sme_TxpowerLimit(hHal, hddtxlimit) !=
-            eHAL_STATUS_SUCCESS )
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Setting maximum tx power failed",
-                __func__);
-            return -1;
-        }
-     }
-     else
-     {
-         hddLog(LOGE, "Invalid arg  %d in WE_SET_SS_GRIP_TX_POWER", set_value);
-         return -1;
-     }
-     return 0;
-}
-int hdd_setGripPwr_helper(struct net_device *dev, const char *command)
-{
-    u8 tmp_set_value, set_value;
-	/*convert the set power value from ascii to integer*/
-    tmp_set_value = command[WLAN_HDD_UI_SET_GRIP_TX_PWR_VALUE_OFFSET] - '0';
-    if(tmp_set_value == 0) set_value =1 ;
-    else			   set_value = 0;
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
-              "%s:tmp_set_value : %d, set_value : %d!!!", __func__, tmp_set_value, set_value);
-    return hdd_setGripPwr(dev, set_value);
-}
-#endif
 static int __iw_set_band_config(struct net_device *dev,
                                 struct iw_request_info *info,
                                 union iwreq_data *wrqu, char *extra)
@@ -10665,33 +10591,6 @@ static int __iw_set_band_config(struct net_device *dev,
 
     return hdd_setBand(dev, value[0]);
 }
-#ifdef SEC_CONFIG_GRIP_POWER
-static int __iw_set_grip_pwr_config(struct net_device *dev,
-                                    struct iw_request_info *info,
-                                    union iwreq_data *wrqu, char *extra)
-{
-    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    int *value = (int *)extra;
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, "%s: ", __func__);
-    if ((WLAN_HDD_GET_CTX(pAdapter))->isLogpInProgress)
-    {
-        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
-                  "%s:LOGP in Progress. Ignore!!!", __func__);
-        return -EBUSY;
-    }
-    return hdd_setGripPwr(dev, value[0]);
-}
-static int iw_set_grip_pwr_config(struct net_device *dev,
-                                  struct iw_request_info *info,
-                                  union iwreq_data *wrqu, char *extra)
-{
-    int ret;
-    vos_ssr_protect(__func__);
-    ret = __iw_set_grip_pwr_config(dev, info, wrqu, extra);
-    vos_ssr_unprotect(__func__);
-    return ret;
-}
-#endif
 
 static int iw_set_band_config(struct net_device *dev,
                               struct iw_request_info *info,
@@ -11044,9 +10943,6 @@ static const iw_handler we_private[] = {
    [WLAN_GET_LINK_SPEED                 - SIOCIWFIRSTPRIV]   = iw_get_linkspeed_priv,
    [WLAN_PRIV_SET_TWO_INT_GET_NONE      - SIOCIWFIRSTPRIV]   = iw_set_two_ints_getnone,
    [WLAN_SET_DOT11P_CHANNEL_SCHED       - SIOCIWFIRSTPRIV]   = iw_set_dot11p_channel_sched,
-#ifdef SEC_CONFIG_GRIP_POWER
-   [WLAN_SET_GRIP_PWR_CONFIG            - SIOCIWFIRSTPRIV]   = iw_set_grip_pwr_config,
-#endif
 };
 
 /*Maximum command length can be only 15 */
@@ -12117,15 +12013,6 @@ static const struct iw_priv_args we_private_args[] = {
     {   WE_SET_FW_CRASH_INJECT,
         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 2,
         0, "crash_inject" },
-#endif
-#ifdef SEC_CONFIG_GRIP_POWER
-/* set SS Grip Tx power
- * 1 = enable and 0 = disable */
-    {
-        WLAN_SET_GRIP_PWR_CONFIG,
-        IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,
-        0,
-        "setGripTxPower" },
 #endif
     {
         WLAN_PRIV_SET_FTIES,

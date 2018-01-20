@@ -60,9 +60,6 @@
 #include <pmcApi.h>
 #include <wlan_hdd_misc.h>
 
-#ifdef SEC_CONFIG_GRIP_POWER
-bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g);
-#endif
 #if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_ESE) || defined(FEATURE_WLAN_LFR)
 static void
 cbNotifySetRoamPrefer5GHz(hdd_context_t *pHddCtx, unsigned long NotifyId)
@@ -4450,30 +4447,6 @@ typedef struct
    char *value;
 }tCfgIniEntry;
 
-#ifdef SEC_CONFIG_GRIP_POWER
-#define SEC_GRIPPOWER_FILEPATH	"/etc/firmware/wlan/qca_cld/grippower.info"
-bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g)
-{
-    struct file *fp    = NULL;
-    char *filepath     = SEC_GRIPPOWER_FILEPATH;
-    char buf[16]        = {0};
-    int i;
-    bool status      = FALSE;
-    for (i = 0; i < 5; ++i) {
-        fp = filp_open(filepath, O_RDONLY, 0);
-        if (!IS_ERR(fp)) {
-            kernel_read(fp, 0, buf, 5);
-            sscanf(buf, "%d:%d", (unsigned int *)grip_power_2g, (unsigned int *)grip_power_5g);
-            printk("[WIFI] GRIPPOWER: [%u:%u]\n", *grip_power_2g, *grip_power_5g);
-            status = TRUE;
-            break;
-        }
-    }
-    if (fp && !IS_ERR(fp))
-        filp_close(fp, NULL);
-    return status;
-}
-#endif
 static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t * pHddCtx,
     tCfgIniEntry* iniTable, unsigned long entries);
 
