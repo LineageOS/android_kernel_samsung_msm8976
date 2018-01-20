@@ -4870,11 +4870,6 @@ void print_hdd_cfg(hdd_context_t *pHddCtx)
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [overrideCountryCode] Value = [%s] ",pHddCtx->cfg_ini->overrideCountryCode);
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gAllowDFSChannelRoam] Value = [%u] ",pHddCtx->cfg_ini->allowDFSChannelRoam);
   hddLog(VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gMaxConcurrentActiveSessions] Value = [%u] ", pHddCtx->cfg_ini->gMaxConcurrentActiveSessions);
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gEnable2x2] Value = [%u] ",pHddCtx->cfg_ini->enable2x2);
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gSetTxChainmask1x1] Value = [%u] ",pHddCtx->cfg_ini->txchainmask1x1);
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gSetRxChainmask1x1] Value = [%u] ",pHddCtx->cfg_ini->rxchainmask1x1);
-#endif
 #ifdef FEATURE_BUS_BANDWIDTH
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
           "Name = [gBusBandwidthHighThreshold] Value = [%u] ",
@@ -5411,11 +5406,6 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
    v_U32_t cbOutString;
    int i;
    int rv;
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-   int status;
-   const struct firmware *fw = NULL;
-   int ant_info = 0;
-#endif
 
    if (MAX_CFG_INI_ITEMS < cRegTableEntries) {
       hddLog(LOGE, FL("MAX_CFG_INI_ITEMS too small, must be at least %ld"),
@@ -5652,28 +5642,6 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
       }
    }
 
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-   status = request_firmware(&fw, WLAN_ANT_INFO_FILE, pHddCtx->parent_dev);
-   if(status)
-   {
-      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: request_firmware failed .ant.info %d\n", __func__, status);
-      goto ant_fail;
-   }
-   if (!fw || !fw->data || !fw->size)
-   {
-      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: invalid .ant.info file\n", __func__);
-      goto ant_fail;
-   }
-   ant_info = (int)fw->data[0] - '0';
-   hddLog(VOS_TRACE_LEVEL_FATAL, "ant.info = %d\n", ant_info);
-   if (ant_info == 1 || ant_info == 2) {
-		pHddCtx->cfg_ini->enable2x2 = 0;
-		pHddCtx->cfg_ini->txchainmask1x1 = ant_info;
-		pHddCtx->cfg_ini->rxchainmask1x1 = ant_info;
-   }
-   ant_fail:
-   release_firmware(fw);
-#endif
    print_hdd_cfg(pHddCtx);
 
    return( ret_status );
