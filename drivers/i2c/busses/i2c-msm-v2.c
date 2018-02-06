@@ -2620,7 +2620,8 @@ static int i2c_msm_rsrcs_clk_init(struct i2c_msm_ctrl *ctrl)
 	ctrl->rsrcs.core_clk = clk_get(ctrl->dev, "core_clk");
 	if (IS_ERR(ctrl->rsrcs.core_clk)) {
 		ret = PTR_ERR(ctrl->rsrcs.core_clk);
-		dev_err(ctrl->dev, "error on clk_get(core_clk):%d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(ctrl->dev, "error on clk_get(core_clk):%d\n", ret);
 		return ret;
 	}
 
@@ -2918,7 +2919,8 @@ err_no_pinctrl:
 clk_err:
 	i2c_msm_rsrcs_mem_teardown(ctrl);
 mem_err:
-	dev_err(ctrl->dev, "error probe() failed with err:%d\n", ret);
+	if (ret != -EPROBE_DEFER)
+		dev_err(ctrl->dev, "error probe() failed with err:%d\n", ret);
 	devm_kfree(&pdev->dev, ctrl);
 	return ret;
 }
