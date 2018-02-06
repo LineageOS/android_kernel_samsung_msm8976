@@ -27659,7 +27659,7 @@ void wma_enable_specific_fw_logs(tp_wma_handle wma_handle,
 	}
 
 	if (!wma_handle->events_logs_list) {
-		WMA_LOGE("%s: Not received event/log list from FW, yet",
+		WMA_LOGD("%s: Not received event/log list from FW, yet",
 			__func__);
 		return;
 	}
