@@ -3473,8 +3473,9 @@ static int msm8952_rt5659_asoc_machine_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
-		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
-			ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
+				ret);
 		goto err;
 	}
 	dev_info(&pdev->dev, "Sound card %s registered\n", card->name);
