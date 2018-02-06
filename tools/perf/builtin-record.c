@@ -1017,7 +1017,7 @@ int cmd_record(int argc, const char **argv, const char *prefix __maybe_unused)
 	err = perf_target__validate(&rec->opts.target);
 	if (err) {
 		perf_target__strerror(&rec->opts.target, err, errbuf, BUFSIZ);
-		ui__warning("%s", errbuf);
+		ui__warning("%s\n", errbuf);
 	}
 
 	err = perf_target__parse_uid(&rec->opts.target);
