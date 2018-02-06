@@ -7628,9 +7628,11 @@ static int msm_thermal_dev_probe(struct platform_device *pdev)
 
 	return ret;
 fail:
-	if (ret)
-		pr_err("Failed reading node=%s, key=%s. err:%d\n",
-			node->full_name, key, ret);
+	if (ret) {
+		if (ret != -EPROBE_DEFER)
+			pr_err("Failed reading node=%s, key=%s. err:%d\n",
+				node->full_name, key, ret);
+	}
 
 probe_exit:
 	return ret;
