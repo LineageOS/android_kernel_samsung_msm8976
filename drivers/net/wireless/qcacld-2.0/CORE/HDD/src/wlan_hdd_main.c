@@ -77,6 +77,7 @@
 #include <wlan_hdd_wowl.h>
 #include <wlan_hdd_misc.h>
 #include <wlan_hdd_wext.h>
+#include "wlan_hdd_request_manager.h"
 #include "wlan_hdd_trace.h"
 #include "vos_types.h"
 #include "vos_trace.h"
@@ -13522,6 +13523,8 @@ void hdd_wlan_exit(hdd_context_t *pHddCtx)
 
    hdd_wlan_green_ap_deinit(pHddCtx);
 
+   hdd_request_manager_deinit();
+
    //Close Watchdog
    if (pConfig && pConfig->fIsLogpEnabled)
       vos_watchdog_close(pVosContext);
@@ -14904,6 +14907,7 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
       goto err_wdclose;
    }
 
+   hdd_request_manager_init();
    hdd_wlan_green_ap_init(pHddCtx);
 
    status = vos_open( &pVosContext, 0);
@@ -15676,6 +15680,7 @@ err_vos_nv_close:
    vos_nv_close();
 
    hdd_wlan_green_ap_deinit(pHddCtx);
+   hdd_request_manager_deinit();
 
 err_wdclose:
    if(pHddCtx->cfg_ini->fIsLogpEnabled)
