@@ -478,9 +478,10 @@ int wlan_hdd_update_phymode(struct net_device *net, tHalHandle hal,
 int process_wma_set_command_twoargs(int sessid, int paramid,
                                     int sval, int ssecval, int vpdev);
 
-void hdd_GetTemperatureCB(int temperature, void *pContext);
-VOS_STATUS wlan_hdd_get_temperature(hdd_adapter_t *pAdapter,
-        union iwreq_data *wrqu, char *extra);
+void hdd_GetTemperatureCB(int temperature, void *cookie);
+VOS_STATUS wlan_hdd_get_temperature(hdd_adapter_t *adapter_ptr,
+				    union iwreq_data *wrqu,
+				    char *extra);
 #ifdef SEC_CONFIG_GRIP_POWER
 int hdd_setGripPwr(struct net_device *dev, u8 set_value);
 int hdd_setGripPwr_helper(struct net_device *dev, const char *command);
