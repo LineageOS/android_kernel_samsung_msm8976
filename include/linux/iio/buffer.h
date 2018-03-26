@@ -46,7 +46,7 @@ struct iio_buffer_access_funcs {
 	int (*get_bytes_per_datum)(struct iio_buffer *buffer);
 	int (*set_bytes_per_datum)(struct iio_buffer *buffer, size_t bpd);
 	int (*get_length)(struct iio_buffer *buffer);
-	int (*set_length)(struct iio_buffer *buffer, int length);
+	int (*set_length)(struct iio_buffer *buffer, unsigned int length);
 };
 
 /**
@@ -69,8 +69,8 @@ struct iio_buffer_access_funcs {
  * @buffer_list:	[INTERN] entry in the devices list of current buffers.
  */
 struct iio_buffer {
-	int					length;
-	int					bytes_per_datum;
+	unsigned int				length;
+	size_t					bytes_per_datum;
 	struct attribute_group			*scan_el_attrs;
 	long					*scan_mask;
 	bool					scan_timestamp;
