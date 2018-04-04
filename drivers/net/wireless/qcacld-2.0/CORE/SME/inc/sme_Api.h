@@ -4508,4 +4508,15 @@ VOS_STATUS sme_is_session_valid(tHalHandle hal_handle, uint8_t session_id);
 void sme_send_disassoc_req_frame(tHalHandle hal, uint8_t session_id,
 		uint8_t *peer_mac, tANI_U16 reason, uint8_t wait_for_ack);
 
+/**
+ * sme_is_sta_key_exchange_in_progress() - checks whether the STA/P2P client
+ * session has key exchange in progress
+ *
+ * @hal: global hal handle
+ * @session_id: session id
+ *
+ * Return: true - if key exchange in progress
+ *         false - if not in progress
+ */
+bool sme_is_sta_key_exchange_in_progress(tHalHandle hal, uint8_t session_id);
 #endif //#if !defined( __SME_API_H )
