@@ -812,7 +812,7 @@ static void dci_process_ctrl_status(unsigned char *buf, int len, int token)
 	uint8_t i;
 	int peripheral_mask, status;
 
-	if (!buf || (len < sizeof(struct diag_ctrl_dci_status))) {
+	if (!buf || len < 2 || (len < sizeof(struct diag_ctrl_dci_status))) {
 		pr_err("diag: In %s, invalid buf %pK or length: %d\n",
 		       __func__, buf, len);
 		return;
