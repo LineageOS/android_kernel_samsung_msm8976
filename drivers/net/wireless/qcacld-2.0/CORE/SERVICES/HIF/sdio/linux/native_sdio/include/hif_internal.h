@@ -140,8 +140,6 @@ struct hif_device {
 #define CMD53_FIXED_ADDRESS 1
 #define CMD53_INCR_ADDRESS  2
 
-void hif_dump_current_dma_addr(void);
-
 BUS_REQUEST *hifAllocateBusRequest(HIF_DEVICE *device);
 void hifFreeBusRequest(HIF_DEVICE *device, BUS_REQUEST *busrequest);
 void AddToAsyncList(HIF_DEVICE *device, BUS_REQUEST *busrequest);

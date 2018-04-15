@@ -121,12 +121,6 @@ static struct ol_fw_files FW_FILES_DEFAULT = {
 	PREFIX "utfbd.bin", PREFIX "qsetup.bin",
 	PREFIX "epping.bin"};
 
-
-void ol_dump_current_dma_address(void)
-{
-	hif_dump_current_dma_addr();
-}
-
 static A_STATUS ol_sdio_extra_initialization(struct ol_softc *scn);
 
 static int ol_get_fw_files_for_target(struct ol_fw_files *pfw_files,

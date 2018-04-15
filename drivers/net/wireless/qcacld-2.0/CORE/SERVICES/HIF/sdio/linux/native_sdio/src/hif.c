@@ -235,39 +235,6 @@ static int hif_sdio_device_suspend(struct device *dev);
 static int hif_sdio_device_resume(struct device *dev);
 #endif
 
-#define MBOX_MEM_LOG_DEBUG_MAX_ENTRY (50)
-
-struct mbox_command_debug{
-	u_int32_t address;
-	u_int32_t length;
-        u_int64_t time;
-};
-
-u_int32_t g_mbox_dma_buf_idx = 0;
-struct mbox_command_debug mbox_command_log_buffer[MBOX_MEM_LOG_DEBUG_MAX_ENTRY];
-
-
-#define MBOX_COMMAND_RECORD(a, b) {					\
-	if (MBOX_MEM_LOG_DEBUG_MAX_ENTRY <= g_mbox_dma_buf_idx)		\
-		g_mbox_dma_buf_idx = 0;				\
-	mbox_command_log_buffer[g_mbox_dma_buf_idx].address = a;	\
-	mbox_command_log_buffer[g_mbox_dma_buf_idx].length =  b;	\
-        mbox_command_log_buffer[g_mbox_dma_buf_idx].time = adf_get_boottime(); \
-        g_mbox_dma_buf_idx++;     \
-}
-
-void hif_dump_current_dma_addr(void)
-{
-        if(g_mbox_dma_buf_idx)
-		pr_err(" index %u address 0x%X length %u time %llu \n",
-		       g_mbox_dma_buf_idx - 1,
-                 mbox_command_log_buffer[g_mbox_dma_buf_idx-1].address,
-                 mbox_command_log_buffer[g_mbox_dma_buf_idx-1].length,
-                 mbox_command_log_buffer[g_mbox_dma_buf_idx-1].time);
-}
-
-
-
 static struct cnss_sdio_wlan_driver ar6k_driver = {
 	.name = "ar6k_wlan",
 	.id_table = ar6k_id_table,
@@ -481,7 +448,6 @@ __HIFReadWrite(HIF_DEVICE *device,
             AR_DEBUG_PRINTF(ATH_DEBUG_TRACE,
                     ("address:%08X, Length:0x%08X, Dummy:0x%04X, Final:0x%08X\n", address, length, (request & HIF_DUMMY_SPACE_MASK) >> 16, mboxLength == 0 ? address : address + (mboxLength - length)));
             if (mboxLength != 0) {
-                A_UINT32 addr = address;
                 if (length > mboxLength) {
                     AR_DEBUG_PRINTF(ATH_DEBUG_ERROR,
                             ("HIFReadWrite: written length(0x%08X) "
@@ -495,8 +461,6 @@ __HIFReadWrite(HIF_DEVICE *device,
                  */
                 address += ((request & HIF_DUMMY_SPACE_MASK) >> 16);
 #endif
-		if (addr == MailBoxInfo.MboxProp[1].ExtendedAddress)
-                    MBOX_COMMAND_RECORD(address, length);
                 }
             }
 

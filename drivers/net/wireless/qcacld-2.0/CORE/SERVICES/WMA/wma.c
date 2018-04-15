@@ -21102,7 +21102,6 @@ int wma_enable_wow_in_fw(WMA_HANDLE handle, int runtime_pm)
 		WMA_LOGE("Credits:%d; Pending_Cmds: %d",
 			wmi_get_host_credits(wma->wmi_handle),
 			wmi_get_pending_cmds(wma->wmi_handle));
-                ol_dump_current_dma_address();
 		ret = wmi_unified_cmd_send(wma->wmi_handle, retry_buf, len,
 			   WMI_WOW_ENABLE_CMDID);
 		if (ret) {
@@ -21142,13 +21141,8 @@ int wma_enable_wow_in_fw(WMA_HANDLE handle, int runtime_pm)
 			}
 
 			return VOS_STATUS_E_FAILURE;
- 		} else {
-			WMA_LOGE("WOW DMA ADDR Retry Success \n");
-                ol_dump_current_dma_address();
 		}
 	} else {
-		WMA_LOGE("WOW DMA ADDR Enable Success \n");
-                ol_dump_current_dma_address();
 		/* Free the retry_buf */
 		if (retry_buf) {
 			wmi_buf_free (retry_buf);
