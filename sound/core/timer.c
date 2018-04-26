@@ -2004,7 +2004,7 @@ static ssize_t snd_timer_user_read(struct file *file, char __user *buffer,
 
 			if (tu->disconnected) {
 				err = -ENODEV;
-				break;
+				goto _error;
 			}
 			if (signal_pending(current)) {
 				err = -ERESTARTSYS;
