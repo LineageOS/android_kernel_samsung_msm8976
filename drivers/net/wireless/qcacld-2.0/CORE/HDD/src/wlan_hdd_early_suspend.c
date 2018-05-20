@@ -2211,7 +2211,6 @@ VOS_STATUS hdd_wlan_re_init(void *hif_sc)
 #endif /* FEATURE_WLAN_EXTSCAN */
    sme_set_rssi_threshold_breached_cb(pHddCtx->hHal, hdd_rssi_threshold_breached);
    wlan_hdd_cfg80211_link_layer_stats_init(pHddCtx);
-   sme_bpf_offload_register_callback(pHddCtx->hHal, hdd_get_bpf_offload_cb);
 
 #ifdef WLAN_FEATURE_LPSS
    wlan_hdd_send_all_scan_intf_info(pHddCtx);
