@@ -297,8 +297,8 @@ static void free_ioctx(struct kioctx *ctx)
 		req = list_first_entry(&ctx->active_reqs,
 				       struct kiocb, ki_list);
 
-		list_del_init(&req->ki_list);
 		kiocb_cancel(ctx, req, &res);
+		list_del_init(&req->ki_list);
 	}
 
 	spin_unlock_irq(&ctx->ctx_lock);
