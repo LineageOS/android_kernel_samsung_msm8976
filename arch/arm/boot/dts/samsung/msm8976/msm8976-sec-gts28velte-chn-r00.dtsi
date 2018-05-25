@@ -776,6 +776,10 @@
 		qcom,wlan-ramdump-dynamic = <0x200000>;
 		status = "okay";
 	};
+
+	qcom,wcnss-wlan@0a000000 {
+		status = "disabled";
+	};	
 };
 
 &rpm_bus {

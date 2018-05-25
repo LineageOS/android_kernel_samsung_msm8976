@@ -117,6 +117,12 @@ static struct device_attribute sec_battery_attrs[] = {
 #endif
 	SEC_BATTERY_ATTR(batt_ext_dev_chg),
 	SEC_BATTERY_ATTR(batt_wdt_control),
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	SEC_BATTERY_ATTR(fg_cycle),
+	SEC_BATTERY_ATTR(fg_full_voltage),
+	SEC_BATTERY_ATTR(fg_fullcapnom),
+	SEC_BATTERY_ATTR(battery_cycle),
+#endif
 };
 #if defined(CONFIG_QPNP_BMS)
 static char *pm_batt_supplied_to[] = {
@@ -1189,6 +1195,84 @@ skip_swelling_chek:
 }
 #endif
 
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+static bool sec_bat_set_aging_step(struct sec_battery_info *battery, int step)
+{
+	union power_supply_propval value = {0, };
+
+	if (battery->pdata->num_age_step <= 0 || step < 0 || step >= battery->pdata->num_age_step) {
+		pr_info("%s: [AGE] abnormal age step : %d/%d\n",
+			__func__, step, battery->pdata->num_age_step-1);
+		return false;
+	}
+
+	battery->pdata->age_step = step;
+
+	/* float voltage */
+	battery->pdata->chg_float_voltage =
+		battery->pdata->age_data[battery->pdata->age_step].float_voltage;
+	battery->pdata->swelling_normal_float_voltage =
+		battery->pdata->chg_float_voltage;
+	if (!battery->swelling_mode) {
+		value.intval = battery->pdata->chg_float_voltage;
+		psy_do_property(battery->pdata->charger_name, set,
+			POWER_SUPPLY_PROP_VOLTAGE_MAX, value);
+	}
+
+	/* full/recharge condition */
+	battery->pdata->recharge_condition_vcell =
+		battery->pdata->age_data[battery->pdata->age_step].recharge_condition_vcell;
+	battery->pdata->full_condition_soc =
+		battery->pdata->age_data[battery->pdata->age_step].full_condition_soc;
+	battery->pdata->full_condition_vcell =
+		battery->pdata->age_data[battery->pdata->age_step].full_condition_vcell;
+
+	value.intval = battery->pdata->full_condition_soc;
+	psy_do_property(battery->pdata->fuelgauge_name, set,
+		POWER_SUPPLY_PROP_CAPACITY_LEVEL, value);
+
+	dev_info(battery->dev,
+		 "%s: Step(%d/%d), Cycle(%d), float_v(%d), r_v(%d), f_s(%d), f_vl(%d)\n",
+		 __func__,
+		 battery->pdata->age_step, battery->pdata->num_age_step-1, battery->batt_cycle,
+		 battery->pdata->chg_float_voltage,
+		 battery->pdata->recharge_condition_vcell,
+		 battery->pdata->full_condition_soc,
+		 battery->pdata->full_condition_vcell);
+
+	return true;
+}
+
+static void sec_bat_aging_check(struct sec_battery_info *battery)
+{
+	int prev_step = battery->pdata->age_step;
+	int calc_step = -1;
+	bool ret = 0;
+
+	if (battery->pdata->num_age_step <= 0)
+		return;
+
+	if (battery->temperature < 50) {
+		pr_info("%s: [AGE] skip (temperature:%d)\n", __func__, battery->temperature);
+		return;
+	}
+
+	for (calc_step = battery->pdata->num_age_step - 1; calc_step >= 0; calc_step--) {
+		if (battery->pdata->age_data[calc_step].cycle <= battery->batt_cycle)
+			break;
+	}
+
+	if (calc_step == prev_step)
+		return;
+
+	ret = sec_bat_set_aging_step(battery, calc_step);
+	dev_info(battery->dev,
+		 "%s: %s change step (%d->%d), Cycle(%d)\n",
+		 __func__, ret ? "Succeed in" : "Fail to",
+		 prev_step, battery->pdata->age_step, battery->batt_cycle);
+}
+#endif
+
 static bool sec_bat_temperature_check(
 				struct sec_battery_info *battery)
 {
@@ -2128,6 +2212,10 @@ static void sec_bat_do_fullcharged(
 					__func__, battery->wdt_kick_disable);
 		}
 
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+		sec_bat_aging_check(battery);
+#endif
+
 		value.intval = POWER_SUPPLY_STATUS_FULL;
 		psy_do_property(battery->pdata->fuelgauge_name, set,
 			POWER_SUPPLY_PROP_STATUS, value);
@@ -2772,12 +2860,19 @@ continue_monitor:
 		 battery->hv_chg_name);
 #else
 	dev_info(battery->dev,
-		"%s: Status(%s), Mode(%s), Health(%s), Cable(%d), Vendor(%s), level(%d%%)\n",
-		__func__,
+		"%s: Status(%s), Mode(%s), Health(%s), Cable(%d), Vendor(%s), level(%d%%)"
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+		", Cycle(%d)"
+#endif
+		"\n",__func__,
 		sec_bat_status_str[battery->status],
 		sec_bat_charging_mode_str[battery->charging_mode],
 		sec_bat_health_str[battery->health],
-		battery->cable_type, battery->pdata->vendor, battery->siop_level);
+		battery->cable_type, battery->pdata->vendor, battery->siop_level
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+		, battery->batt_cycle
+#endif
+		);
 #endif
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	dev_info(battery->dev,
@@ -3466,6 +3561,29 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 				battery->wdt_kick_disable);
 		break;
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	case FG_CYCLE:
+		value.intval = SEC_BATTERY_CAPACITY_CYCLE;
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+			POWER_SUPPLY_PROP_ENERGY_NOW, value);
+		value.intval = value.intval / 100;
+		dev_info(battery->dev, "fg cycle(%d)\n", value.intval);
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", value.intval);
+		break;
+	case FG_FULL_VOLTAGE:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", battery->pdata->chg_float_voltage);
+		break;
+	case FG_FULLCAPNOM:
+		value.intval =
+			SEC_BATTERY_CAPACITY_AGEDCELL;
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+			POWER_SUPPLY_PROP_ENERGY_NOW, value);
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", value.intval);
+		break;
+	case BATTERY_CYCLE:
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", battery->batt_cycle);
+		break;
+#endif
 	default:
 		i = -EINVAL;
 	}
@@ -3998,6 +4116,27 @@ ssize_t sec_bat_store_attrs(
 		}
 		ret = count;
 		break;
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	case FG_CYCLE:
+		break;
+	case FG_FULL_VOLTAGE:
+		break;
+	case FG_FULLCAPNOM:
+		break;
+	case BATTERY_CYCLE:
+		if (sscanf(buf, "%10d\n", &x) == 1) {
+			dev_info(battery->dev, "%s: BATTERY_CYCLE(%d)\n", __func__, x);
+			if (x >= 0) {
+				int prev_battery_cycle = battery->batt_cycle;
+				battery->batt_cycle = x;
+				if (prev_battery_cycle < 0) {
+					sec_bat_aging_check(battery);
+				}
+			}
+			ret = count;
+		}
+		break;
+#endif
 	default:
 		ret = -EINVAL;
 	}
@@ -5632,6 +5771,36 @@ static int sec_bat_parse_dt(struct device *dev,
 		pr_info("%s: self_discharging_temp_pollingtime is Empty\n", __func__);
 #endif
 
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	p = of_get_property(np, "battery,age_data", &len);
+	if (p) {
+		battery->pdata->num_age_step = len / sizeof(sec_age_data_t);
+		battery->pdata->age_data = kzalloc(len, GFP_KERNEL);
+		ret = of_property_read_u32_array(np, "battery,age_data",
+				 (u32 *)battery->pdata->age_data, len/sizeof(u32));
+		if (ret) {
+			pr_err("%s failed to read battery->pdata->age_data: %d\n",
+					__func__, ret);
+			kfree(battery->pdata->age_data);
+			battery->pdata->age_data = NULL;
+			battery->pdata->num_age_step = 0;
+		}
+		pr_err("%s num_age_step : %d\n", __func__, battery->pdata->num_age_step);
+		for (len = 0; len < battery->pdata->num_age_step; ++len) {
+			pr_err("[%d/%d]cycle:%d, float:%d, full_v:%d, recharge_v:%d, soc:%d\n",
+				len, battery->pdata->num_age_step-1,
+				battery->pdata->age_data[len].cycle,
+				battery->pdata->age_data[len].float_voltage,
+				battery->pdata->age_data[len].full_condition_vcell,
+				battery->pdata->age_data[len].recharge_condition_vcell,
+				battery->pdata->age_data[len].full_condition_soc);
+		}
+	} else {
+		battery->pdata->num_age_step = 0;
+		pr_err("%s there is not age_data\n", __func__);
+	}
+#endif
+
 	np = of_find_node_by_name(NULL, "charger");
 
 	if (!np) {
@@ -5850,6 +6019,12 @@ static int sec_battery_probe(struct platform_device *pdev)
 #if defined(CONFIG_SW_SELF_DISCHARGING)
 	battery->sw_self_discharging = false;
 #endif
+
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	battery->batt_cycle = -1;
+	battery->pdata->age_step = 0;
+#endif
+
 
 	if (battery->pdata->charger_name == NULL)
 		battery->pdata->charger_name = "sec-charger";

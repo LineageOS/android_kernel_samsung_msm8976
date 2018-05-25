@@ -46,6 +46,12 @@ config BATTERY_SWELLING_SELF_DISCHARGING
 	help
 	  Say Y to include support for prevent battery swelling with self discharging
 
+config BATTERY_AGE_FORECAST
+	tristate "battery age forecast"
+	default n
+	help
+	Say Y to use calc time to full function.
+
 config MUIC_SUPPORT_MULTIMEDIA_DOCK
 	bool "MUIC_SUPPORT_MULTIMEDIA_DOCK"
 	default n

@@ -64,6 +64,7 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #include "../../mdss/mdss_panel.h"
 #include "../../mdss/mdss_dsi.h"
 #include "../../mdss/mdss_debug.h"
+#include "../../../../../fs/sysfs/sysfs.h"
 
 #if defined(CONFIG_SEC_DEBUG)
 #include <linux/qcom/sec_debug.h>
@@ -998,7 +999,7 @@ struct BITMAPFILEHEADER                 /**** BMP file header structure ****/
 	unsigned int   biClrUsed;        /* Number of colors used */
 	unsigned int   biClrImportant;   /* Number of important colors */
 } __packed;
-
+extern struct kset *devices_kset;
 
 /* SAMSUNG COMMON HEADER*/
 #include "ss_dsi_smart_dimming_common.h"

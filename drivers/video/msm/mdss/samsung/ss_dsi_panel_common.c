@@ -487,13 +487,14 @@ static ssize_t mdss_samsung_panel_lpm_ctrl_debug(struct file *file,
 	struct mdss_dsi_ctrl_pdata *ctrl;
 	int mode, ret = count;
 	char buf[10];
+	size_t buf_size = min(count, sizeof(buf) - 1);
 
 	if (IS_ERR_OR_NULL(vdd)) {
 		ret = -EFAULT;
 		goto end;
 	}
 
-	if (copy_from_user(buf, user_buf, count)) {
+	if (copy_from_user(buf, user_buf, buf_size)) {
 		ret = -EFAULT;
 		goto end;
 	}
@@ -4207,6 +4208,9 @@ static ssize_t tuning_store(struct device *dev,
 {
 	char *pt;
 
+	if (buf == NULL || strchr(buf, '.') || strchr(buf, '/'))
+		return size;
+
 	memset(tuning_file, 0, sizeof(tuning_file));
 	snprintf(tuning_file, MAX_FILE_NAME, "%s%s", TUNING_FILE_PATH, buf);
 
@@ -5874,6 +5878,78 @@ static ssize_t mipi_samsung_esd_check_show(struct device *dev,
 	return rc;
 }
 
+static ssize_t mdss_samsung_disp_SVC_OCTA_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	static int string_size = 50;
+	char temp[string_size];
+	int *cell_id;
+	struct samsung_display_driver_data *vdd =
+		(struct samsung_display_driver_data *)dev_get_drvdata(dev);
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd");
+		return strnlen(buf, string_size);
+	}
+
+	cell_id = &vdd->cell_id_dsi[DISPLAY_1][0];
+
+	/*
+	*	STANDARD FORMAT (Total is 11Byte)
+	*	MAX_CELL_ID : 11Byte
+	*	7byte(cell_id) + 2byte(Mdnie x_postion) + 2byte(Mdnie y_postion)
+	*/
+
+	snprintf((char *)temp, sizeof(temp),
+			"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+		cell_id[0], cell_id[1], cell_id[2], cell_id[3], cell_id[4],
+		cell_id[5], cell_id[6],
+		(vdd->mdnie_x[DISPLAY_1] & 0xFF00) >> 8,
+		vdd->mdnie_x[DISPLAY_1] & 0xFF,
+		(vdd->mdnie_y[DISPLAY_1] & 0xFF00) >> 8,
+		vdd->mdnie_y[DISPLAY_1] & 0xFF);
+
+	strlcat(buf, temp, string_size);
+
+	return strnlen(buf, string_size);
+}
+
+static ssize_t mdss_samsung_disp_SVC_OCTA2_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	static int string_size = 50;
+	char temp[string_size];
+	int *cell_id;
+	struct samsung_display_driver_data *vdd =
+		(struct samsung_display_driver_data *)dev_get_drvdata(dev);
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd");
+		return strnlen(buf, string_size);
+	}
+
+	cell_id = &vdd->cell_id_dsi[DISPLAY_2][0];
+
+	/*
+	*	STANDARD FORMAT (Total is 11Byte)
+	*	MAX_CELL_ID : 11Byte
+	*	7byte(cell_id) + 2byte(Mdnie x_postion) + 2byte(Mdnie y_postion)
+	*/
+
+	snprintf((char *)temp, sizeof(temp),
+			"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+		cell_id[0], cell_id[1], cell_id[2], cell_id[3], cell_id[4],
+		cell_id[5], cell_id[6],
+		(vdd->mdnie_x[DISPLAY_2] & 0xFF00) >> 8,
+		vdd->mdnie_x[DISPLAY_2] & 0xFF,
+		(vdd->mdnie_y[DISPLAY_2] & 0xFF00) >> 8,
+		vdd->mdnie_y[DISPLAY_2] & 0xFF);
+
+	strlcat(buf, temp, string_size);
+
+	return strnlen(buf, string_size);
+}
+
 static DEVICE_ATTR(lcd_type, S_IRUGO, mdss_samsung_disp_lcdtype_show, NULL);
 static DEVICE_ATTR(cell_id, S_IRUGO, mdss_samsung_disp_cell_id_show, NULL);
 static DEVICE_ATTR(window_type, S_IRUGO, mdss_samsung_disp_windowtype_show, NULL);
@@ -5896,6 +5972,8 @@ static DEVICE_ATTR(ldu_correction, S_IRUGO | S_IWUSR | S_IWGRP, mdss_samsung_ldu
 static DEVICE_ATTR(adaptive_control, S_IRUGO | S_IWUSR | S_IWGRP, NULL, mdss_samsung_adaptive_control_store);
 static DEVICE_ATTR(hw_cursor, S_IRUGO | S_IWUSR | S_IWGRP, NULL, mipi_samsung_hw_cursor_store);
 static DEVICE_ATTR(esd_check, S_IRUGO , mipi_samsung_esd_check_show, NULL);
+static DEVICE_ATTR(SVC_OCTA, S_IRUGO, mdss_samsung_disp_SVC_OCTA_show, NULL);
+static DEVICE_ATTR(SVC_OCTA2, S_IRUGO, mdss_samsung_disp_SVC_OCTA2_show, NULL);
 
 static struct attribute *panel_sysfs_attributes[] = {
 	&dev_attr_lcd_type.attr,
@@ -5920,6 +5998,8 @@ static struct attribute *panel_sysfs_attributes[] = {
 	&dev_attr_adaptive_control.attr,
 	&dev_attr_hw_cursor.attr,
 	&dev_attr_esd_check.attr,
+	&dev_attr_SVC_OCTA.attr,
+	&dev_attr_SVC_OCTA2.attr,
 	NULL
 };
 static const struct attribute_group panel_sysfs_group = {
@@ -5984,6 +6064,8 @@ int mdss_samsung_create_sysfs(void *data)
 #endif
 #endif
 	struct device *csc_dev = vdd_data.mfd_dsi[0]->fbi->dev;
+	struct sysfs_dirent *SVC_sd;
+	struct kobject *SVC;
 
 	/* sysfs creat func should be called one time in dual dsi mode */
 	if (sysfs_enable)
@@ -6004,6 +6086,30 @@ int mdss_samsung_create_sysfs(void *data)
 		sysfs_remove_group(&lcd_device->dev.kobj, &panel_sysfs_group);
 		return rc;
 	}
+
+	/* To find SVC kobject */
+	SVC_sd = sysfs_get_dirent(devices_kset->kobj.sd, NULL, "svc");
+	if (IS_ERR_OR_NULL(SVC_sd)) {
+	/* try to create SVC kobject */
+		SVC = kobject_create_and_add("svc", &devices_kset->kobj);
+		if (IS_ERR_OR_NULL(SVC))
+			LCD_ERR("Failed to create sys/devices/svc already exist svc : 0x%p\n", SVC);
+		else
+			LCD_INFO("Success to create sys/devices/svc svc : 0x%p\n", SVC);
+	} else {
+		SVC = SVC_sd->s_dir.kobj;
+		LCD_INFO("Success to find SVC_sd : 0x%p svc : 0x%p\n", SVC_sd, SVC);
+	}
+
+	if (!IS_ERR_OR_NULL(SVC)) {
+		rc = sysfs_create_link(SVC, &lcd_device->dev.kobj, "OCTA");
+		if (rc)
+			LCD_ERR("Failed to create panel sysfs svc/OCTA..\n");
+		else
+			LCD_INFO("Success to create panel sysfs svc/OCTA..\n");
+		} else
+		LCD_ERR("Failed to find svc kobject\n");
+
 
 #if defined(CONFIG_BACKLIGHT_CLASS_DEVICE)
 	bd = backlight_device_register("panel", &lcd_device->dev,

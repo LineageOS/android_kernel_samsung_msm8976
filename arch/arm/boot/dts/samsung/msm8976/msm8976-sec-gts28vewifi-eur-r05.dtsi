@@ -18,7 +18,7 @@
 #include "msm8976-sec-pinctrl-gts28vewifi-eur-r05.dtsi"
 #include "msm8976-sec-gts2ve-eur-fingerprint-sensor_00.dtsi"
 #include "msm8976-sec-gts28vewifi-eur-battery-r05.dtsi"
-#include "msm8976-sm5703.dtsi"
+#include "msm8976-sec-gts28ve-sm5703.dtsi"
 //#include "msm8976-s2mpb02.dtsi"
 #include "msm8976-sec-a9xlte-chn-mst-r02.dtsi"
 #include "msm8976-camera-sensor-tabs-r01.dtsi"

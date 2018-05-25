@@ -81,7 +81,7 @@
 		battery,recharge_check_count = <1>;
 		battery,recharge_condition_type = <4>; /* SEC_BATTERY_RECHARGE_CONDITION_VCELL */
 		battery,recharge_condition_soc = <98>;
-		battery,recharge_condition_vcell = <4300>;
+		battery,recharge_condition_vcell = <4280>;
 
 		battery,charging_total_time = <21600>;
 		battery,recharging_total_time = <5400>;
@@ -108,11 +108,11 @@
 
 		/* cycle, chg_float_voltage, recharge_condition_vcell, full_condition_vcell, full_condition_soc */
 		battery,age_data = <
-				0 4350 4300 4250 93
-				200 4330 4280 4230 92
-				250 4310 4260 4210 91
-				300 4290 4240 4190 90
-				1000 4240 4190 4140 89
+				0 4350 4280 4250 93
+				200 4330 4260 4230 92
+				250 4310 4240 4210 91
+				300 4290 4220 4190 90
+				1000 4240 4170 4140 89
 				>;
 
 		charger {

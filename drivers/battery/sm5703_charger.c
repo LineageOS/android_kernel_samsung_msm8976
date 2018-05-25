@@ -697,6 +697,7 @@ static void sm5703_configure_charger(struct sm5703_charger_data *charger)
 
 	switch (full_check_type) {
 		case SEC_BATTERY_FULLCHARGED_CHGPSY:
+		case SEC_BATTERY_FULLCHARGED_FG_CURRENT:
 #if defined(CONFIG_BATTERY_SWELLING)
 			psy_do_property("battery", get,
 					POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, swelling_state);
@@ -845,6 +846,10 @@ static int sm5703_get_charging_health(struct sm5703_charger_data *charger)
 {
 	int vbus_status = sm5703_reg_read(charger->sm5703->i2c_client, SM5703_STATUS5);
 	int health = POWER_SUPPLY_HEALTH_GOOD;
+	int chg_status3;
+	int nCHG = 0;
+
+	chg_status3 = sm5703_reg_read(charger->sm5703->i2c_client, SM5703_STATUS3);
 
 	pr_info("%s : charger->is_charging = %d, charger->cable_type = %d, is_current_reduced = %d\n",
 		__func__, charger->is_charging, charger->cable_type, charger->is_current_reduced);
@@ -867,6 +872,20 @@ static int sm5703_get_charging_health(struct sm5703_charger_data *charger)
 		health = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
 	else
 		health = POWER_SUPPLY_HEALTH_UNKNOWN;
+
+	if (health == POWER_SUPPLY_HEALTH_GOOD) {
+		/* check if chgen */
+		nCHG = gpio_get_value(charger->pdata->chgen_gpio);
+
+		/* print the log at the abnormal case */
+		if ((charger->is_charging == 1) && (chg_status3 & SM5703_STATUS3_DONE) &&
+			(nCHG)) {
+			sm5703_test_read(charger->sm5703->i2c_client);
+			gpio_direction_output(charger->pdata->chgen_gpio,
+				!(charger->is_charging)); /* re-enable Charger */
+			pr_info("%s : FORCE RE-ENABLE Charger in Fake DONE state\n", __func__);
+		}
+	}
 
 	pr_info("%s : Health : %d\n", __func__, health);
 

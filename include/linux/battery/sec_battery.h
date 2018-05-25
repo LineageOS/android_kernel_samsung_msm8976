@@ -238,6 +238,9 @@ struct sec_battery_info {
 	bool sw_self_discharging;
 	struct wake_lock self_discharging_wake_lock;
 #endif
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	int batt_cycle;
+#endif
 };
 
 ssize_t sec_bat_show_attrs(struct device *dev,
@@ -350,6 +353,12 @@ enum {
 #endif
 	BATT_EXT_DEV_CHG,
 	BATT_WDT_CONTROL,
+#if defined(CONFIG_BATTERY_AGE_FORECAST)
+	FG_CYCLE,
+	FG_FULL_VOLTAGE,
+	FG_FULLCAPNOM,
+	BATTERY_CYCLE,
+#endif
 };
 
 enum {

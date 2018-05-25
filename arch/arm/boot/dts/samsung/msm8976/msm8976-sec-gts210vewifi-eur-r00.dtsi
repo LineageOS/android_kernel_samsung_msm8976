@@ -1026,6 +1026,8 @@
 	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
 	cd-gpios = <&msm_gpio 100 0x1>;
 
+	qcom,clk-rates = <400000 25000000 50000000 100000000 177777778>;
+
 	status = "ok";
 };
 

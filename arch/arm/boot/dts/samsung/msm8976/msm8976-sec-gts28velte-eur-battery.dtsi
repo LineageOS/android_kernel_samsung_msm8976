@@ -89,12 +89,12 @@
 		   SEC_BATTERY_FULL_CONDITION_VCELL */
 		battery,full_condition_type = <13>;
 		battery,full_condition_soc = <93>;
-		battery,full_condition_vcell = <4300>;
+		battery,full_condition_vcell = <4250>;
 
 		battery,recharge_check_count = <1>;
 		battery,recharge_condition_type = <4>; /* SEC_BATTERY_RECHARGE_CONDITION_VCELL */
 		battery,recharge_condition_soc = <98>;
-		battery,recharge_condition_vcell = <4340>;
+		battery,recharge_condition_vcell = <4280>;
 
 		battery,self_discharging_en;
 		battery,self_discharging_type = <2>;	/* SEC_BAT_SELF_DISCHARGING_BY_CHG */
@@ -131,12 +131,21 @@
 
 		qcom,sec-battery-vadc = <&pm8950_vadc>;
 
+		/* cycle, chg_float_voltage, recharge_condition_vcell, full_condition_vcell, full_condition_soc */
+		battery,age_data = <
+				0 4350 4280 4250 93
+				200 4330 4260 4230 92
+				250 4310 4240 4210 91
+				300 4290 4220 4190 90
+				1000 4240 4170 4140 89
+				>;
+
 		charger {
 			status = "disable";
 			/* Charger */
 			battery,charger_name = "sm5705-charger";
 			battery,chgen_gpio = <&msm_gpio 132 0x00>;
-			battery,chg_float_voltage = <4390>;
+			battery,chg_float_voltage = <4350>;
 
 			battery,chg_polarity_en = <0>;
 			battery,chg_gpio_status = <0>;
