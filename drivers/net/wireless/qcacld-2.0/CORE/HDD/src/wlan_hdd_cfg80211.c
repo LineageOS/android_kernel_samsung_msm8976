@@ -9562,7 +9562,7 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 	 * defer out-network roaming. EBUSY is used to convey wait indication.
 	 */
 	if (!is_fast_roam_enabled) {
-		if (sme_staInMiddleOfRoaming(hdd_ctx->hHal,
+		if (smeNeighborMiddleOfRoaming(hdd_ctx->hHal,
 					adapter->sessionId)) {
 			hddLog(LOG1, FL("Roaming in progress, do not allow disable"));
 			return -EBUSY;
@@ -22010,7 +22010,7 @@ int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
            }
         }
 
-        if (sme_staInMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
+        if (smeNeighborMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
             hddLog(LOG1, FL("Roaming in progress, don't allow suspend"));
             return -EAGAIN;
         }
