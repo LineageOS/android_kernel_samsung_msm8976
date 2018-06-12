@@ -98,7 +98,7 @@ static inline unsigned int vos_round_div(unsigned int dividend,
 
 #endif
 
-
+typedef unsigned long vos_time_t;
 /*--------------------------------------------------------------------------
   Type declarations
   ------------------------------------------------------------------------*/
