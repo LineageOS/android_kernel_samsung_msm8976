@@ -1163,9 +1163,6 @@ struct hdd_adapter_s
     /* Time stamp for start RoC request */
     v_TIME_t startRocTs;
 
-	/* State for synchronous OCB requests to WMI */
-	struct sir_dcc_update_ndl_response dcc_update_ndl_resp;
-
 	/* MAC addresses used for OCB interfaces */
 	tSirMacAddr ocb_mac_address[VOS_MAX_CONCURRENCY_PERSONA];
 	int ocb_mac_addr_count;
