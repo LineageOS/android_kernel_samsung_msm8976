@@ -9581,7 +9581,7 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 					 is_fast_roam_enabled);
 	if (!HAL_STATUS_SUCCESS(status)) {
 		hddLog(LOGE,
-			FL("sme_config_fast_roaming (err=%d)"), status);
+			FL("sme_config_fast_roaming: Fast Roaming is disabled"));
 		return -EINVAL;
 	}
 
