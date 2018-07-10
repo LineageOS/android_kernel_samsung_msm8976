@@ -521,8 +521,6 @@ static int hdd_ocb_set_config_req(hdd_adapter_t *adapter,
 {
 	int rc;
 	eHalStatus halStatus;
-	bool enable_chan_stats;
-	struct dsrc_radio_chan_stats_ctxt *ctx;
 	void *cookie;
 	struct hdd_request *hdd_request;
 	struct hdd_ocb_set_config_priv *priv;
@@ -535,23 +533,6 @@ static int hdd_ocb_set_config_req(hdd_adapter_t *adapter,
 		hddLog(LOGE, FL("The configuration is invalid"));
 		return -EINVAL;
 	}
-
-	/*
-	 * Save OCB configured channel information for
-	 * DSRC Radio channel statistics event processsor.
-	 */
-	ctx = &adapter->dsrc_chan_stats;
-	ctx->config_chans_num = config->channel_count;
-	for (i = 0; i < config->channel_count; i++)
-		ctx->config_chans_freq[i] = config->channels[i].chan_freq;
-	if (ctx->cur_req) {
-		vos_mem_free(ctx->cur_req);
-		ctx->cur_req = NULL;
-	}
-	/* Disable Channel Statistics */
-	enable_chan_stats = ctx->enable_chan_stats;
-	if (enable_chan_stats)
-		wlan_hdd_dsrc_config_radio_chan_stats(adapter, false);
 
 	hdd_request = hdd_request_alloc(&params);
 	if (!hdd_request) {
@@ -596,32 +577,9 @@ static int hdd_ocb_set_config_req(hdd_adapter_t *adapter,
 		wlan_hdd_netif_queue_control(adapter,
 					WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
 					WLAN_CONTROL_PATH);
-	if (enable_chan_stats)
-		wlan_hdd_dsrc_config_radio_chan_stats(adapter, true);
-
-	/*
-	* Net device mtu size is 1500 by default, But for OCB RAW mode,
-	* driver need later convert 802.3 data header to IEEE802.11
-	* data header and EPD header, which will increase total frame
-	* length. In such case, long packet length will exceed the
-	* target credit size. It resulted in that the packet is cut
-	* down, data would be missed and the traffic would be broken.
-	* So decrease the netdev mtu size to work around this issue
-	* in IEEE80211p RAW mode.
-	*/
-	if (config->flags & OCB_CONFIG_FLAG_80211_FRAME_MODE)
-		adapter->dev->mtu = ETH_DATA_LEN - 8;
-	else
-		adapter->dev->mtu = ETH_DATA_LEN;
 
 	/* fall through */
 end:
-	if (rc) {
-		/* Flush already saved configured channel frequence */
-		ctx->config_chans_num = 0;
-		vos_mem_zero(ctx->config_chans_freq, 2 * sizeof(uint32_t));
-	}
-
 	hdd_request_put(hdd_request);
 	return rc;
 }
