@@ -34450,16 +34450,17 @@ static void wma_set_vdev_suspend_dtim(tp_wma_handle wma, v_U8_t vdev_id)
 		}
 
 		/*
-		 * Set inactivity time to 75ms when DUT is in WoW mode.
+		 * Set inactivity time to 50ms when DUT is in WoW mode.
 		 * It will be recovered to the cfg value when DUT resumes.
-		 * Worst case inactivity is 75ms for broadcast frames.
 		 *
-		 * 200ms Inactivity timer is applicable only to unicast
-		 * data traffic.
+		 * The value 50ms inherits from Pronto. Pronto has different
+		 * inactivity for broadcast frames (worst case inactivity
+		 * is 50ms). 200ms Inactivity timer is applicable only to
+		 * unicast data traffic.
 		 */
-		WMA_LOGD("%s: Set inactivity_time to 75.", __func__);
+		WMA_LOGD("%s: Set inactivity_time to 50.", __func__);
 		ret = wmi_unified_set_sta_ps_param(wma->wmi_handle, vdev_id,
-					WMI_STA_PS_PARAM_INACTIVITY_TIME, 75);
+					WMI_STA_PS_PARAM_INACTIVITY_TIME, 50);
 		if (ret)
 			WMA_LOGE("%s: Setting InActivity time Failed.",
 				 __func__);
