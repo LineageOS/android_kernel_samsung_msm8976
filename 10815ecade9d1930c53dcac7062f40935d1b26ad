@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bfbd2f67_1ac72255",
+        "filename": "net/l2tp/l2tp_core.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 351,
+      "author": {
+        "id": 9760
+      },
+      "writtenOn": "2018-09-06T12:25:53Z",
+      "side": 1,
+      "message": "Are you sure that there are no error?\n\";\" at the end",
+      "revId": "10815ecade9d1930c53dcac7062f40935d1b26ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
