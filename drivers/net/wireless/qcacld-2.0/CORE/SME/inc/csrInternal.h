@@ -43,6 +43,7 @@
 #include "csrSupport.h"
 #include "vos_nvitem.h"
 #include "wlan_qct_tl.h"
+#include "vos_utils.h"
 
 #include "csrApi.h"
 
