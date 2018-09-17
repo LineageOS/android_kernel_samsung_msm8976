@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2d76db93_8159f329",
+        "filename": "arch/arm64/configs/gts28vewifi_defconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 298,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-09-17T10:17:43Z",
+      "side": 0,
+      "message": "shouldn\u0027t that be set to \"# CONFIG_QCOM_LTE_COEX is not set\" instead of deleting?",
+      "range": {
+        "startLine": 298,
+        "startChar": 0,
+        "endLine": 298,
+        "endChar": 22
+      },
+      "revId": "134052f835b6b5faf065ddbfc63cd41b13bc547c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
