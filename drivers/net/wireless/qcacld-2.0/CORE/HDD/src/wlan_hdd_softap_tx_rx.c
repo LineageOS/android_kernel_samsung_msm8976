@@ -1057,7 +1057,7 @@ VOS_STATUS hdd_softap_RegisterSTA( hdd_adapter_t *pAdapter,
                   "Turn on Monitor the carrier");
            //Enable Tx queue
        hddLog(LOG1, FL("Enabling queues"));
-       wlan_hdd_netif_queue_control(pAdapter,
+       wlan_hdd_netif_queue_control(pmonAdapter,
             WLAN_START_ALL_NETIF_QUEUE_N_CARRIER,
             WLAN_CONTROL_PATH);
     }
