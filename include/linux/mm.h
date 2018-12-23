@@ -1608,7 +1608,7 @@ vm_unmapped_area(struct vm_unmapped_area_info *info)
 	else
 		addr = unmapped_area_topdown(info);
 	if (addr == -ENOMEM)
-		printk(KERN_ERR "%s %d - NOMEM in vm_unmapped_area "
+		printk(KERN_DEBUG "%s %d - NOMEM in vm_unmapped_area "
 			"pid=%d flags=%lx length=%lx low_limit=%lx "
 			"high_limit=%lx align_mask=%lx\n",
 			__func__, __LINE__,

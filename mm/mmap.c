@@ -2015,7 +2015,7 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 		addr = vm_unmapped_area(&info);
 	}
 	if (addr == -ENOMEM)
-		printk(KERN_ERR "%s %d - NOMEM from vm_unmapped_area "
+		printk(KERN_DEBUG "%s %d - NOMEM from vm_unmapped_area "
 			"pid=%d flags=%lx length=%lx low_limit=%lx "
 			"high_limit=%lx align_mask=%lx\n",
 			__func__, __LINE__,
