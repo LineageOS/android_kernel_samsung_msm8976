@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -970,6 +970,7 @@ enum CountryCode {
     CTRY_MEXICO               = 484,     /* Mexico */
     CTRY_MONACO               = 492,     /* Principality of Monaco */
     CTRY_MOROCCO              = 504,     /* Morocco */
+    CTRY_MYANMAR              = 104,     /* Myanmar*/
     CTRY_NEPAL                = 524,     /* Nepal */
     CTRY_NETHERLANDS          = 528,     /* Netherlands */
     CTRY_NETHERLANDS_ANTILLES = 530,     /* Netherlands-Antilles */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2016 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -624,6 +624,7 @@ static const COUNTRY_CODE_TO_ENUM_RD ahCmnAllCountries[] = {
     {CTRY_MEXICO,      FCC1_WORLD,    "MX", "MEXICO",         YES, YES, YES, YES, YES, YES, YES, YES, 7000 },
     {CTRY_MONACO,      ETSI4_WORLD,   "MC", "MONACO",         YES, YES, YES, YES, YES, YES, YES, YES, 7000 },
     {CTRY_MOROCCO,     APL4_WORLD,    "MA", "MOROCCO",        YES,  NO, YES, YES, YES, YES, YES, YES, 7000 },
+    {CTRY_MYANMAR,     APL1_WORLD,    "MM", "MYANMAR",     YES,  YES, YES, YES, YES,  YES,  YES, YES, 7000 },
     {CTRY_NEPAL,       APL1_WORLD,    "NP", "NEPAL",          YES,  NO, YES, YES, YES, YES, YES, YES, 7000 },
     {CTRY_NETHERLANDS, ETSI1_WORLD,   "NL", "NETHERLANDS",    YES,  NO, YES, YES, YES, YES, YES, YES, 7000 },
     {CTRY_NETHERLANDS_ANTILLES, ETSI1_WORLD, "AN", "NETHERLANDS ANTILLES", YES,  NO, YES, YES, YES, YES, YES, YES, 7000 },
