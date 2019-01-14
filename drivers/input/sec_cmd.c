@@ -62,19 +62,20 @@ static ssize_t sec_cmd_store(struct device *dev,
 	struct sec_cmd_data *data = dev_get_drvdata(dev);
 	char *cur, *start, *end;
 	char buff[SEC_CMD_STR_LEN] = { 0 };
-	int len, i;
+	size_t len;
 	struct sec_cmd *sec_cmd_ptr = NULL;
 	char delim = ',';
 	bool cmd_found = false;
-	int param_cnt = 0;
+	unsigned int i, param_cnt = 0;
 
 	if (!data) {
 		pr_err("%s: No platform data found\n", __func__);
 		return -EINVAL;
 	}
 
-	if(strlen(buf) >= SEC_CMD_STR_LEN){		
-		pr_err("%s: cmd length is over (%s,%d)!!\n", __func__, buf, (int)strlen(buf));
+	if (count >= SEC_CMD_STR_LEN) {
+		pr_err("%s: cmd length is over (%s,%d)!!\n",
+		       __func__, buf, (int)count);
 		return -EINVAL;
 	}
 	if (data->cmd_is_running == true) {
@@ -89,7 +90,7 @@ static ssize_t sec_cmd_store(struct device *dev,
 	data->cmd_state = SEC_CMD_STATUS_RUNNING;
 	for (i = 0; i < ARRAY_SIZE(data->cmd_param); i++)
 		data->cmd_param[i] = 0;
-	len = (int)count;
+	len = count;
 	if (*(buf + len - 1) == '\n')
 		len--;
 	memset(data->cmd, 0x00, ARRAY_SIZE(data->cmd));
@@ -265,11 +266,12 @@ static ssize_t sec_cmd_store(struct device *dev, struct device_attribute *devatt
 		return -EINVAL;
 	}
 
-	if(strlen(buf) >= SEC_CMD_STR_LEN){		
-		pr_err("%s: cmd length is over (%s,%d)!!\n", __func__, buf, (int)strlen(buf));
+	if (count >= SEC_CMD_STR_LEN) {
+		pr_err("%s: cmd length is over (%s,%d)!!\n",
+		       __func__, buf, (int)count);
 		return -EINVAL;
 	}
-	strncpy(cmd.cmd, buf, count);
+	strlcpy(cmd.cmd, buf, sizeof(cmd.cmd));
 
 	mutex_lock(&data->fifo_lock);
 	if (kfifo_avail(&data->cmd_queue)) {
