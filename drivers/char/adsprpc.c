@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015,2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -59,6 +59,8 @@
 #define FASTRPC_CTXID_MASK (0xFF0)
 
 #define IS_CACHE_ALIGNED(x) (((x) & ((L1_CACHE_BYTES)-1)) == 0)
+
+#define FASTRPC_STATIC_HANDLE_KERNEL (1)
 
 static inline uint64_t buf_page_start(uint64_t buf)
 {
@@ -1122,6 +1124,15 @@ static int fastrpc_internal_invoke(struct fastrpc_file *fl, uint32_t mode,
 	int err = 0;
 
 	if (!kernel) {
+		VERIFY(err, invoke->handle != FASTRPC_STATIC_HANDLE_KERNEL);
+		if (err) {
+			pr_err("adsprpc: ERROR: %s: user application %s trying to send a kernel RPC message to channel %d",
+				__func__, current->comm, cid);
+			goto bail;
+		}
+	}
+
+	if (!kernel) {
 		VERIFY(err, 0 == context_restore_interrupted(fl, invokefd,
 								&ctx));
 		if (err)
@@ -1186,7 +1197,7 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 		int tgid = current->tgid;
 		ra[0].buf.pv = (void *)&tgid;
 		ra[0].buf.len = sizeof(tgid);
-		ioctl.inv.handle = 1;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(0, 1, 0);
 		ioctl.inv.pra = ra;
 		ioctl.fds = NULL;
@@ -1236,7 +1247,7 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 		ra[3].buf.len = 1 * sizeof(*pages);
 		fds[3] = 0;
 
-		ioctl.inv.handle = 1;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(6, 4, 0);
 		ioctl.inv.pra = ra;
 		ioctl.fds = fds;
@@ -1265,7 +1276,7 @@ static int fastrpc_release_current_dsp_process(struct fastrpc_file *fl)
 	tgid = fl->tgid;
 	ra[0].buf.pv = (void *)&tgid;
 	ra[0].buf.len = sizeof(tgid);
-	ioctl.inv.handle = 1;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 	ioctl.inv.sc = REMOTE_SCALARS_MAKE(1, 1, 0);
 	ioctl.inv.pra = ra;
 	ioctl.fds = NULL;
@@ -1308,7 +1319,7 @@ static int fastrpc_mmap_on_dsp(struct fastrpc_file *fl, uint32_t flags,
 	ra[2].buf.pv = (void *)&routargs;
 	ra[2].buf.len = sizeof(routargs);
 
-	ioctl.inv.handle = 1;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 	if (fl->apps->compat)
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(4, 2, 1);
 	else
@@ -1348,7 +1359,7 @@ static int fastrpc_munmap_on_dsp_rh(struct fastrpc_file *fl,
 	ra[0].buf.pv = (void *)&routargs;
 	ra[0].buf.len = sizeof(routargs);
 
-	ioctl.inv.handle = 1;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 	ioctl.inv.sc = REMOTE_SCALARS_MAKE(7, 0, 1);
 	ioctl.inv.pra = ra;
 	ioctl.fds = NULL;
@@ -1392,7 +1403,7 @@ static int fastrpc_munmap_on_dsp(struct fastrpc_file *fl,
 	ra[0].buf.pv = (void *)&inargs;
 	ra[0].buf.len = sizeof(inargs);
 
-	ioctl.inv.handle = 1;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
 	if (fl->apps->compat)
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(5, 1, 0);
 	else
