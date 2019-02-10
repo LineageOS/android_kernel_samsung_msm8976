@@ -3,6 +3,7 @@
 
 #define DEBUG_MUIC
 #define READ 0
+#undef WRITE
 #define WRITE 1
 
 extern void muic_reg_log(u8 reg, u8 value, u8 rw);
