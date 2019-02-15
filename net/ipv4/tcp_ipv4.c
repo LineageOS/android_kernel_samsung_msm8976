@@ -437,13 +437,14 @@ void tcp_v4_err(struct sk_buff *icmp_skb, u32 info)
 		if (sock_owned_by_user(sk))
 			break;
 
+		skb = tcp_write_queue_head(sk);
+		if (WARN_ON_ONCE(!skb))
+			break;
+
 		icsk->icsk_backoff--;
 		inet_csk(sk)->icsk_rto = (tp->srtt ? __tcp_set_rto(tp) :
 			TCP_TIMEOUT_INIT) << icsk->icsk_backoff;
 		tcp_bound_rto(sk);
-
-		skb = tcp_write_queue_head(sk);
-		BUG_ON(!skb);
 
 		remaining = icsk->icsk_rto - min(icsk->icsk_rto,
 				tcp_time_stamp - TCP_SKB_CB(skb)->when);
