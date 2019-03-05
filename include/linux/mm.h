@@ -1601,20 +1601,10 @@ extern unsigned long unmapped_area_topdown(struct vm_unmapped_area_info *info);
 static inline unsigned long
 vm_unmapped_area(struct vm_unmapped_area_info *info)
 {
-	unsigned long addr;
-
 	if (!(info->flags & VM_UNMAPPED_AREA_TOPDOWN))
-		addr = unmapped_area(info);
+		return unmapped_area(info);
 	else
-		addr = unmapped_area_topdown(info);
-	if (addr == -ENOMEM)
-		printk(KERN_DEBUG "%s %d - NOMEM in vm_unmapped_area "
-			"pid=%d flags=%lx length=%lx low_limit=%lx "
-			"high_limit=%lx align_mask=%lx\n",
-			__func__, __LINE__,
-			current->pid, info->flags, info->length, info->low_limit,
-			info->high_limit, info->align_mask);
-	return addr;
+		return unmapped_area_topdown(info);
 }
 
 /* truncate.c */

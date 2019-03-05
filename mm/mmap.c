@@ -1936,13 +1936,8 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	struct vm_area_struct *vma, *prev;
 	struct vm_unmapped_area_info info;
 
-	if (len > TASK_SIZE - mmap_min_addr) {
-		printk(KERN_ERR "%s %d - (len > TASK_SIZE - mmap_min_addr) len=%lx "
-			"TASK_SIZE=%lx mmap_min_addr=%lx pid=%d addr=%lx\n",
-			__func__, __LINE__,
-			len, TASK_SIZE, mmap_min_addr, current->pid, addr);
+	if (len > TASK_SIZE - mmap_min_addr)
 		return -ENOMEM;
-	}
 
 	if (flags & MAP_FIXED)
 		return addr;
@@ -1961,15 +1956,7 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 	info.low_limit = TASK_UNMAPPED_BASE;
 	info.high_limit = TASK_SIZE;
 	info.align_mask = 0;
-	addr = vm_unmapped_area(&info);
-	if (addr == -ENOMEM)
-		printk(KERN_ERR "%s %d - NOMEM from vm_unmapped_area "
-			"pid=%d flags=%lx length=%lx low_limit=%lx "
-			"high_limit=%lx align_mask=%lx\n",
-			__func__, __LINE__,
-			current->pid, info.flags, info.length, info.low_limit,
-			info.high_limit, info.align_mask);
-	return addr;
+	return vm_unmapped_area(&info);
 }
 #endif	
 
@@ -1989,14 +1976,8 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 	struct vm_unmapped_area_info info;
 
 	/* requested length too big for entire address space */
-	if (len > TASK_SIZE - mmap_min_addr) {
-		printk(KERN_ERR "%s %d - (len > TASK_SIZE - mmap_min_addr) len=%lx "
-			"TASK_SIZE=%lx mmap_min_addr=%lx pid=%d addr=%lx\n",
-			__func__, __LINE__,
-			len, TASK_SIZE, mmap_min_addr, current->pid, addr);
+	if (len > TASK_SIZE - mmap_min_addr)
 		return -ENOMEM;
-	}
-
 
 	if (flags & MAP_FIXED)
 		return addr;
@@ -2031,13 +2012,7 @@ arch_get_unmapped_area_topdown(struct file *filp, const unsigned long addr0,
 		info.high_limit = TASK_SIZE;
 		addr = vm_unmapped_area(&info);
 	}
-	if (addr == -ENOMEM)
-		printk(KERN_DEBUG "%s %d - NOMEM from vm_unmapped_area "
-			"pid=%d flags=%lx length=%lx low_limit=%lx "
-			"high_limit=%lx align_mask=%lx\n",
-			__func__, __LINE__,
-			current->pid, info.flags, info.length, info.low_limit,
-			info.high_limit, info.align_mask);
+
 	return addr;
 }
 #endif
