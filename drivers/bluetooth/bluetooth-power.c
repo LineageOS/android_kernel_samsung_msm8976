@@ -157,6 +157,13 @@ static int bt_configure_gpios(int on)
 	BT_PWR_DBG("%s  bt_gpio= %d on: %d", __func__, bt_reset_gpio, on);
 
 	if (on) {
+		rc = gpio_request(bt_reset_gpio, "bt_sys_rst_n");
+		if (rc) {
+			BT_PWR_ERR("unable to request gpio %d (%d)\n",
+				   bt_reset_gpio, rc);
+			return rc;
+		}
+
 		rc = gpio_direction_output(bt_reset_gpio, 0);
 		if (rc) {
 			BT_PWR_ERR("Unable to set direction\n");
@@ -400,19 +407,6 @@ static int bt_power_populate_dt_pinfo(struct platform_device *pdev)
 		if (bt_power_pdata->bt_gpio_sys_rst < 0) {
 			BT_PWR_ERR("bt-reset-gpio not provided in device tree");
 			return bt_power_pdata->bt_gpio_sys_rst;
-		}
-
-		rc = gpio_request(bt_power_pdata->bt_gpio_sys_rst, "bt_sys_rst_n");
-		if (rc) {
-			BT_PWR_ERR("unable to request gpio %d (%d)\n",
-					bt_power_pdata->bt_gpio_sys_rst, rc);
-			return rc;
-		}
-
-		rc = gpio_direction_output(bt_power_pdata->bt_gpio_sys_rst, 0);
-		if (rc) {
-			BT_PWR_ERR("Unable to set direction\n");
-			return rc;
 		}
 
 		rc = bt_dt_parse_vreg_info(&pdev->dev,
