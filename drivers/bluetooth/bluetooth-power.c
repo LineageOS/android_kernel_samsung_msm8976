@@ -28,8 +28,8 @@
 #include <linux/regulator/consumer.h>
 #include <net/cnss.h>
 
-#define BT_PWR_DBG(fmt, arg...)  pr_err("[BT] %s: " fmt "\n" , __func__ , ## arg)
-#define BT_PWR_INFO(fmt, arg...) pr_err("[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define BT_PWR_DBG(fmt, arg...)  pr_debug("[BT] %s: " fmt "\n" , __func__ , ## arg)
+#define BT_PWR_INFO(fmt, arg...) pr_info("[BT] %s: " fmt "\n" , __func__ , ## arg)
 #define BT_PWR_ERR(fmt, arg...)  pr_err("[BT] %s: " fmt "\n" , __func__ , ## arg)
 
 
