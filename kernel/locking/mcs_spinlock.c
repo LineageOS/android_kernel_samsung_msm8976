@@ -100,7 +100,7 @@ bool osq_lock(struct optimistic_spin_queue *lock)
 
 	prev = decode_cpu(old);
 	node->prev = prev;
-	ASSIGN_ONCE(node, prev->next);
+	WRITE_ONCE(prev->next, node);
 
 	/*
 	 * Normally @prev is untouchable after the above store; because at that
@@ -185,8 +185,8 @@ unqueue:
 	 * it will wait in Step-A.
 	 */
 
-	ASSIGN_ONCE(prev, next->prev);
-	ASSIGN_ONCE(next, prev->next);
+	WRITE_ONCE(next->prev, prev);
+	WRITE_ONCE(prev->next, next);
 
 	return false;
 }

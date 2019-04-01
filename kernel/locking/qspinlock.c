@@ -191,7 +191,7 @@ clear_pending_set_locked(struct qspinlock *lock, u32 val)
 {
 	struct __qspinlock *l = (void *)lock;
 
-	ASSIGN_ONCE(_Q_LOCKED_VAL,l->locked_pending);
+	WRITE_ONCE(l->locked_pending, _Q_LOCKED_VAL);
 }
 
 /*
@@ -276,7 +276,7 @@ static __always_inline void set_locked(struct qspinlock *lock)
 {
 	struct __qspinlock *l = (void *)lock;
 
-	ASSIGN_ONCE(_Q_LOCKED_VAL, l->locked);
+	WRITE_ONCE(l->locked, _Q_LOCKED_VAL);
 }
 
 /**
@@ -471,7 +471,7 @@ queue:
 	 */
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
-		ASSIGN_ONCE(node, prev->next);
+		WRITE_ONCE(prev->next, node);
 #ifdef CONFIG_DEBUG_QUEUE_SPINLOCK
 		trace_printk("we've cpu %d ahead of us\n",
 			     (old >> _Q_TAIL_CPU_OFFSET) - 1);

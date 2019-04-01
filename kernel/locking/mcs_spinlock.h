@@ -62,10 +62,10 @@ void mcs_spin_lock(struct mcs_spinlock **lock, struct mcs_spinlock *node)
 		return;
 	}
 	/*
-	 * BluesMan: Change from ACCESS_ONCE to ASSIGN_ONCE
+	 * BluesMan: Change from ACCESS_ONCE to WRITE_ONCE
 	 *
 	 */
-	ASSIGN_ONCE(node, prev->next);
+	WRITE_ONCE(prev->next, node);
 
 	/* Wait until the lock holder passes the lock down. */
 	arch_mcs_spin_lock_contended(&node->locked);
