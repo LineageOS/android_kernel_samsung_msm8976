@@ -56,7 +56,7 @@ config ANDROID_TIMED_GPIO
 
 config ANDROID_LOW_MEMORY_KILLER
 	bool "Android Low Memory Killer"
-	default N
+	default n
 	---help---
 	  Registers processes to be killed when memory is low
 
