@@ -68,6 +68,11 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
+#if defined(CONFIG_ZSWAP)
+extern u64 zswap_pool_pages;
+extern atomic_t zswap_stored_pages;
+#endif
+
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
@@ -117,7 +122,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		struct task_struct *p;
 		short oom_score_adj;
 
-		if (tsk->flags & PF_KTHREAD)
+		if (tsk->flags & PF_KTHREAD ||
+			tsk->state & TASK_UNINTERRUPTIBLE)
 			continue;
 
 		p = find_lock_task_mm(tsk);
@@ -136,6 +142,15 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			continue;
 		}
 		tasksize = get_mm_rss(p->mm);
+#if defined(CONFIG_ZSWAP)
+		if (atomic_read(&zswap_stored_pages)) {
+			lowmem_print(3, "shown tasksize : %d\n", tasksize);
+			tasksize += (int)zswap_pool_pages * get_mm_counter(p->mm, MM_SWAPENTS)
+				/ atomic_read(&zswap_stored_pages);
+			lowmem_print(3, "real tasksize : %d\n", tasksize);
+		}
+#endif
+
 		task_unlock(p);
 		if (tasksize <= 0)
 			continue;
