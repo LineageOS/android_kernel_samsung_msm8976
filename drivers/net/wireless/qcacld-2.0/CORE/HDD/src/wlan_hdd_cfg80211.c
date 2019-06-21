@@ -7830,6 +7830,14 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 		hddLog(LOGE, FL("HDD context is not valid"));
 		return status;
 	}
+
+	if (!((adapter->device_mode == WLAN_HDD_SOFTAP) ||
+	    (adapter->device_mode == WLAN_HDD_P2P_GO))) {
+		hddLog(VOS_TRACE_LEVEL_ERROR, FL("Invalid device mode %d"),
+		       adapter->device_mode);
+		return -EINVAL;
+	}
+
 	sap_config = &adapter->sessionCtx.ap.sapConfig;
 	vos_mem_zero(&sap_config->acs_cfg, sizeof(struct sap_acs_cfg));
 
