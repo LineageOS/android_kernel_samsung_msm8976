@@ -702,7 +702,7 @@ if (adf_os_unlikely(pdev->rx_ring.rx_reset)) {
             pdev->rx_ind_msdu_byte_idx = 0;
 
             if (unlikely(pdev->rx_mpdu_range_offset_words > msg_len)) {
-                adf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid rx_mpdu_range_offset_words %d\n",
+                adf_os_print("HTT_T2H_MSG_TYPE_RX_IND, invalid rx_mpdu_range_offset_words %d\n",
                                       pdev->rx_mpdu_range_offset_words);
                 WARN_ON(1);
                 break;
@@ -716,14 +716,14 @@ if (adf_os_unlikely(pdev->rx_ring.rx_reset)) {
              */
             if (unlikely(calculated_msg_len <
                                      pdev->rx_mpdu_range_offset_words)) {
-                        adf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid mpdu_ranges %u\n",
+                        adf_os_print("HTT_T2H_MSG_TYPE_RX_IND, invalid mpdu_ranges %u\n",
                                                 (num_mpdu_ranges *
                                                 (int)sizeof(uint32_t)));
                         WARN_ON(1);
                         break;
             }
             if (unlikely(calculated_msg_len > msg_len)) {
-                        adf_print("HTT_T2H_MSG_TYPE_RX_IND, invalid offset_words + mpdu_ranges %u\n",
+                        adf_os_print("HTT_T2H_MSG_TYPE_RX_IND, invalid offset_words + mpdu_ranges %u\n",
                                       calculated_msg_len);
                         WARN_ON(1);
                         break;
