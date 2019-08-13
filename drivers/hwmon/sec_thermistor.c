@@ -329,7 +329,11 @@ static int sec_therm_probe(struct platform_device *pdev)
 
 	if (IS_ERR(info->vadc_dev)) {
 		ret = PTR_ERR(info->vadc_dev);
-		pr_err("%s: ret(%d)\n", __func__, ret);
+		if (ret == -EPROBE_DEFER)
+			pr_info("%s: Probing VADC\n", __func__);
+		else
+			pr_err("%s: ret(%d)\n", __func__, ret);
+
 		if (ret != -EPROBE_DEFER)
 			pr_err("vadc property missing\n");
 		else

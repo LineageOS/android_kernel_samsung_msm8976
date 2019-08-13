@@ -2227,7 +2227,10 @@ static int qpnp_vadc_get_temp(struct thermal_zone_device *thermal,
 
 	rc = qpnp_vadc_read(vadc,
 				vadc_therm->vadc_channel, &result);
-	if (rc) {
+	if (rc == -EPROBE_DEFER) {
+		pr_info("Probing VADC\n");
+		return rc;
+	} else if (rc) {
 		pr_err("VADC read error with %d\n", rc);
 		return rc;
 	}
