@@ -178,7 +178,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
             enum htt_rx_flush_action action;
 
             if (adf_nbuf_len(htt_t2h_msg) < HTT_RX_FLUSH_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -220,7 +220,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
             int msg_len = adf_nbuf_len(htt_t2h_msg);
 
             if (msg_len < HTT_RX_FRAG_IND_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -308,7 +308,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
             u_int8_t vdev_id;
 
             if (adf_nbuf_len(htt_t2h_msg) < HTT_RX_PEER_MAP_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -335,7 +335,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
             u_int16_t peer_id;
 
             if (adf_nbuf_len(htt_t2h_msg) < HTT_RX_PEER_UNMAP_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -360,7 +360,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
             int is_unicast;
 
             if (adf_nbuf_len(htt_t2h_msg) < HTT_SEC_IND_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -452,7 +452,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
         int sign, old_credit;
 
         if (adf_nbuf_len(htt_t2h_msg) < HTT_TX_CREDIT_MSG_BYTES) {
-            adf_print("invalid nbuff len");
+            adf_os_print("invalid nbuff len");
             WARN_ON(1);
             break;
         }
@@ -533,7 +533,7 @@ htt_t2h_lp_msg_handler(void *context, adf_nbuf_t htt_t2h_msg )
                 int msg_len = adf_nbuf_len(htt_t2h_msg);
 
                 if (msg_len < HTT_RX_OFLD_PKT_ERR_MIC_ERR_BYTES) {
-                    adf_print("invalid nbuff len");
+                    adf_os_print("invalid nbuff len");
                     WARN_ON(1);
                     break;
                 }
@@ -827,7 +827,7 @@ if (adf_os_unlikely(pdev->rx_ring.rx_reset)) {
             int msg_len = adf_nbuf_len(htt_t2h_msg);
 
             if (msg_len < HTT_RX_PN_IND_BYTES) {
-                adf_print("invalid nbuff len");
+                adf_os_print("invalid nbuff len");
                 WARN_ON(1);
                 break;
             }
@@ -844,7 +844,7 @@ if (adf_os_unlikely(pdev->rx_ring.rx_reset)) {
 
             if (msg_len - HTT_RX_PN_IND_BYTES <
                 pn_ie_cnt * sizeof(uint8_t)) {
-                adf_print("invalid pn_ie len");
+                adf_os_print("invalid pn_ie len");
                 WARN_ON(1);
                 break;
             }
