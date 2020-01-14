@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "4a40e15d_c949f8fe",
+        "filename": "drivers/net/wireless/qcacld-2.0/CORE/CLD_TXRX/TLSHIM/tl_shim.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 600,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2020-01-14T10:26:36Z",
+      "side": 1,
+      "message": "Isn\u0027t a call to\n\n  adf_os_spin_unlock_bh(\u0026tl_shim-\u003emgmt_lock);\n\nmissing here?",
+      "range": {
+        "startLine": 600,
+        "startChar": 2,
+        "endLine": 600,
+        "endChar": 13
+      },
+      "revId": "68b103fb4663d984bb4512ad0c2e079e165c7271",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
