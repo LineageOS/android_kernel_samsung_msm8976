@@ -22,6 +22,30 @@
       "revId": "68b103fb4663d984bb4512ad0c2e079e165c7271",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "52d25161_a13b04d7",
+        "filename": "drivers/net/wireless/qcacld-2.0/CORE/CLD_TXRX/TLSHIM/tl_shim.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 600,
+      "author": {
+        "id": 12604
+      },
+      "writtenOn": "2020-01-14T10:34:58Z",
+      "side": 1,
+      "message": "Good find. This looks like a bug in the original commit. Maybe this should be fixed separately.",
+      "parentUuid": "4a40e15d_c949f8fe",
+      "range": {
+        "startLine": 600,
+        "startChar": 2,
+        "endLine": 600,
+        "endChar": 13
+      },
+      "revId": "68b103fb4663d984bb4512ad0c2e079e165c7271",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
