@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016, 2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1364,8 +1364,9 @@ static void hdd_SendReAssocEvent(struct net_device *dev,
         goto done;
     }
 
-    if (pCsrRoamInfo->nAssocRspLength == 0) {
-        hddLog(LOGE, FL("Invalid assoc response length"));
+    if (pCsrRoamInfo->nAssocRspLength < FT_ASSOC_RSP_IES_OFFSET) {
+        hddLog(LOGE, FL("Invalid assoc response length %d"),
+               pCsrRoamInfo->nAssocRspLength);
         goto done;
     }
 
@@ -1390,6 +1391,10 @@ static void hdd_SendReAssocEvent(struct net_device *dev,
 
     /* Send the Assoc Resp, the supplicant needs this for initial Auth */
     len = pCsrRoamInfo->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
+    if (len > IW_GENERIC_IE_MAX) {
+        hddLog(LOGE, FL("Invalid Assoc resp length %d"), len);
+        goto done;
+    }
     rspRsnLength = len;
     memcpy(rspRsnIe, pFTAssocRsp, len);
     memset(rspRsnIe + len, 0, IW_GENERIC_IE_MAX - len);
