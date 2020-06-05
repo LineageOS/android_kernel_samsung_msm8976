@@ -360,7 +360,7 @@ static int msm_vb2_buf_done(struct vb2_buffer *vb, int session_id,
 
 	session = msm_get_session(session_id);
 	if (IS_ERR_OR_NULL(session))
-		return 0;
+		return -EINVAL;
 
 	read_lock_irqsave(&session->stream_rwlock, rl_flags);
 
@@ -415,7 +415,7 @@ static int msm_vb2_flush_buf(int session_id, unsigned int stream_id)
 	struct vb2_buffer *vb2_buf = NULL;
 
 	session = msm_get_session(session_id);
-		if (IS_ERR_OR_NULL(session))
+	if (IS_ERR_OR_NULL(session))
 		return -EINVAL;
 
 	read_lock_irqsave(&session->stream_rwlock, rl_flags);
