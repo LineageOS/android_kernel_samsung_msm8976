@@ -13498,7 +13498,7 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
     tSirMacRateSet ExRateSet;
     tCsrRoamSession *pSession = CSR_GET_SESSION( pMac, sessionId );
     tANI_U32 dwTmp;
-    tANI_U8 wpaRsnIE[DOT11F_IE_RSN_MAX_LEN];    //RSN MAX is bigger than WPA MAX
+    tANI_U8 *wpaRsnIE = NULL;
     tANI_U32 ucDot11Mode = 0;
     tANI_U8 txBFCsnValue = 0;
     tpCsrNeighborRoamControlInfo neigh_roam_info;
@@ -13514,6 +13514,12 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         smsLog(pMac, LOGE, FL(" pBssDescription is NULL"));
         return eHAL_STATUS_FAILURE;
     }
+    wpaRsnIE = vos_mem_malloc(DOT11F_IE_RSN_MAX_LEN);
+    if (!wpaRsnIE) {
+	smsLog(pMac, LOGE, FL("wpaRsnIE alloc fail"));
+        return eHAL_STATUS_FAILURE;
+    }
+    vos_mem_zero(wpaRsnIE, DOT11F_IE_RSN_MAX_LEN);
     neigh_roam_info = &pMac->roam.neighborRoamInfo[sessionId];
 
     if ((eWNI_SME_REASSOC_REQ == messageType) ||
@@ -14262,6 +14268,9 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
     if (!HAL_STATUS_SUCCESS(status) && (NULL != pMsg)) {
         vos_mem_free(pMsg);
     }
+    if (wpaRsnIE)
+	vos_mem_free(wpaRsnIE);
+
     return( status );
 }
 

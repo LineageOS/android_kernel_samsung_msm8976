@@ -3163,10 +3163,16 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
 #endif
     tDot11fBeaconIEs *pIesLocal = pIes;
     eCsrAuthType negAuthType = eCSR_AUTH_TYPE_UNKNOWN;
-    tDot11fIERSN dot11RSNIE;
+    tDot11fIERSN *dot11RSNIE = NULL;
     tANI_U32 status;
     smsLog(pMac, LOGW, "%s called...", __func__);
 
+    dot11RSNIE = vos_mem_malloc(sizeof(tDot11fIERSN));
+    if (!dot11RSNIE) {
+	smsLog(pMac, LOGW, "dot11RSNIE alloc fail");
+	return cbRSNIe;
+    }
+    vos_mem_zero(dot11RSNIE, sizeof(tDot11fIERSN));
     do
     {
         if ( !csrIsProfileRSN( pProfile ) ) break;
@@ -3176,21 +3182,20 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
             break;
         }
 
-        memset(&dot11RSNIE, 0, sizeof(tDot11fIERSN));
         /*
          *  Use intersection of the RSN cap sent by user space and
          *  the AP, so that only common capability are enabled.
          */
         if(pProfile->nRSNReqIELength && pProfile->pRSNReqIE) {
             status = dot11fUnpackIeRSN(hHal, pProfile->pRSNReqIE + 2,
-                                       pProfile->nRSNReqIELength - 2, &dot11RSNIE);
+                                       pProfile->nRSNReqIELength - 2, dot11RSNIE);
             if (DOT11F_SUCCEEDED(status)) {
                 pIesLocal->RSN.RSN_Cap[0] =
                         pIesLocal->RSN.RSN_Cap[0] &
-                        dot11RSNIE.RSN_Cap[0];
+                        dot11RSNIE->RSN_Cap[0];
                 pIesLocal->RSN.RSN_Cap[1] =
                         pIesLocal->RSN.RSN_Cap[1] &
-                        dot11RSNIE.RSN_Cap[1];
+                        dot11RSNIE->RSN_Cap[1];
             }
         }
 
@@ -3298,6 +3303,8 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
         //locally allocated
         vos_mem_free(pIesLocal);
     }
+    if (dot11RSNIE)
+        vos_mem_free(dot11RSNIE);
 
     return( cbRSNIe );
 }
